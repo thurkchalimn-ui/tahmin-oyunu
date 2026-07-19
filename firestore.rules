@@ -46,12 +46,14 @@ service cloud.firestore {
     }
 
     // predictions/{predictionId}: kullanıcı sadece kendi tahminini,
-    // maç henüz kilitlenmemişken (kickoffAt gelecekte) oluşturabilir.
-    // isCorrect alanı yalnız admin tarafından (sonuç girildiğinde) güncellenir.
+    // maç henüz kilitlenmemişken (kickoffAt gelecekte) VE e-postasını
+    // doğrulamışken oluşturabilir. isCorrect alanı yalnız admin tarafından
+    // (sonuç girildiğinde) güncellenir.
     match /predictions/{predictionId} {
       allow read: if true;
       allow create: if isOwner(request.resource.data.userId) &&
-        request.resource.data.isCorrect == null;
+        request.resource.data.isCorrect == null &&
+        request.auth.token.email_verified == true;
       allow update: if isAdmin();
       allow delete: if false;
     }

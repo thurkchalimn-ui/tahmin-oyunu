@@ -9,6 +9,7 @@ import {
   orderBy,
   limit as fbLimit,
   getDocs,
+  documentId,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
@@ -57,6 +58,31 @@ export async function createMatch(input: NewMatchInput): Promise<void> {
     result: null,
     createdAt: Timestamp.now(),
   });
+}
+
+/**
+ * Verilen maç ID'lerine karşılık gelen maçları toplu olarak getirir.
+ * Bir oyuncunun tahmin geçmişini, ilgili maç bilgileriyle (takım adları vb.)
+ * birlikte göstermek için kullanılır. Firestore 'in' sorgusu en fazla 30 değer
+ * kabul ettiği için liste 30'arlık parçalara bölünür.
+ */
+export async function getMatchesByIds(matchIds: string[]): Promise<Match[]> {
+  const uniqueIds = Array.from(new Set(matchIds));
+  if (uniqueIds.length === 0) return [];
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < uniqueIds.length; i += 30) {
+    chunks.push(uniqueIds.slice(i, i + 30));
+  }
+
+  const chunkResults = await Promise.all(
+    chunks.map(async (chunk) => {
+      const q = query(collection(db, 'matches'), where(documentId(), 'in', chunk));
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => mapMatchDoc(d.id, d.data()));
+    }),
+  );
+  return chunkResults.flat();
 }
 
 /** Belirli bir güne ait maçları gerçek zamanlı dinler (sıraya göre). */

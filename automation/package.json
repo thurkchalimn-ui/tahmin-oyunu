@@ -1,0 +1,13 @@
+{
+  "name": "tahmin-oyunu-automation",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Maç saatinden 3 saat sonra sonucu API-Football'dan çekip Firestore'a otomatik yazan GitHub Actions script'i.",
+  "scripts": {
+    "check-results": "node check-results.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  }
+}

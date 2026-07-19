@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { UserProfile } from '@/types';
 
 interface LeaderboardTableProps {
@@ -42,7 +43,9 @@ export function LeaderboardTable({ users, currentUserId }: LeaderboardTableProps
                 {MEDALS[i] ?? i + 1}
               </td>
               <td className="px-4 py-3 font-medium text-pitch-900 dark:text-pitch-100">
-                {user.displayName}
+                <Link to={`/oyuncu/${user.uid}`} className="hover:text-scoreboard-amber hover:underline">
+                  {user.displayName}
+                </Link>
                 {user.badges.some((b) => b.streakLength >= 15) && <span className="ml-1">🏆</span>}
               </td>
               <td className="px-4 py-3 text-right font-mono text-scoreboard-amber">{user.bestStreak}</td>
