@@ -1,0 +1,59 @@
+rules_version = '2';
+
+// Güvenlik notu: Seri (streak) yeniden hesaplama işlemi bu MVP'de admin
+// istemcisi tarafından tetiklenir. Üretimde kopyalanamaz/hile yapılamaz
+// olması için bu mantığın bir Cloud Function'a taşınması önerilir
+// (bkz. proje README'sindeki "Sonraki Geliştirme Adımı").
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // admins koleksiyonu: sadece Firebase Console üzerinden manuel eklenir,
+    // istemciden asla yazılamaz.
+    match /admins/{uid} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // users/{uid}: herkes liderlik tablosu için okuyabilir.
+    // Sahibi sadece displayName günceller; seri/rozet alanlarını yalnız admin değiştirir.
+    match /users/{uid} {
+      allow read: if true;
+      allow create: if isOwner(uid);
+      allow update: if isAdmin() ||
+        (isOwner(uid) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['displayName', 'updatedAt']));
+      allow delete: if false;
+    }
+
+    // matches/{matchId}: herkes okuyabilir, sadece admin yazar/düzenler.
+    match /matches/{matchId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // predictions/{predictionId}: kullanıcı sadece kendi tahminini,
+    // maç henüz kilitlenmemişken (kickoffAt gelecekte) oluşturabilir.
+    // isCorrect alanı yalnız admin tarafından (sonuç girildiğinde) güncellenir.
+    match /predictions/{predictionId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.userId) &&
+        request.resource.data.isCorrect == null;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+  }
+}
