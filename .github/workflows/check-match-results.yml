@@ -1,0 +1,32 @@
+name: Maç Sonuçlarını Otomatik Kontrol Et
+
+# Her 15 dakikada bir otomatik çalışır; "workflow_dispatch" ile GitHub arayüzünden
+# elle de tetiklenebilir (test etmek için kullanışlı).
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check-results:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: automation
+    steps:
+      - name: Kodu indir
+        uses: actions/checkout@v4
+
+      - name: Node.js kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Bağımlılıkları kur
+        run: npm install
+
+      - name: Sonuç kontrol scriptini çalıştır
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+        run: npm run check-results

@@ -45,8 +45,10 @@ export function HomePage() {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6">
-      <section className="rounded-xl bg-pitch-900 p-5 text-pitch-100 dark:bg-pitch-800">
-        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-pitch-100/50">Güncel Serin</p>
+      <section className="rounded-xl border border-pitch-700/15 bg-white p-5 dark:border-pitch-700 dark:bg-pitch-800">
+        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
+          Güncel Serin
+        </p>
         <StreakBadge currentStreak={profile?.currentStreak ?? 0} />
       </section>
 

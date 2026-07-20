@@ -8,3 +8,7 @@ dist-ssr
 *.log
 .vscode/*
 !.vscode/extensions.json
+
+# Firebase servis hesabı anahtarları - ASLA commit edilmemeli
+*firebase-adminsdk*.json
+serviceAccountKey.json

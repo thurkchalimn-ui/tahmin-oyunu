@@ -25,21 +25,29 @@ export function PlayerProfilePage() {
         {profile.displayName}
       </h1>
 
-      <section className="rounded-xl bg-pitch-900 p-5 text-pitch-100 dark:bg-pitch-800">
-        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-pitch-100/50">Güncel Seri</p>
+      <section className="rounded-xl border border-pitch-700/15 bg-white p-5 dark:border-pitch-700 dark:bg-pitch-800">
+        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
+          Güncel Seri
+        </p>
         <StreakBadge currentStreak={profile.currentStreak} />
-        <div className="mt-4 grid grid-cols-3 gap-3 border-t border-pitch-100/10 pt-4 text-center">
+        <div className="mt-4 grid grid-cols-3 gap-3 border-t border-pitch-700/10 pt-4 text-center dark:border-pitch-100/10">
           <div>
             <p className="font-mono text-lg font-bold text-scoreboard-amber">{profile.bestStreak}</p>
-            <p className="font-mono text-[10px] uppercase text-pitch-100/50">En İyi Seri</p>
+            <p className="font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">
+              En İyi Seri
+            </p>
           </div>
           <div>
-            <p className="font-mono text-lg font-bold">{profile.correctPredictions}</p>
-            <p className="font-mono text-[10px] uppercase text-pitch-100/50">Doğru</p>
+            <p className="font-mono text-lg font-bold text-pitch-900 dark:text-pitch-100">
+              {profile.correctPredictions}
+            </p>
+            <p className="font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">Doğru</p>
           </div>
           <div>
-            <p className="font-mono text-lg font-bold">{profile.totalPredictions}</p>
-            <p className="font-mono text-[10px] uppercase text-pitch-100/50">Toplam</p>
+            <p className="font-mono text-lg font-bold text-pitch-900 dark:text-pitch-100">
+              {profile.totalPredictions}
+            </p>
+            <p className="font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">Toplam</p>
           </div>
         </div>
       </section>
