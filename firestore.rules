@@ -57,5 +57,19 @@ service cloud.firestore {
       allow update: if isAdmin();
       allow delete: if false;
     }
+    // messages/{messageId}: herkes okuyabilir (giriş yapmasa bile), sadece
+    // e-postasını doğrulamış kullanıcılar kendi adına mesaj gönderebilir.
+    // Mesajlar bir kez gönderildikten sonra değiştirilemez/silinemez (moderasyon
+    // gerekirse admin panelinden Firestore Console üzerinden manuel silinebilir).
+    match /messages/{messageId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.userId) &&
+        request.auth.token.email_verified == true &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 &&
+        request.resource.data.text.size() <= 500;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
   }
 }

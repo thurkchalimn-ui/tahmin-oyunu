@@ -22,6 +22,11 @@ export function formatMatchTime(iso: string): string {
   });
 }
 
+/** ISO zaman damgasını sadece saat:dakika olarak gösterir (sohbet mesajları için). */
+export function formatChatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
 /** Maçın başlama saati geçmiş mi? (Tahmin kilidi için kullanılır) */
 export function isMatchLocked(kickoffAt: string): boolean {
   return new Date(kickoffAt).getTime() <= Date.now();

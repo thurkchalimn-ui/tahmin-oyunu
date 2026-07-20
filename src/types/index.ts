@@ -52,3 +52,12 @@ export interface AsyncState<T> {
   loading: boolean;
   error: string | null;
 }
+
+// Sohbet kanalındaki tek bir mesaj
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  displayName: string;
+  text: string;
+  createdAt: string; // ISO 8601
+}

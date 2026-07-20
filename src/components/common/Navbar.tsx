@@ -30,6 +30,9 @@ export function Navbar() {
           <NavLink to="/liderlik" className={navLinkClass}>
             Liderlik
           </NavLink>
+          <NavLink to="/sohbet" className={navLinkClass}>
+            Sohbet
+          </NavLink>
           {firebaseUser && (
             <NavLink to="/profil" className={navLinkClass}>
               Profil

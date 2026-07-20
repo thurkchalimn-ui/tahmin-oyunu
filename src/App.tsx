@@ -8,6 +8,7 @@ import { HomePage } from '@/pages/HomePage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { LeaderboardPage } from '@/pages/LeaderboardPage';
+import { ChatPage } from '@/pages/ChatPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { PlayerProfilePage } from '@/pages/PlayerProfilePage';
 import { AdminPage } from '@/pages/AdminPage';
@@ -28,6 +29,7 @@ export default function App() {
                 <Route path="/giris" element={<LoginPage />} />
                 <Route path="/kayit" element={<RegisterPage />} />
                 <Route path="/liderlik" element={<LeaderboardPage />} />
+                <Route path="/sohbet" element={<ChatPage />} />
                 <Route path="/oyuncu/:uid" element={<PlayerProfilePage />} />
                 <Route
                   path="/profil"
