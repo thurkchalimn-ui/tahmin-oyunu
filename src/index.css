@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply font-body text-pitch-900 dark:text-pitch-100 antialiased transition-colors duration-200;
+  }
+
+  /* Klavye ile gezinmede görünür odak halkası (erişilebilirlik) */
+  :focus-visible {
+    @apply outline-none ring-2 ring-scoreboard-amber ring-offset-2 ring-offset-pitch-100 dark:ring-offset-pitch-900;
+  }
+
+  /* Kullanıcı azaltılmış hareket tercih ediyorsa animasyonları kısıtla */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
