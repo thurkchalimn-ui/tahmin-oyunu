@@ -9,6 +9,7 @@ import {
   limit as fbLimit,
   updateDoc,
   where,
+  documentId,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
@@ -73,18 +74,61 @@ export async function updateDisplayName(uid: string, displayName: string): Promi
 }
 
 /**
+ * Verilen maç ID'lerinin `kickoffAt` (başlama saati) değerlerini toplu olarak getirir.
+ * matchService.ts'deki benzer fonksiyonun küçük bir kopyasıdır; matchService zaten bu
+ * dosyadaki recalculateUserStreak'i çağırdığı için döngüsel import'tan kaçınmak amacıyla
+ * burada ayrıca (ve sade şekilde) tanımlanmıştır.
+ */
+async function getKickoffTimesByMatchIds(matchIds: string[]): Promise<Map<string, string>> {
+  const uniqueIds = Array.from(new Set(matchIds));
+  const result = new Map<string, string>();
+  if (uniqueIds.length === 0) return result;
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < uniqueIds.length; i += 30) {
+    chunks.push(uniqueIds.slice(i, i + 30));
+  }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const q = query(collection(db, 'matches'), where(documentId(), 'in', chunk));
+      const snap = await getDocs(q);
+      snap.docs.forEach((d) => {
+        const kickoffAt = d.data().kickoffAt;
+        const iso = kickoffAt instanceof Timestamp ? kickoffAt.toDate().toISOString() : (kickoffAt as string);
+        result.set(d.id, iso ?? '');
+      });
+    }),
+  );
+  return result;
+}
+
+/**
  * Bir maç sonucu girildikten sonra çağrılır: kullanıcının tüm sonuçlanmış
- * tahminlerini kronolojik sıraya göre yeniden değerlendirir, güncel seriyi,
- * en iyi seriyi ve 15'lik hedefe ulaşıldıysa yeni rozeti hesaplayıp kaydeder.
+ * tahminlerini, ait oldukları maçın GERÇEK BAŞLAMA SAATİNE (kickoffAt) göre
+ * kronolojik sıraya dizip yeniden değerlendirir, güncel seriyi, en iyi seriyi
+ * ve 15'lik hedefe ulaşıldıysa yeni rozeti hesaplayıp kaydeder.
+ *
+ * ÖNEMLİ: Sıralama, maçın admin panelinde EKLENME sırasına göre değil, gerçek
+ * `kickoffAt` saatine göre yapılır. Aksi halde admin maçları farklı bir sırayla
+ * eklerse (örn. önce geç saatli bir maçı, sonra erken saatli bir maçı eklerse)
+ * seri yanlış hesaplanır.
  */
 export async function recalculateUserStreak(uid: string): Promise<void> {
   const predSnap = await getDocs(query(collection(db, 'predictions'), where('userId', '==', uid)));
   const predictions = predSnap.docs.map((d) => d.data() as Prediction);
 
-  const currentStreak = calculateCurrentStreak(predictions);
-  const bestStreak = calculateBestStreak(predictions);
-  const totalPredictions = predictions.filter((p) => p.isCorrect !== null).length;
-  const correctPredictions = predictions.filter((p) => p.isCorrect === true).length;
+  const resolved = predictions.filter((p) => p.isCorrect !== null);
+  const kickoffByMatchId = await getKickoffTimesByMatchIds(resolved.map((p) => p.matchId));
+
+  const ordered = resolved
+    .map((p) => ({ ...p, kickoffAt: kickoffByMatchId.get(p.matchId) ?? '' }))
+    .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime());
+
+  const currentStreak = calculateCurrentStreak(ordered);
+  const bestStreak = calculateBestStreak(ordered);
+  const totalPredictions = resolved.length;
+  const correctPredictions = resolved.filter((p) => p.isCorrect === true).length;
 
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);

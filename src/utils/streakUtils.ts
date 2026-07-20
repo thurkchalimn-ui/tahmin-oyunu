@@ -1,37 +1,33 @@
-import type { Prediction } from '@/types';
-
 export const STREAK_TARGET = 15; // Rozet kazanmak için gereken art arda doğru sayısı
 
-/**
- * Sonuçlanmış tahminleri kronolojik sıraya (matchGlobalOrder) göre işleyerek
- * güncel seriyi hesaplar. Herhangi bir yanlış tahmin seriyi sıfırlar.
- * Gün farketmeksizin art arda 15 doğru bilinirse hedefe ulaşılmış sayılır.
- */
-export function calculateCurrentStreak(predictions: Prediction[]): number {
-  const resolved = predictions
-    .filter((p) => p.isCorrect !== null)
-    .sort((a, b) => a.matchGlobalOrder - b.matchGlobalOrder);
+/** Seri hesaplaması için sıralanmış, sonuçlanmış bir tahmin öğesi. */
+export interface OrderedResolvedPrediction {
+  isCorrect: boolean | null;
+}
 
+/**
+ * Kronolojik sıraya (maçın gerçek başlama saatine göre) DİZİLMİŞ tahmin listesini
+ * işleyerek güncel seriyi hesaplar. Herhangi bir yanlış tahmin seriyi sıfırlar.
+ * ÖNEMLİ: Bu fonksiyon sıralamayı kendisi yapmaz — çağıran taraf (userService),
+ * tahminleri ilgili maçın `kickoffAt` alanına göre sıralayıp buraya öyle vermelidir.
+ * Aksi halde (örn. admin panelinde maçların eklenme sırasına göre sıralanırsa) seri
+ * yanlış hesaplanabilir - bu proje daha önce tam olarak bu hataya sahipti.
+ */
+export function calculateCurrentStreak(orderedPredictions: OrderedResolvedPrediction[]): number {
   let streak = 0;
-  for (const prediction of resolved) {
-    if (prediction.isCorrect) {
-      streak += 1;
-    } else {
-      streak = 0; // Seri sıfırlanır, baştan başlar
-    }
+  for (const prediction of orderedPredictions) {
+    if (prediction.isCorrect === null) continue; // Sonuçlanmamış olanlar sayılmaz
+    streak = prediction.isCorrect ? streak + 1 : 0;
   }
   return streak;
 }
 
-/** Kullanıcının tüm zamanların en yüksek serisini hesaplar (rozet geçmişi için). */
-export function calculateBestStreak(predictions: Prediction[]): number {
-  const resolved = predictions
-    .filter((p) => p.isCorrect !== null)
-    .sort((a, b) => a.matchGlobalOrder - b.matchGlobalOrder);
-
+/** Kronolojik sıraya dizilmiş tahminlerden tüm zamanların en yüksek serisini hesaplar. */
+export function calculateBestStreak(orderedPredictions: OrderedResolvedPrediction[]): number {
   let streak = 0;
   let best = 0;
-  for (const prediction of resolved) {
+  for (const prediction of orderedPredictions) {
+    if (prediction.isCorrect === null) continue;
     streak = prediction.isCorrect ? streak + 1 : 0;
     best = Math.max(best, streak);
   }

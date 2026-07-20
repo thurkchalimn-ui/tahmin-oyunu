@@ -43,38 +43,67 @@ function normalizeTeamName(name) {
     .replace(/[^a-z0-9]/g, ''); // harf/rakam dışını kaldır
 }
 
-/** Sonuçlanmış tahminlerden güncel seriyi hesaplar (src/utils/streakUtils.ts ile aynı mantık). */
-function calculateCurrentStreak(predictions) {
-  const resolved = predictions
-    .filter((p) => p.isCorrect !== null)
-    .sort((a, b) => a.matchGlobalOrder - b.matchGlobalOrder);
+/** Sıralanmış (kronolojik) tahminlerden güncel seriyi hesaplar (src/utils/streakUtils.ts ile aynı mantık). */
+function calculateCurrentStreak(orderedPredictions) {
   let streak = 0;
-  for (const p of resolved) streak = p.isCorrect ? streak + 1 : 0;
+  for (const p of orderedPredictions) {
+    if (p.isCorrect === null) continue;
+    streak = p.isCorrect ? streak + 1 : 0;
+  }
   return streak;
 }
 
-function calculateBestStreak(predictions) {
-  const resolved = predictions
-    .filter((p) => p.isCorrect !== null)
-    .sort((a, b) => a.matchGlobalOrder - b.matchGlobalOrder);
+function calculateBestStreak(orderedPredictions) {
   let streak = 0;
   let best = 0;
-  for (const p of resolved) {
+  for (const p of orderedPredictions) {
+    if (p.isCorrect === null) continue;
     streak = p.isCorrect ? streak + 1 : 0;
     best = Math.max(best, streak);
   }
   return best;
 }
 
-/** Bir kullanıcının serisini yeniden hesaplayıp Firestore'a yazar (src/services/userService.ts ile aynı mantık). */
+/** Verilen maç ID'lerinin kickoffAt değerlerini toplu olarak getirir. */
+async function getKickoffTimesByMatchIds(matchIds) {
+  const uniqueIds = [...new Set(matchIds)];
+  const result = new Map();
+  if (uniqueIds.length === 0) return result;
+
+  const chunks = [];
+  for (let i = 0; i < uniqueIds.length; i += 30) {
+    chunks.push(uniqueIds.slice(i, i + 30));
+  }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const snap = await db.collection('matches').where('__name__', 'in', chunk).get();
+      snap.docs.forEach((d) => result.set(d.id, d.data().kickoffAt ?? ''));
+    }),
+  );
+  return result;
+}
+
+/**
+ * Bir kullanıcının serisini yeniden hesaplayıp Firestore'a yazar. Sıralama,
+ * maçların gerçek kickoffAt (başlama saati) bilgisine göre yapılır - admin
+ * panelinde eklenme sırasına göre DEĞİL (bkz. src/services/userService.ts'deki
+ * aynı isimli fonksiyonun yorumu, aynı hata burada da düzeltilmiştir).
+ */
 async function recalculateUserStreak(uid) {
   const predSnap = await db.collection('predictions').where('userId', '==', uid).get();
   const predictions = predSnap.docs.map((d) => d.data());
+  const resolved = predictions.filter((p) => p.isCorrect !== null);
 
-  const currentStreak = calculateCurrentStreak(predictions);
-  const bestStreak = calculateBestStreak(predictions);
-  const totalPredictions = predictions.filter((p) => p.isCorrect !== null).length;
-  const correctPredictions = predictions.filter((p) => p.isCorrect === true).length;
+  const kickoffByMatchId = await getKickoffTimesByMatchIds(resolved.map((p) => p.matchId));
+  const ordered = resolved
+    .map((p) => ({ ...p, kickoffAt: kickoffByMatchId.get(p.matchId) ?? '' }))
+    .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime());
+
+  const currentStreak = calculateCurrentStreak(ordered);
+  const bestStreak = calculateBestStreak(ordered);
+  const totalPredictions = resolved.length;
+  const correctPredictions = resolved.filter((p) => p.isCorrect === true).length;
 
   const userRef = db.collection('users').doc(uid);
   const userSnap = await userRef.get();
