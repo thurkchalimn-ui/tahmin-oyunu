@@ -45,6 +45,11 @@ export function ChatMessageList({ messages, currentUserId }: ChatMessageListProp
                 className="font-display text-xs font-semibold text-scoreboard-amberDark hover:underline dark:text-scoreboard-amber"
               >
                 {message.displayName}
+                {message.isAdmin && (
+                  <span className="ml-1 font-mono text-[10px] font-normal text-pitch-700/50 dark:text-pitch-100/40">
+                    (admin)
+                  </span>
+                )}
               </Link>
               <span className="font-mono text-[10px] text-pitch-700/40 dark:text-pitch-100/30">
                 {formatChatTime(message.createdAt)}

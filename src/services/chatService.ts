@@ -21,12 +21,18 @@ function mapMessageDoc(id: string, data: Record<string, unknown>): ChatMessage {
     userId: data.userId as string,
     displayName: (data.displayName as string) ?? 'İsimsiz Oyuncu',
     text: data.text as string,
+    isAdmin: (data.isAdmin as boolean) ?? false,
     createdAt: iso,
   };
 }
 
 /** Sohbet kanalına yeni bir mesaj gönderir. */
-export async function sendMessage(userId: string, displayName: string, text: string): Promise<void> {
+export async function sendMessage(
+  userId: string,
+  displayName: string,
+  text: string,
+  isAdmin: boolean,
+): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) throw new Error('Boş mesaj gönderilemez.');
   if (trimmed.length > MAX_MESSAGE_LENGTH) {
@@ -36,6 +42,7 @@ export async function sendMessage(userId: string, displayName: string, text: str
     userId,
     displayName,
     text: trimmed,
+    isAdmin,
     createdAt: Timestamp.now(),
   });
 }

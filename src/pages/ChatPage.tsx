@@ -8,12 +8,12 @@ import { ErrorMessage } from '@/components/common/ErrorMessage';
 
 /** Kullanıcıların birbirine kullanıcı adlarıyla göründüğü, herkese açık sohbet kanalı. */
 export function ChatPage() {
-  const { firebaseUser, profile, emailVerified } = useAuth();
+  const { firebaseUser, profile, emailVerified, isAdmin } = useAuth();
   const { data: messages, loading, error } = useChatMessages();
 
   async function handleSend(text: string) {
     if (!firebaseUser || !profile) return;
-    await sendMessage(firebaseUser.uid, profile.displayName, text);
+    await sendMessage(firebaseUser.uid, profile.displayName, text, isAdmin);
   }
 
   const disabled = !firebaseUser || !emailVerified;

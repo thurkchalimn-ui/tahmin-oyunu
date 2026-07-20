@@ -59,5 +59,6 @@ export interface ChatMessage {
   userId: string;
   displayName: string;
   text: string;
+  isAdmin: boolean; // Gönderen admin mi? (Firestore kuralında doğrulanır, sahte etiket takılamaz)
   createdAt: string; // ISO 8601
 }
