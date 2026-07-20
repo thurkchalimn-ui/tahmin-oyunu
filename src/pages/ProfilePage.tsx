@@ -1,14 +1,20 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePredictionHistory } from '@/hooks/usePredictionHistory';
 import { updateDisplayName } from '@/services/userService';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
+import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistoryList';
 import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { isNonEmpty } from '@/utils/validators';
 
 /** Kullanıcının kendi istatistiklerini ve rozetlerini gördüğü profil sayfası. */
 export function ProfilePage() {
   const { firebaseUser, profile } = useAuth();
+  const { data: history, loading: historyLoading, error: historyError } = usePredictionHistory(
+    firebaseUser?.uid,
+  );
   const [displayName, setDisplayName] = useState(profile?.displayName ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -91,6 +97,19 @@ export function ProfilePage() {
           Kaydet
         </Button>
       </form>
+
+      <section>
+        <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
+          Tahmin Geçmişim
+        </h2>
+        {historyLoading ? (
+          <LoadingSpinner label="Tahminler yükleniyor..." />
+        ) : historyError ? (
+          <ErrorMessage message={historyError} />
+        ) : (
+          <PredictionHistoryList items={history ?? []} />
+        )}
+      </section>
     </div>
   );
 }
