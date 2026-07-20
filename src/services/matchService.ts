@@ -25,6 +25,8 @@ function mapMatchDoc(id: string, data: Record<string, unknown>): Match {
     globalOrder: data.globalOrder as number,
     homeTeam: data.homeTeam as string,
     awayTeam: data.awayTeam as string,
+    homeTeamLogo: (data.homeTeamLogo as string) || undefined,
+    awayTeamLogo: (data.awayTeamLogo as string) || undefined,
     league: (data.league as string) ?? '',
     kickoffAt: toIso(data.kickoffAt),
     result: (data.result as PredictionChoice) ?? null,
@@ -45,6 +47,8 @@ interface NewMatchInput {
   dayOrder: number;
   homeTeam: string;
   awayTeam: string;
+  homeTeamLogo?: string;
+  awayTeamLogo?: string;
   league?: string;
   kickoffAt: string; // ISO string
 }

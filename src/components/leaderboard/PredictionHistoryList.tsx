@@ -1,5 +1,6 @@
 import type { PredictionHistoryItem } from '@/hooks/usePredictionHistory';
 import { formatMatchTime } from '@/utils/dateUtils';
+import { TeamLogo } from '@/components/common/TeamLogo';
 import type { PredictionChoice } from '@/types';
 
 interface PredictionHistoryListProps {
@@ -33,8 +34,10 @@ export function PredictionHistoryList({ items }: PredictionHistoryListProps) {
               bg-white p-3 dark:border-pitch-700 dark:bg-pitch-800"
           >
             <div>
-              <p className="font-body text-sm font-medium text-pitch-900 dark:text-pitch-100">
+              <p className="flex items-center gap-1.5 font-body text-sm font-medium text-pitch-900 dark:text-pitch-100">
+                <TeamLogo name={match.homeTeam} logoUrl={match.homeTeamLogo} size="sm" />
                 {match.homeTeam} vs {match.awayTeam}
+                <TeamLogo name={match.awayTeam} logoUrl={match.awayTeamLogo} size="sm" />
               </p>
               <p className="font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
                 {formatMatchTime(match.kickoffAt)}

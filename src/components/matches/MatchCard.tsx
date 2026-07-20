@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Match, Prediction, PredictionChoice } from '@/types';
 import { formatMatchTime, isMatchLocked } from '@/utils/dateUtils';
 import { Button } from '@/components/common/Button';
+import { TeamLogo } from '@/components/common/TeamLogo';
 
 interface MatchCardProps {
   match: Match;
@@ -52,9 +53,15 @@ export function MatchCard({ match, prediction, onPredict, isSubmitting = false }
       </div>
 
       <div className="mb-4 flex items-center justify-between font-display text-base font-medium text-pitch-900 dark:text-pitch-100">
-        <span className="flex-1 text-right">{match.homeTeam}</span>
+        <span className="flex flex-1 items-center justify-end gap-2 text-right">
+          {match.homeTeam}
+          <TeamLogo name={match.homeTeam} logoUrl={match.homeTeamLogo} />
+        </span>
         <span className="mx-3 text-pitch-700/40 dark:text-pitch-100/30">vs</span>
-        <span className="flex-1">{match.awayTeam}</span>
+        <span className="flex flex-1 items-center gap-2">
+          <TeamLogo name={match.awayTeam} logoUrl={match.awayTeamLogo} />
+          {match.awayTeam}
+        </span>
       </div>
 
       <div className="grid grid-cols-3 gap-2">

@@ -9,6 +9,8 @@ interface AdminMatchFormProps {
     dayOrder: number;
     homeTeam: string;
     awayTeam: string;
+    homeTeamLogo?: string;
+    awayTeamLogo?: string;
     league?: string;
     kickoffAt: string;
   }) => Promise<void>;
@@ -20,6 +22,8 @@ export function AdminMatchForm({ onSubmit, nextDayOrder }: AdminMatchFormProps) 
   const [date, setDate] = useState(todayKey());
   const [homeTeam, setHomeTeam] = useState('');
   const [awayTeam, setAwayTeam] = useState('');
+  const [homeTeamLogo, setHomeTeamLogo] = useState('');
+  const [awayTeamLogo, setAwayTeamLogo] = useState('');
   const [league, setLeague] = useState('');
   const [kickoffTime, setKickoffTime] = useState('20:00');
   const [error, setError] = useState<string | null>(null);
@@ -41,9 +45,20 @@ export function AdminMatchForm({ onSubmit, nextDayOrder }: AdminMatchFormProps) 
     setIsSubmitting(true);
     try {
       const kickoffAt = new Date(`${date}T${kickoffTime}:00`).toISOString();
-      await onSubmit({ date, dayOrder: nextDayOrder, homeTeam, awayTeam, league, kickoffAt });
+      await onSubmit({
+        date,
+        dayOrder: nextDayOrder,
+        homeTeam,
+        awayTeam,
+        homeTeamLogo: homeTeamLogo.trim() || undefined,
+        awayTeamLogo: awayTeamLogo.trim() || undefined,
+        league,
+        kickoffAt,
+      });
       setHomeTeam('');
       setAwayTeam('');
+      setHomeTeamLogo('');
+      setAwayTeamLogo('');
     } catch {
       setError('Maç eklenirken bir hata oluştu.');
     } finally {
@@ -98,6 +113,26 @@ export function AdminMatchForm({ onSubmit, nextDayOrder }: AdminMatchFormProps) 
           onChange={(e) => setAwayTeam(e.target.value)}
           placeholder="Ör. Fenerbahçe"
           className="rounded-md border border-pitch-700/20 bg-transparent px-3 py-2 dark:border-pitch-700"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
+        Ev Sahibi Logo Linki (opsiyonel)
+        <input
+          value={homeTeamLogo}
+          onChange={(e) => setHomeTeamLogo(e.target.value)}
+          placeholder="https://..."
+          className="rounded-md border border-pitch-700/20 bg-transparent px-3 py-2 font-mono text-xs dark:border-pitch-700"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
+        Deplasman Logo Linki (opsiyonel)
+        <input
+          value={awayTeamLogo}
+          onChange={(e) => setAwayTeamLogo(e.target.value)}
+          placeholder="https://..."
+          className="rounded-md border border-pitch-700/20 bg-transparent px-3 py-2 font-mono text-xs dark:border-pitch-700"
         />
       </label>
 

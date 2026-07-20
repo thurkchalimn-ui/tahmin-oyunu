@@ -9,6 +9,8 @@ export interface Match {
   globalOrder: number; // Tüm maçlar arasındaki kronolojik sıra (seri hesaplaması için)
   homeTeam: string;
   awayTeam: string;
+  homeTeamLogo?: string; // Admin panelinden girilen logo görseli linki (opsiyonel)
+  awayTeamLogo?: string;
   league?: string;
   kickoffAt: string; // ISO 8601 zaman damgası - maç başlangıcı (tahmin kilidi)
   result: PredictionChoice | null; // Sonuç girilene kadar null
