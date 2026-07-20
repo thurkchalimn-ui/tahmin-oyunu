@@ -42,7 +42,7 @@ async function getNextGlobalOrder(): Promise<number> {
   return (snap.docs[0].data().globalOrder as number) + 1;
 }
 
-interface NewMatchInput {
+export interface NewMatchInput {
   date: string;
   dayOrder: number;
   homeTeam: string;
@@ -62,6 +62,18 @@ export async function createMatch(input: NewMatchInput): Promise<void> {
     result: null,
     createdAt: Timestamp.now(),
   });
+}
+
+/**
+ * Admin: mevcut bir maçın bilgilerini günceller (takım adı, logo, lig, saat vb.).
+ * `date` ve `dayOrder` kasıtlı olarak buradan değiştirilemez, çünkü globalOrder ve
+ * dolayısıyla seri hesaplaması bunlara dayanır - yanlışlıkla bozulmalarını önler.
+ */
+export async function updateMatch(
+  matchId: string,
+  updates: Partial<Omit<NewMatchInput, 'date' | 'dayOrder'>>,
+): Promise<void> {
+  await updateDoc(doc(db, 'matches', matchId), updates);
 }
 
 /**

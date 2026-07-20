@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMatches } from '@/hooks/useMatches';
-import { createMatch, setMatchResult } from '@/services/matchService';
+import { createMatch, setMatchResult, updateMatch } from '@/services/matchService';
 import { AdminMatchForm } from '@/components/admin/AdminMatchForm';
 import { AdminMatchList } from '@/components/admin/AdminMatchList';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -65,6 +65,13 @@ export function AdminPage() {
                 await setMatchResult(matchId, result);
               } catch {
                 setActionError('Sonuç kaydedilemedi.');
+              }
+            }}
+            onUpdateMatch={async (matchId, updates) => {
+              try {
+                await updateMatch(matchId, updates);
+              } catch {
+                setActionError('Maç güncellenemedi.');
               }
             }}
           />
