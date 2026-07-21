@@ -1,10 +1,10 @@
 // ============================================================================
-// Bu script GitHub Actions tarafından zamanlanmış olarak (örn. 5 dakikada bir)
+// Bu script GitHub Actions tarafından zamanlanmış olarak (15 dakikada bir)
 // çalıştırılır. İki işi vardır:
 //   1) Başlamış ama henüz bitmemiş maçlar için ANLIK SKORU (canlı skor) çeker
 //      ve Firestore'a yazar - site bunu gerçek zamanlı okuyup gösterir.
-//   2) Kickoff saatinin üzerinden 3 saat geçtiği halde sonucu hâlâ girilmemiş
-//      maçları bulup, kesin sonucu yazar, tahminleri değerlendirir, serileri günceller.
+//   2) API-Football maçın bittiğini bildirdiği an (FT / AET / PEN) kesin
+//      sonucu yazar, tahminleri değerlendirir, serileri günceller.
 // Maçı API'de bulamazsa (takım adı eşleşmezse vb.) sessizce atlar; o maç admin
 // panelinden elle girilmeye devam edilebilir.
 //
@@ -12,6 +12,12 @@
 // birkaç dakika gecikmeli çalışabilir - "canlı" skor bu yüzden gerçek zamanlıdan
 // birkaç dakika geride kalabilir. Tamamen anlık istiyorsan ücretli bir servis
 // (Cloud Functions + Cloud Scheduler, saniyeler içinde tetiklenebilir) gerekir.
+//
+// KOTA NOTU: API-Football'un RapidAPI ücretsiz planı günde 100 / ayda 1000
+// istek ile sınırlı. Bu script aynı güne ait tüm maçlar için tek istek attığı
+// için maç sayısı değil, ÇALIŞMA SIKLIĞI (cron) ve maçın bitince ne kadar
+// çabuk sonuçlanacağı kotayı belirler. Maç bitince hemen sonuçlandırmak
+// (aşağıda artık sabit bir gecikme YOK) gereksiz sorguları önler.
 //
 // Gerekli ortam değişkenleri (GitHub Actions "Secrets" olarak eklenir):
 //   FIREBASE_SERVICE_ACCOUNT_KEY  -> Firebase servis hesabı JSON'ının tamamı (tek satır)
@@ -22,7 +28,6 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
 const STREAK_TARGET = 15; // src/utils/streakUtils.ts ile aynı değer - değiştirirsen orada da değiştir
-const RESULT_DELAY_MS = 3 * 60 * 60 * 1000; // Maç başlangıcından 3 saat sonra kontrol et
 
 // --- Firebase Admin SDK başlatma -------------------------------------------
 const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
@@ -242,10 +247,13 @@ async function main() {
         continue;
       }
 
-      const isDueForFinal = new Date(match.kickoffAt).getTime() + RESULT_DELAY_MS <= now;
+      // Maç bittiği an (API 'FT' / 'AET' / 'PEN' dediği an) hemen sonuçlandır.
+      // Eskiden kickoff'tan 3 saat sonrasını bekleyen sabit bir gecikme vardı;
+      // bu, maç bitmiş olsa bile gereksiz yere ek API isteği harcatıyordu.
+      // Artık gecikme yok - kota daha verimli kullanılıyor, sonuçlar daha hızlı işleniyor.
       const result = extractResult(fixture);
 
-      if (result && isDueForFinal) {
+      if (result) {
         // --- Kesin sonucu yaz, tahminleri değerlendir, serileri güncelle ---
         await db.collection('matches').doc(match.id).update({ result, liveScore: null });
 
