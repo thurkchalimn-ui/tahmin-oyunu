@@ -43,10 +43,16 @@ export function usePredictionHistory(uid: string | undefined): AsyncState<Predic
               const aPending = a.prediction.isCorrect === null;
               const bPending = b.prediction.isCorrect === null;
               if (aPending !== bPending) return aPending ? -1 : 1; // sonuçlanmamışlar önce
-              const diff = new Date(a.match.kickoffAt).getTime() - new Date(b.match.kickoffAt).getTime();
-              // Sonuçlanmamışlar: en erken başlayacak üstte. Sonuçlananlar: en son
-              // biten üstte (ana sayfadaki HomePage.tsx ile birebir aynı mantık).
-              return aPending ? diff : -diff;
+
+              if (aPending) {
+                // Sonuçlanmamışlar: en erken başlayacak üstte.
+                return new Date(a.match.kickoffAt).getTime() - new Date(b.match.kickoffAt).getTime();
+              }
+              // Sonuçlananlar: önce en son güne ait maçlar, aynı gün içinde de
+              // dayOrder'a göre 20'den geriye doğru (ana sayfadaki HomePage.tsx
+              // ile birebir aynı mantık).
+              if (a.match.date !== b.match.date) return a.match.date < b.match.date ? 1 : -1;
+              return b.match.dayOrder - a.match.dayOrder;
             });
 
           setState({ data: items, loading: false, error: null });
