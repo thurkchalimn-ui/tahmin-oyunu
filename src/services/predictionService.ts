@@ -10,6 +10,7 @@ function mapPredictionDoc(id: string, data: Record<string, unknown>): Prediction
     userId: data.userId as string,
     matchId: data.matchId as string,
     matchGlobalOrder: data.matchGlobalOrder as number,
+    date: (data.date as string) ?? '',
     choice: data.choice as PredictionChoice,
     isCorrect: (data.isCorrect as boolean | null) ?? null,
     createdAt: toIso(data.createdAt),
@@ -30,6 +31,7 @@ export async function submitPrediction(
     userId,
     matchId: match.id,
     matchGlobalOrder: match.globalOrder,
+    date: match.date,
     choice,
     isCorrect: null,
     createdAt: Timestamp.now(),
@@ -47,5 +49,27 @@ export function subscribeUserPredictions(
     q,
     (snap) => onChange(snap.docs.map((d) => mapPredictionDoc(d.id, d.data()))),
     () => onError('Tahminleriniz yüklenemedi.'),
+  );
+}
+
+/**
+ * Kullanıcının belirli bir güne ait toplam tahmin sayısını gerçek zamanlı dinler.
+ * Günlük tahmin hakkı limitini hesaplamak için kullanılır (bkz. creditsService.ts).
+ */
+export function subscribeDailyPredictionCount(
+  userId: string,
+  date: string,
+  onChange: (count: number) => void,
+  onError: (message: string) => void,
+): () => void {
+  const q = query(
+    collection(db, 'predictions'),
+    where('userId', '==', userId),
+    where('date', '==', date),
+  );
+  return onSnapshot(
+    q,
+    (snap) => onChange(snap.size),
+    () => onError('Günlük tahmin sayısı yüklenemedi.'),
   );
 }

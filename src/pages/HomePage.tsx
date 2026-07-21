@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMatches } from '@/hooks/useMatches';
 import { usePredictions } from '@/hooks/usePredictions';
+import { useDailyPredictionLimit } from '@/hooks/useDailyPredictionLimit';
 import { submitPrediction } from '@/services/predictionService';
 import { MatchList } from '@/components/matches/MatchList';
+import { DailyLimitPanel } from '@/components/matches/DailyLimitPanel';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
@@ -17,6 +19,7 @@ export function HomePage() {
   const date = todayKey();
   const { data: matches, loading: matchesLoading, error: matchesError } = useMatches(date);
   const { data: predictions, loading: predictionsLoading } = usePredictions(firebaseUser?.uid);
+  const dailyLimit = useDailyPredictionLimit(firebaseUser?.uid, date);
   const [submittingMatchId, setSubmittingMatchId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -27,6 +30,12 @@ export function HomePage() {
     }
     if (!emailVerified) {
       setSubmitError('Tahmin yapabilmek için önce e-postanı doğrulaman gerekiyor.');
+      return;
+    }
+    if (dailyLimit.remaining <= 0) {
+      setSubmitError(
+        'Bugünkü tahmin hakların bitti. Reklam izleyerek +1 hak kazanabilirsin (yukarıdaki panel).',
+      );
       return;
     }
     setSubmitError(null);
@@ -52,7 +61,10 @@ export function HomePage() {
         <StreakBadge currentStreak={profile?.currentStreak ?? 0} />
       </section>
 
+      {firebaseUser && !dailyLimit.loading && <DailyLimitPanel limit={dailyLimit} />}
+
       {submitError && <ErrorMessage message={submitError} />}
+      {dailyLimit.error && <ErrorMessage message={dailyLimit.error} />}
 
       <section>
         <h1 className="mb-3 font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">

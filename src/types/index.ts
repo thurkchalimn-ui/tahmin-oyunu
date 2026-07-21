@@ -34,6 +34,7 @@ export interface Prediction {
   userId: string;
   matchId: string;
   matchGlobalOrder: number;
+  date: string; // Maçın 'YYYY-MM-DD' tarihi - günlük tahmin hakkı sayımı için
   choice: PredictionChoice;
   isCorrect: boolean | null; // Sonuç girilmeden önce null
   createdAt: string;

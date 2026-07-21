@@ -49,12 +49,31 @@ service cloud.firestore {
     // maç henüz kilitlenmemişken (kickoffAt gelecekte) VE e-postasını
     // doğrulamışken oluşturabilir. isCorrect alanı yalnız admin tarafından
     // (sonuç girildiğinde) güncellenir.
+    // GÜVENLİK NOTU: Günlük tahmin hakkı limiti (5 ücretsiz + reklamla kazanılan
+    // bonus, en fazla 20) bu MVP'de yalnızca istemci tarafında (arayüzde)
+    // uygulanmaktadır. Tam sunucu taraflı doğrulama bir Cloud Function/transaction
+    // gerektirir; bkz. bu dosyanın başındaki benzer not (seri hesaplaması için).
     match /predictions/{predictionId} {
       allow read: if true;
       allow create: if isOwner(request.resource.data.userId) &&
         request.resource.data.isCorrect == null &&
+        request.resource.data.date is string &&
         request.auth.token.email_verified == true;
       allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // dailyBonusCredits/{uid}_{date}: kullanıcı, reklam izleyerek kazandığı
+    // günlük ekstra tahmin hakkını burada biriktirir. Her yazımda tam olarak
+    // +1 artabilir ve en fazla 15'e (5 temel hak + 15 = 20 tavan) ulaşabilir;
+    // böylece bir kullanıcı isteği manipüle etse bile sınırsız hak biriktiremez.
+    match /dailyBonusCredits/{docId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.userId) &&
+        request.resource.data.credits == 1;
+      allow update: if isOwner(resource.data.userId) &&
+        request.resource.data.credits == resource.data.credits + 1 &&
+        request.resource.data.credits <= 15;
       allow delete: if false;
     }
     // messages/{messageId}: herkes okuyabilir (giriş yapmasa bile), sadece
