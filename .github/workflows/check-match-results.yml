@@ -28,5 +28,5 @@ jobs:
       - name: Sonuç kontrol scriptini çalıştır
         env:
           FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
-          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          API_FOOTBALL_KEY: ${{ secrets.RAPIDAPI_KEY }}
         run: npm run check-results
