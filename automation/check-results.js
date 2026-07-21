@@ -144,10 +144,20 @@ async function fetchFixturesForDate(date) {
   const res = await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}`, {
     headers: {
       'x-apisports-key': API_FOOTBALL_KEY,
+      // Bazı sağlayıcılar/CDN'ler (ör. Cloudflare bot koruması), Node'un varsayılan
+      // fetch User-Agent'ını "robotik" bulup daha kimlik doğrulamaya gelmeden
+      // isteği engelleyebiliyor. Normal bir tarayıcı gibi görünmesi için ekliyoruz.
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+      Accept: 'application/json',
     },
   });
   if (!res.ok) {
-    throw new Error(`API-Football isteği başarısız: ${res.status} ${res.statusText}`);
+    // Teşhis için: sadece durum kodunu değil, sunucunun döndürdüğü gerçek gövdeyi de yazdır.
+    const bodyText = await res.text().catch(() => '(gövde okunamadı)');
+    throw new Error(
+      `API-Football isteği başarısız: ${res.status} ${res.statusText} - Gövde: ${bodyText.slice(0, 500)}`,
+    );
   }
   const json = await res.json();
   return json.response ?? [];
