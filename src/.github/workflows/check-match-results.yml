@@ -1,6 +1,6 @@
 name: Maç Sonuçlarını Otomatik Kontrol Et
 
-# Her 15 dakikada bir otomatik çalışır; "workflow_dispatch" ile GitHub arayüzünden
+# Her 5 dakikada bir otomatik çalışır; "workflow_dispatch" ile GitHub arayüzünden
 # elle de tetiklenebilir (test etmek için kullanışlı).
 on:
   schedule:
