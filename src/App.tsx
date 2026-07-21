@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { Navbar } from '@/components/common/Navbar';
+import { BottomNav } from '@/components/common/BottomNav';
 import { EmailVerificationBanner } from '@/components/common/EmailVerificationBanner';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
 import { HomePage } from '@/pages/HomePage';
@@ -23,7 +24,7 @@ export default function App() {
           <div className="min-h-screen bg-pitch-100 dark:bg-pitch-900">
             <Navbar />
             <EmailVerificationBanner />
-            <main>
+            <main className="pb-16">
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/giris" element={<LoginPage />} />
@@ -50,6 +51,7 @@ export default function App() {
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </main>
+            <BottomNav />
           </div>
         </BrowserRouter>
       </AuthProvider>

@@ -24,7 +24,7 @@ export function ChatPage() {
       : undefined;
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-2xl flex-col px-4 py-4">
+    <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-2xl flex-col px-4 py-4">
       <h1 className="mb-3 font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
         Sohbet
       </h1>

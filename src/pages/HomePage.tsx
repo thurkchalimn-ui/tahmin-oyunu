@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMatches } from '@/hooks/useMatches';
 import { usePredictions } from '@/hooks/usePredictions';
@@ -6,22 +6,34 @@ import { useDailyPredictionLimit } from '@/hooks/useDailyPredictionLimit';
 import { submitPrediction } from '@/services/predictionService';
 import { MatchList } from '@/components/matches/MatchList';
 import { DailyLimitPanel } from '@/components/matches/DailyLimitPanel';
+import { DateNavigator } from '@/components/matches/DateNavigator';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { AdBanner } from '@/components/common/AdBanner';
-import { todayKey } from '@/utils/dateUtils';
+import { todayKey, formatDateHeading } from '@/utils/dateUtils';
 import type { Match, PredictionChoice } from '@/types';
 
-/** Ana sayfa: bugünün 20 maçını gösterir ve kullanıcının tahmin yapmasını sağlar. */
+/** Ana sayfa: seçilen günün maçlarını gösterir ve kullanıcının tahmin yapmasını sağlar. */
 export function HomePage() {
   const { firebaseUser, profile, emailVerified } = useAuth();
-  const date = todayKey();
-  const { data: matches, loading: matchesLoading, error: matchesError } = useMatches(date);
+  const today = todayKey();
+  const [selectedDate, setSelectedDate] = useState(today);
+  const { data: matches, loading: matchesLoading, error: matchesError } = useMatches(selectedDate);
   const { data: predictions, loading: predictionsLoading } = usePredictions(firebaseUser?.uid);
-  const dailyLimit = useDailyPredictionLimit(firebaseUser?.uid, date);
+  // Günlük tahmin hakkı her zaman BUGÜNE göre hesaplanır - hangi günün maçlarına bakıldığından bağımsız.
+  const dailyLimit = useDailyPredictionLimit(firebaseUser?.uid, today);
   const [submittingMatchId, setSubmittingMatchId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Sonucu henüz belirlenmemiş maçlar üstte, sonuçlanmış maçlar listenin en altında
+  // (kickoffAt sırası her iki grup içinde de korunur - bkz. useMatches/matchService).
+  const orderedMatches = useMemo(() => {
+    const list = matches ?? [];
+    const pending = list.filter((m) => m.result === null);
+    const resolved = list.filter((m) => m.result !== null);
+    return [...pending, ...resolved];
+  }, [matches]);
 
   async function handlePredict(match: Match, choice: PredictionChoice) {
     if (!firebaseUser) {
@@ -49,9 +61,6 @@ export function HomePage() {
     }
   }
 
-  if (matchesLoading || predictionsLoading) return <LoadingSpinner fullScreen label="Maçlar yükleniyor..." />;
-  if (matchesError) return <ErrorMessage message={matchesError} />;
-
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6">
       <section className="rounded-xl border border-pitch-700/15 bg-white p-5 dark:border-pitch-700 dark:bg-pitch-800">
@@ -67,15 +76,25 @@ export function HomePage() {
       {dailyLimit.error && <ErrorMessage message={dailyLimit.error} />}
 
       <section>
-        <h1 className="mb-3 font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
-          Bugünün 20 Maçı
-        </h1>
-        <MatchList
-          matches={matches ?? []}
-          predictions={predictions ?? []}
-          onPredict={handlePredict}
-          submittingMatchId={submittingMatchId}
-        />
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
+            {selectedDate === today ? 'Bugünün Maçları' : `${formatDateHeading(selectedDate)} Maçları`}
+          </h1>
+          <DateNavigator date={selectedDate} onChange={setSelectedDate} />
+        </div>
+
+        {matchesLoading || predictionsLoading ? (
+          <LoadingSpinner label="Maçlar yükleniyor..." />
+        ) : matchesError ? (
+          <ErrorMessage message={matchesError} />
+        ) : (
+          <MatchList
+            matches={orderedMatches}
+            predictions={predictions ?? []}
+            onPredict={handlePredict}
+            submittingMatchId={submittingMatchId}
+          />
+        )}
       </section>
 
       <AdBanner slot="bottom" />
