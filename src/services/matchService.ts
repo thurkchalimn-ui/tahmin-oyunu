@@ -111,14 +111,16 @@ export function subscribeMatchesByDate(
   // Not: Burada bilinçli olarak orderBy kullanılmıyor. `where('date', ...)` ile
   // farklı bir alanda `orderBy` birleştirmek Firestore'da composite index
   // gerektirir (Firebase Console'da manuel oluşturulması gerekir). Günde en
-  // fazla 20 maç olacağı için sıralamayı burada, istemci tarafında yapmak
-  // hem index derdini ortadan kaldırıyor hem de performans açısından sorun teşkil etmiyor.
+  // fazla 20 maç olacağı için sıralamayı burada, istemci tarafında (gerçek
+  // başlama saatine - kickoffAt - göre, admin panelinde eklenme sırasına göre
+  // DEĞİL) yapmak hem index derdini ortadan kaldırıyor hem de performans
+  // açısından sorun teşkil etmiyor.
   const q = query(collection(db, 'matches'), where('date', '==', date));
   return onSnapshot(
     q,
     (snap) => {
       const matches = snap.docs.map((d) => mapMatchDoc(d.id, d.data()));
-      matches.sort((a, b) => a.dayOrder - b.dayOrder);
+      matches.sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime());
       onChange(matches);
     },
     (error) => {
