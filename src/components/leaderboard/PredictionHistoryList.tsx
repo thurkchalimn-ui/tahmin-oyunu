@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import type { PredictionHistoryItem } from '@/hooks/usePredictionHistory';
 import { formatMatchTime } from '@/utils/dateUtils';
 import { TeamLogo } from '@/components/common/TeamLogo';
+import { Button } from '@/components/common/Button';
 import type { PredictionChoice } from '@/types';
 
 interface PredictionHistoryListProps {
@@ -8,9 +10,19 @@ interface PredictionHistoryListProps {
 }
 
 const CHOICE_LABELS: Record<PredictionChoice, string> = { HOME: '1', DRAW: 'X', AWAY: '2' };
+const PAGE_SIZE = 15;
 
-/** Bir oyuncunun geçmiş tahminlerini, maç bilgisi ve doğru/yanlış durumuyla listeler. */
+/**
+ * Bir oyuncunun geçmiş tahminlerini, maç bilgisi ve doğru/yanlış durumuyla listeler.
+ * Liste 15'erlik sayfalara bölünür (uzun geçmişlerde tek seferde onlarca satır
+ * yüklenmesin diye); `items` zaten kronolojik sırayla (en eski maç en üstte) gelir.
+ */
 export function PredictionHistoryList({ items }: PredictionHistoryListProps) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = items.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   if (items.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-pitch-700/20 p-8 text-center dark:border-pitch-700">
@@ -23,7 +35,7 @@ export function PredictionHistoryList({ items }: PredictionHistoryListProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      {items.map(({ match, prediction }) => {
+      {pageItems.map(({ match, prediction }) => {
         const isPending = prediction.isCorrect === null;
         const isCorrect = prediction.isCorrect === true;
 
@@ -58,6 +70,30 @@ export function PredictionHistoryList({ items }: PredictionHistoryListProps) {
           </div>
         );
       })}
+
+      {totalPages > 1 && (
+        <div className="mt-2 flex items-center justify-center gap-3">
+          <Button
+            variant="ghost"
+            disabled={currentPage === 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="!px-3 !py-1.5 text-xs"
+          >
+            ← Önceki
+          </Button>
+          <span className="font-mono text-xs text-pitch-700/60 dark:text-pitch-100/50">
+            Sayfa {currentPage} / {totalPages}
+          </span>
+          <Button
+            variant="ghost"
+            disabled={currentPage === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="!px-3 !py-1.5 text-xs"
+          >
+            Sonraki →
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

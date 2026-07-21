@@ -39,7 +39,7 @@ export function usePredictionHistory(uid: string | undefined): AsyncState<Predic
               return match ? { match, prediction } : null;
             })
             .filter((item): item is PredictionHistoryItem => item !== null)
-            .sort((a, b) => new Date(b.match.kickoffAt).getTime() - new Date(a.match.kickoffAt).getTime());
+            .sort((a, b) => new Date(a.match.kickoffAt).getTime() - new Date(b.match.kickoffAt).getTime());
 
           setState({ data: items, loading: false, error: null });
         } catch {
