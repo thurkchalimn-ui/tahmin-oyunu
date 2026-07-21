@@ -30,6 +30,7 @@ function mapMatchDoc(id: string, data: Record<string, unknown>): Match {
     league: (data.league as string) ?? '',
     kickoffAt: toIso(data.kickoffAt),
     result: (data.result as PredictionChoice) ?? null,
+    liveScore: (data.liveScore as Match['liveScore']) ?? null,
     createdAt: toIso(data.createdAt),
   };
 }

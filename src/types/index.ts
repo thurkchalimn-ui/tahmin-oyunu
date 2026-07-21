@@ -14,7 +14,18 @@ export interface Match {
   league?: string;
   kickoffAt: string; // ISO 8601 zaman damgası - maç başlangıcı (tahmin kilidi)
   result: PredictionChoice | null; // Sonuç girilene kadar null
+  liveScore?: LiveScore | null; // Otomasyon tarafından maç sırasında güncellenir
   createdAt: string;
+}
+
+// Otomasyon script'inin (bkz. automation/check-results.js) maç devam ederken
+// yazdığı anlık skor bilgisi. status, API-Football'un ham kodlarını taşır
+// (ör. '1H', 'HT', '2H', 'FT', 'PST'); ekranda gösterirken yorumlanır.
+export interface LiveScore {
+  homeGoals: number;
+  awayGoals: number;
+  status: string;
+  minute: string | null;
 }
 
 // Kullanıcının bir maça verdiği tahmin
