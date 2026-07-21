@@ -43,10 +43,9 @@ export function usePredictionHistory(uid: string | undefined): AsyncState<Predic
               const aPending = a.prediction.isCorrect === null;
               const bPending = b.prediction.isCorrect === null;
               if (aPending !== bPending) return aPending ? -1 : 1; // sonuçlanmamışlar önce
-              const diff = new Date(a.match.kickoffAt).getTime() - new Date(b.match.kickoffAt).getTime();
-              // Sonuçlanmamışlar: en erken başlayacak üstte. Sonuçlananlar: bitişi
-              // en yakın (en son oynanan) üstte, geriye doğru (eskiye) sıralanır.
-              return aPending ? diff : -diff;
+              // Her iki grup içinde de ana sayfadaki (matchService.subscribeMatchesByDate)
+              // ile birebir aynı sıralama: en erken başlayan üstte.
+              return new Date(a.match.kickoffAt).getTime() - new Date(b.match.kickoffAt).getTime();
             });
 
           setState({ data: items, loading: false, error: null });
