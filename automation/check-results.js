@@ -21,7 +21,8 @@
 //
 // Gerekli ortam değişkenleri (GitHub Actions "Secrets" olarak eklenir):
 //   FIREBASE_SERVICE_ACCOUNT_KEY  -> Firebase servis hesabı JSON'ının tamamı (tek satır)
-//   RAPIDAPI_KEY                  -> RapidAPI üzerinden alınan API-Football anahtarı
+//   API_FOOTBALL_KEY              -> dashboard.api-football.com üzerinden alınan
+//                                    ücretsiz API anahtarı (RapidAPI KULLANILMIYOR)
 // ============================================================================
 
 import { initializeApp, cert } from 'firebase-admin/app';
@@ -39,9 +40,11 @@ const serviceAccount = JSON.parse(serviceAccountRaw);
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
-if (!RAPIDAPI_KEY) {
-  console.error('HATA: RAPIDAPI_KEY ortam değişkeni bulunamadı.');
+// RapidAPI yerine API-Football'un kendi sunucusuna (dashboard.api-football.com
+// üzerinden alınan ücretsiz anahtarla) doğrudan bağlanıyoruz.
+const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
+if (!API_FOOTBALL_KEY) {
+  console.error('HATA: API_FOOTBALL_KEY ortam değişkeni bulunamadı.');
   process.exit(1);
 }
 
@@ -136,12 +139,11 @@ async function recalculateUserStreak(uid) {
   });
 }
 
-/** API-Football'dan verilen tarihe ait tüm maçları çeker. */
+/** API-Football'dan (RapidAPI değil, doğrudan kendi sunucusundan) verilen tarihe ait tüm maçları çeker. */
 async function fetchFixturesForDate(date) {
-  const res = await fetch(`https://api-football-v1.p.rapidapi.com/v3/fixtures?date=${date}`, {
+  const res = await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}`, {
     headers: {
-      'x-rapidapi-key': RAPIDAPI_KEY,
-      'x-rapidapi-host': 'api-football-v1.p.rapidapi.com',
+      'x-apisports-key': API_FOOTBALL_KEY,
     },
   });
   if (!res.ok) {
