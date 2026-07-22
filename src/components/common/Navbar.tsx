@@ -12,15 +12,13 @@ import logo from '@/assets/logo.png';
  */
 export function Navbar() {
   const { firebaseUser } = useAuth();
-
   return (
     <header className="sticky top-0 z-20 border-b border-pitch-700/20 bg-pitch-100/90 backdrop-blur
       dark:border-pitch-700 dark:bg-pitch-900/90">
-      <nav className="mx-auto flex max-w-4xl items-center justify-between px-4 py-2">
+      <nav className="mx-auto flex max-w-4xl items-center justify-between px-4 py-1.5">
         <NavLink to="/" className="flex items-center gap-2">
-          <img src={logo} alt="Tahmin Serisi" className="h-11 w-11 object-contain" />
+          <img src={logo} alt="Tahmin Serisi" className="h-16 w-16 object-contain" />
         </NavLink>
-
         <div className="flex items-center gap-3">
           <ThemeToggle />
           {firebaseUser ? (
