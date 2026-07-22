@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AsyncState, Match, Prediction } from '@/types';
 import { subscribeUserPredictions } from '@/services/predictionService';
 import { getMatchesByIds } from '@/services/matchService';
-import { compareMatchesAscending, compareMatchesDescending } from '@/utils/matchNumbering';
+import { compareMatchesAscending, compareMatchesDescendingReverseAlpha } from '@/utils/matchNumbering';
 
 export interface PredictionHistoryItem {
   match: Match;
@@ -14,8 +14,9 @@ export interface PredictionHistoryItem {
  * (takım adları, saat) birleştirerek getirir. Sıralama, ana sayfadaki ve
  * seri hesaplamasındaki (bkz. matchNumbering.ts) mantıkla birebir aynıdır:
  * sonuçlanmamış tahminler en erken başlayacak üstte, sonuçlananlar en son
- * başlayan üstte; aynı saatte başlayanlarda ev sahibi takım adına göre
- * alfabetik sıralamanın uygulanır.
+ * başlayan üstte; aynı saatte başlayanlarda sonuçlanmamışlarda ev sahibi
+ * takım adına göre A'dan Z'ye, sonuçlananlarda ise Z'den A'ya sıralama
+ * uygulanır.
  */
 export function usePredictionHistory(uid: string | undefined): AsyncState<PredictionHistoryItem[]> {
   const [state, setState] = useState<AsyncState<PredictionHistoryItem[]>>({
@@ -30,14 +31,12 @@ export function usePredictionHistory(uid: string | undefined): AsyncState<Predic
       return;
     }
     setState({ data: null, loading: true, error: null });
-
     const unsubscribe = subscribeUserPredictions(
       uid,
       async (predictions) => {
         try {
           const matches = await getMatchesByIds(predictions.map((p) => p.matchId));
           const matchById = new Map(matches.map((m) => [m.id, m]));
-
           const items = predictions
             .map((prediction) => {
               const match = matchById.get(prediction.matchId);
@@ -50,9 +49,8 @@ export function usePredictionHistory(uid: string | undefined): AsyncState<Predic
               if (aPending !== bPending) return aPending ? -1 : 1; // sonuçlanmamışlar önce
               return aPending
                 ? compareMatchesAscending(a.match, b.match)
-                : compareMatchesDescending(a.match, b.match);
+                : compareMatchesDescendingReverseAlpha(a.match, b.match);
             });
-
           setState({ data: items, loading: false, error: null });
         } catch {
           setState({ data: null, loading: false, error: 'Tahmin geçmişi yüklenemedi.' });
