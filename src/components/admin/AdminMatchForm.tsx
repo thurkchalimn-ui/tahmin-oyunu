@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/common/Button';
 import { isNonEmpty } from '@/utils/validators';
 import { todayKey } from '@/utils/dateUtils';
+import { getTeamLogoByName } from '@/services/matchService';
 
 interface AdminMatchFormProps {
   onSubmit: (input: {
@@ -29,6 +30,21 @@ export function AdminMatchForm({ onSubmit, nextDayOrder }: AdminMatchFormProps) 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Takım adı yazılıp alandan çıkıldığında, daha önce aynı isimle eklenmiş bir
+  // maçtaki logo varsa otomatik doldurur. Kullanıcı zaten elle bir logo linki
+  // girdiyse (ör. bu maça özel farklı bir logo istiyorsa) üzerine YAZILMAZ.
+  async function handleHomeTeamBlur() {
+    if (!isNonEmpty(homeTeam) || homeTeamLogo.trim()) return;
+    const logo = await getTeamLogoByName(homeTeam).catch(() => undefined);
+    if (logo) setHomeTeamLogo(logo);
+  }
+
+  async function handleAwayTeamBlur() {
+    if (!isNonEmpty(awayTeam) || awayTeamLogo.trim()) return;
+    const logo = await getTeamLogoByName(awayTeam).catch(() => undefined);
+    if (logo) setAwayTeamLogo(logo);
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -44,7 +60,12 @@ export function AdminMatchForm({ onSubmit, nextDayOrder }: AdminMatchFormProps) 
 
     setIsSubmitting(true);
     try {
-      const kickoffAt = new Date(`${date}T${kickoffTime}:00`).toISOString();
+      // NOT: Saat dilimi belirtilmeden `new Date('2026-01-01T18:45:00')` çağrılırsa,
+      // bu kodu ÇALIŞTIRAN cihazın/tarayıcının yerel saat dilimine göre yorumlanır -
+      // bu da ortama göre farklı (ve yanlış) sonuçlar verebiliyordu. Türkiye DST
+      // kullanmıyor ve yıl boyu sabit UTC+3'te olduğu için bunu açıkça belirtip
+      // tarayıcı ortamından bağımsız, her zaman doğru UTC değerini elde ediyoruz.
+      const kickoffAt = new Date(`${date}T${kickoffTime}:00+03:00`).toISOString();
       await onSubmit({
         date,
         dayOrder: nextDayOrder,
@@ -101,6 +122,7 @@ export function AdminMatchForm({ onSubmit, nextDayOrder }: AdminMatchFormProps) 
         <input
           value={homeTeam}
           onChange={(e) => setHomeTeam(e.target.value)}
+          onBlur={handleHomeTeamBlur}
           placeholder="Ör. Galatasaray"
           className="rounded-md border border-pitch-700/20 bg-transparent px-3 py-2 dark:border-pitch-700"
         />
@@ -111,27 +133,28 @@ export function AdminMatchForm({ onSubmit, nextDayOrder }: AdminMatchFormProps) 
         <input
           value={awayTeam}
           onChange={(e) => setAwayTeam(e.target.value)}
+          onBlur={handleAwayTeamBlur}
           placeholder="Ör. Fenerbahçe"
           className="rounded-md border border-pitch-700/20 bg-transparent px-3 py-2 dark:border-pitch-700"
         />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        Ev Sahibi Logo Linki (opsiyonel)
+        Ev Sahibi Logo Linki (opsiyonel - takım adı yazılınca varsa otomatik dolar)
         <input
           value={homeTeamLogo}
           onChange={(e) => setHomeTeamLogo(e.target.value)}
-          placeholder="https://..."
+          placeholder="https://... (boş bırakırsan otomatik doldurulmaya çalışılır)"
           className="rounded-md border border-pitch-700/20 bg-transparent px-3 py-2 font-mono text-xs dark:border-pitch-700"
         />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        Deplasman Logo Linki (opsiyonel)
+        Deplasman Logo Linki (opsiyonel - takım adı yazılınca varsa otomatik dolar)
         <input
           value={awayTeamLogo}
           onChange={(e) => setAwayTeamLogo(e.target.value)}
-          placeholder="https://..."
+          placeholder="https://... (boş bırakırsan otomatik doldurulmaya çalışılır)"
           className="rounded-md border border-pitch-700/20 bg-transparent px-3 py-2 font-mono text-xs dark:border-pitch-700"
         />
       </label>
