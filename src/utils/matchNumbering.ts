@@ -28,6 +28,22 @@ export function compareMatchesDescending(
 }
 
 /**
+ * compareMatchesDescending ile aynı, ama aynı saatte başlayan maçlarda
+ * alfabetik sıralamayı TERSTEN (Z'den A'ya) uygular. Sadece tahmin geçmişi
+ * (usePredictionHistory) ekranındaki sonuçlanmış tahminler için kullanılır -
+ * ana sayfa/profil sayfalarındaki genel sıralamayı (orderMatchesForDisplay)
+ * etkilemez.
+ */
+export function compareMatchesDescendingReverseAlpha(
+  a: { kickoffAt: string; homeTeam: string },
+  b: { kickoffAt: string; homeTeam: string },
+): number {
+  const timeDiff = new Date(b.kickoffAt).getTime() - new Date(a.kickoffAt).getTime();
+  if (timeDiff !== 0) return timeDiff;
+  return b.homeTeam.localeCompare(a.homeTeam, 'tr');
+}
+
+/**
  * Bir listeyi, sonucu belirlenmemiş maçlar en erken başlayacak olan üstte
  * olacak şekilde; sonuçlanmış maçları ise en son başlayan üstte olacak
  * şekilde iki gruba ayırıp birleştirir. Ana sayfa ve profil sayfalarındaki
