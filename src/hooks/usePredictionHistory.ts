@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { AsyncState, Match, Prediction } from '@/types';
 import { subscribeUserPredictions } from '@/services/predictionService';
 import { getMatchesByIds } from '@/services/matchService';
-import { compareMatchesAscending, compareMatchesDescendingReverseAlpha } from '@/utils/matchNumbering';
 
 export interface PredictionHistoryItem {
   match: Match;
@@ -11,12 +10,7 @@ export interface PredictionHistoryItem {
 
 /**
  * Bir kullanıcının tüm tahminlerini, ait oldukları maçın bilgileriyle
- * (takım adları, saat) birleştirerek getirir. Sıralama, ana sayfadaki ve
- * seri hesaplamasındaki (bkz. matchNumbering.ts) mantıkla birebir aynıdır:
- * sonuçlanmamış tahminler en erken başlayacak üstte, sonuçlananlar en son
- * başlayan üstte; aynı saatte başlayanlarda sonuçlanmamışlarda ev sahibi
- * takım adına göre A'dan Z'ye, sonuçlananlarda ise Z'den A'ya sıralama
- * uygulanır.
+ * (takım adları, saat) birleştirerek, en yeni maç en üstte olacak şekilde getirir.
  */
 export function usePredictionHistory(uid: string | undefined): AsyncState<PredictionHistoryItem[]> {
   const [state, setState] = useState<AsyncState<PredictionHistoryItem[]>>({
@@ -31,12 +25,14 @@ export function usePredictionHistory(uid: string | undefined): AsyncState<Predic
       return;
     }
     setState({ data: null, loading: true, error: null });
+
     const unsubscribe = subscribeUserPredictions(
       uid,
       async (predictions) => {
         try {
           const matches = await getMatchesByIds(predictions.map((p) => p.matchId));
           const matchById = new Map(matches.map((m) => [m.id, m]));
+
           const items = predictions
             .map((prediction) => {
               const match = matchById.get(prediction.matchId);
@@ -47,10 +43,18 @@ export function usePredictionHistory(uid: string | undefined): AsyncState<Predic
               const aPending = a.prediction.isCorrect === null;
               const bPending = b.prediction.isCorrect === null;
               if (aPending !== bPending) return aPending ? -1 : 1; // sonuçlanmamışlar önce
-              return aPending
-                ? compareMatchesAscending(a.match, b.match)
-                : compareMatchesDescendingReverseAlpha(a.match, b.match);
+
+              if (aPending) {
+                // Sonuçlanmamışlar: en erken başlayacak üstte.
+                return new Date(a.match.kickoffAt).getTime() - new Date(b.match.kickoffAt).getTime();
+              }
+              // Sonuçlananlar: önce en son güne ait maçlar, aynı gün içinde de
+              // dayOrder'a göre 20'den geriye doğru (ana sayfadaki HomePage.tsx
+              // ile birebir aynı mantık).
+              if (a.match.date !== b.match.date) return a.match.date < b.match.date ? 1 : -1;
+              return b.match.dayOrder - a.match.dayOrder;
             });
+
           setState({ data: items, loading: false, error: null });
         } catch {
           setState({ data: null, loading: false, error: 'Tahmin geçmişi yüklenemedi.' });

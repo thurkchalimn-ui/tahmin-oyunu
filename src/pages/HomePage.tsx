@@ -12,7 +12,6 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { AdBanner } from '@/components/common/AdBanner';
 import { todayKey, formatDateHeading } from '@/utils/dateUtils';
-import { orderMatchesForDisplay } from '@/utils/matchNumbering';
 import type { Match, PredictionChoice } from '@/types';
 
 /** Ana sayfa: seçilen günün maçlarını gösterir ve kullanıcının tahmin yapmasını sağlar. */
@@ -27,11 +26,21 @@ export function HomePage() {
   const [submittingMatchId, setSubmittingMatchId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Sonucu henüz belirlenmemiş maçlar üstte (en erken başlayacak üstte),
-  // sonuçlanmış maçlar altta (en son başlayan üstte); aynı saatte başlayan
-  // maçlarda ev sahibi takım adına göre alfabetik sıralama uygulanır.
-  // Bu mantık, seri hesaplamasıyla (userService.ts) birebir aynıdır.
-  const orderedMatches = useMemo(() => orderMatchesForDisplay(matches ?? []), [matches]);
+  // Sonucu henüz belirlenmemiş maçlar üstte (en erken başlayacak olan en üstte),
+  // sonuçlanmış maçlar listenin en altında ama kendi içinde: önce en son güne
+  // ait maçlar, aynı gün içinde de dayOrder'a göre 20'den geriye doğru sıralanır
+  // (bkz. usePredictionHistory.ts - profildeki sıralamayla birebir aynı mantık).
+  const orderedMatches = useMemo(() => {
+    const list = matches ?? [];
+    const pending = [...list.filter((m) => m.result === null)].sort(
+      (a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime(),
+    );
+    const resolved = [...list.filter((m) => m.result !== null)].sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return b.dayOrder - a.dayOrder;
+    });
+    return [...pending, ...resolved];
+  }, [matches]);
 
   async function handlePredict(match: Match, choice: PredictionChoice) {
     if (!firebaseUser) {
