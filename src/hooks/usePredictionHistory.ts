@@ -15,7 +15,7 @@ export interface PredictionHistoryItem {
  * seri hesaplamasındaki (bkz. matchNumbering.ts) mantıkla birebir aynıdır:
  * sonuçlanmamış tahminler en erken başlayacak üstte, sonuçlananlar en son
  * başlayan üstte; aynı saatte başlayanlarda ev sahibi takım adına göre
- * alfabetik sıralamanın tersi uygulanır.
+ * alfabetik sıralamanın uygulanır.
  */
 export function usePredictionHistory(uid: string | undefined): AsyncState<PredictionHistoryItem[]> {
   const [state, setState] = useState<AsyncState<PredictionHistoryItem[]>>({
