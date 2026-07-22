@@ -1,34 +1,64 @@
 export const STREAK_TARGET = 15; // Rozet kazanmak için gereken art arda doğru sayısı
 
-/** Seri hesaplaması için sıralanmış, sonuçlanmış bir tahmin öğesi. */
-export interface OrderedResolvedPrediction {
+/** Seri hesaplaması için gereken minimum bilgi. */
+export interface StreakInput {
+  kickoffAt: string;
+  homeTeam: string; // Sadece aynı anda başlayan maçlar arasında STABİL bir sıra için kullanılır
   isCorrect: boolean | null;
 }
 
 /**
- * Kronolojik sıraya (maçın gerçek başlama saatine göre) DİZİLMİŞ tahmin listesini
- * işleyerek güncel seriyi hesaplar. Herhangi bir yanlış tahmin seriyi sıfırlar.
- * ÖNEMLİ: Bu fonksiyon sıralamayı kendisi yapmaz — çağıran taraf (userService),
- * tahminleri ilgili maçın `kickoffAt` alanına göre sıralayıp buraya öyle vermelidir.
- * Aksi halde (örn. admin panelinde maçların eklenme sırasına göre sıralanırsa) seri
- * yanlış hesaplanabilir - bu proje daha önce tam olarak bu hataya sahipti.
+ * Sonuçlanmış tahminleri kickoffAt'a göre kronolojik sıraya dizip, AYNI ANDA
+ * (aynı dakikada) başlayan maçları tek bir grup olarak birleştirir.
+ *
+ * Neden gerekli: iki maç tam olarak aynı saatte başlıyorsa, "hangisi önce
+ * oynandı" sorusunun gerçek bir cevabı yoktur. Bunları sırayla (biri diğerinden
+ * önceymiş gibi) değerlendirmek, hangi takımın ismi alfabetik olarak önce
+ * geldiğine göre keyfi ve yanıltıcı sonuçlar üretir (ör. aynı anda başlayan
+ * doğru+yanlış bir çift, sadece isim sıralaması yüzünden doğrunun hiç
+ * sayılmamasına yol açabilir). Bunun yerine, aynı anda başlayan maçlar TEK BİR
+ * grup olarak değerlendirilir: grubun hepsi doğruysa serinin tamamına birden
+ * eklenir, içlerinden biri bile yanlışsa seri o noktada sıfırlanır.
  */
-export function calculateCurrentStreak(orderedPredictions: OrderedResolvedPrediction[]): number {
+function groupResolvedByKickoff(items: StreakInput[]): StreakInput[][] {
+  const resolved = items.filter((i) => i.isCorrect !== null);
+  const sorted = [...resolved].sort((a, b) => {
+    const timeDiff = new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime();
+    if (timeDiff !== 0) return timeDiff;
+    return a.homeTeam.localeCompare(b.homeTeam, 'tr');
+  });
+
+  const groups: StreakInput[][] = [];
+  for (const item of sorted) {
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup && lastGroup[0].kickoffAt === item.kickoffAt) {
+      lastGroup.push(item);
+    } else {
+      groups.push([item]);
+    }
+  }
+  return groups;
+}
+
+/** Güncel seriyi hesaplar. Aynı anda başlayan maçlar birlikte (grup olarak) değerlendirilir. */
+export function calculateCurrentStreak(items: StreakInput[]): number {
+  const groups = groupResolvedByKickoff(items);
   let streak = 0;
-  for (const prediction of orderedPredictions) {
-    if (prediction.isCorrect === null) continue; // Sonuçlanmamış olanlar sayılmaz
-    streak = prediction.isCorrect ? streak + 1 : 0;
+  for (const group of groups) {
+    const allCorrect = group.every((i) => i.isCorrect === true);
+    streak = allCorrect ? streak + group.length : 0;
   }
   return streak;
 }
 
-/** Kronolojik sıraya dizilmiş tahminlerden tüm zamanların en yüksek serisini hesaplar. */
-export function calculateBestStreak(orderedPredictions: OrderedResolvedPrediction[]): number {
+/** Tüm zamanların en yüksek serisini hesaplar (aynı grup mantığıyla). */
+export function calculateBestStreak(items: StreakInput[]): number {
+  const groups = groupResolvedByKickoff(items);
   let streak = 0;
   let best = 0;
-  for (const prediction of orderedPredictions) {
-    if (prediction.isCorrect === null) continue;
-    streak = prediction.isCorrect ? streak + 1 : 0;
+  for (const group of groups) {
+    const allCorrect = group.every((i) => i.isCorrect === true);
+    streak = allCorrect ? streak + group.length : 0;
     best = Math.max(best, streak);
   }
   return best;

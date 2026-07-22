@@ -47,6 +47,28 @@ export async function sendMessage(
   });
 }
 
+/**
+ * Sadece en son mesajın zamanını dinler (tüm mesajları çekmeden). BottomNav'daki
+ * "yeni mesaj var" kırmızı noktasını hafif bir sorguyla güncel tutmak için kullanılır.
+ */
+export function subscribeLatestMessageTime(onChange: (iso: string | null) => void): () => void {
+  const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc'), fbLimit(1));
+  return onSnapshot(
+    q,
+    (snap) => {
+      if (snap.empty) {
+        onChange(null);
+        return;
+      }
+      const data = snap.docs[0].data();
+      const createdAt = data.createdAt;
+      const iso = createdAt instanceof Timestamp ? createdAt.toDate().toISOString() : (createdAt as string);
+      onChange(iso ?? null);
+    },
+    () => onChange(null),
+  );
+}
+
 /** Son mesajları gerçek zamanlı dinler (en eski en üstte olacak şekilde döner). */
 export function subscribeMessages(
   onChange: (messages: ChatMessage[]) => void,

@@ -30,6 +30,9 @@ function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
     correctPredictions: (data.correctPredictions as number) ?? 0,
     badges: (data.badges as Badge[]) ?? [],
     isAdmin: false, // AuthContext içinde admins koleksiyonuna göre ayrıca belirlenir
+    lastSeenChatAt: data.lastSeenChatAt ? toIso(data.lastSeenChatAt) : null,
+    lastSeenRank: (data.lastSeenRank as number | undefined) ?? null,
+    lastSeenProfileAt: data.lastSeenProfileAt ? toIso(data.lastSeenProfileAt) : null,
     createdAt: toIso(data.createdAt),
     updatedAt: toIso(data.updatedAt),
   };

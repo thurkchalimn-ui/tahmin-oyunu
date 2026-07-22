@@ -37,6 +37,7 @@ export interface Prediction {
   date: string; // Maçın 'YYYY-MM-DD' tarihi - günlük tahmin hakkı sayımı için
   choice: PredictionChoice;
   isCorrect: boolean | null; // Sonuç girilmeden önce null
+  resolvedAt?: string | null; // Sonucun girildiği an (ISO) - "yeni sonuçlandı" bildirimi için
   createdAt: string;
 }
 
@@ -56,6 +57,11 @@ export interface UserProfile {
   correctPredictions: number;
   badges: Badge[];
   isAdmin: boolean;
+  // Bildirim göstergeleri (kırmızı nokta) için: kullanıcı ilgili sayfayı en son
+  // ne zaman / hangi sırada gördü. Sayfa ziyaret edildiğinde güncellenir.
+  lastSeenChatAt?: string | null;
+  lastSeenRank?: number | null;
+  lastSeenProfileAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
