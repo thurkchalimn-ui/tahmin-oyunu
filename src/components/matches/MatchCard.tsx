@@ -49,7 +49,7 @@ export function MatchCard({ match, prediction, onPredict, isSubmitting = false }
         dark:border-pitch-700 dark:bg-pitch-800"
     >
       <div className="mb-3 flex items-center justify-between text-xs font-mono text-pitch-700/60 dark:text-pitch-100/50">
-        <span>{match.league || 'Maç'} · #{match.dayOrder}</span>
+        <span>{match.league || 'Maç'}</span>
         <span>{formatMatchTime(match.kickoffAt)}</span>
       </div>
 

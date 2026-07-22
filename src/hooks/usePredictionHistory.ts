@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AsyncState, Match, Prediction } from '@/types';
 import { subscribeUserPredictions } from '@/services/predictionService';
 import { getMatchesByIds } from '@/services/matchService';
+import { compareMatchesAscending, compareMatchesDescending } from '@/utils/matchNumbering';
 
 export interface PredictionHistoryItem {
   match: Match;
@@ -10,7 +11,11 @@ export interface PredictionHistoryItem {
 
 /**
  * Bir kullanıcının tüm tahminlerini, ait oldukları maçın bilgileriyle
- * (takım adları, saat) birleştirerek, en yeni maç en üstte olacak şekilde getirir.
+ * (takım adları, saat) birleştirerek getirir. Sıralama, ana sayfadaki ve
+ * seri hesaplamasındaki (bkz. matchNumbering.ts) mantıkla birebir aynıdır:
+ * sonuçlanmamış tahminler en erken başlayacak üstte, sonuçlananlar en son
+ * başlayan üstte; aynı saatte başlayanlarda ev sahibi takım adına göre
+ * alfabetik sıralama uygulanır.
  */
 export function usePredictionHistory(uid: string | undefined): AsyncState<PredictionHistoryItem[]> {
   const [state, setState] = useState<AsyncState<PredictionHistoryItem[]>>({
@@ -43,16 +48,9 @@ export function usePredictionHistory(uid: string | undefined): AsyncState<Predic
               const aPending = a.prediction.isCorrect === null;
               const bPending = b.prediction.isCorrect === null;
               if (aPending !== bPending) return aPending ? -1 : 1; // sonuçlanmamışlar önce
-
-              if (aPending) {
-                // Sonuçlanmamışlar: en erken başlayacak üstte.
-                return new Date(a.match.kickoffAt).getTime() - new Date(b.match.kickoffAt).getTime();
-              }
-              // Sonuçlananlar: önce en son güne ait maçlar, aynı gün içinde de
-              // dayOrder'a göre 20'den geriye doğru (ana sayfadaki HomePage.tsx
-              // ile birebir aynı mantık).
-              if (a.match.date !== b.match.date) return a.match.date < b.match.date ? 1 : -1;
-              return b.match.dayOrder - a.match.dayOrder;
+              return aPending
+                ? compareMatchesAscending(a.match, b.match)
+                : compareMatchesDescending(a.match, b.match);
             });
 
           setState({ data: items, loading: false, error: null });

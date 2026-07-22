@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Match, PredictionChoice } from '@/types';
 import { formatMatchTime } from '@/utils/dateUtils';
+import { assignMatchNumbers } from '@/utils/matchNumbering';
 import { TeamLogo } from '@/components/common/TeamLogo';
 import { AdminMatchEditForm } from '@/components/admin/AdminMatchEditForm';
 import { Button } from '@/components/common/Button';
@@ -41,6 +42,10 @@ export function AdminMatchList({ matches, onSetResult, onUpdateMatch }: AdminMat
     return <p className="text-sm text-pitch-700/60 dark:text-pitch-100/50">Bu tarihte maç yok.</p>;
   }
 
+  // Admin listesindeki #N etiketi, dayOrder (eklenme sırası) yerine gerçek
+  // başlama saatine göre hesaplanır - böylece her zaman doğru kronolojik sırayı yansıtır.
+  const numberMap = assignMatchNumbers(matches);
+
   return (
     <div className="flex flex-col gap-2">
       {matches.map((match) =>
@@ -63,7 +68,7 @@ export function AdminMatchList({ matches, onSetResult, onUpdateMatch }: AdminMat
             <div>
               <p className="flex items-center gap-1.5 font-body text-sm font-medium text-pitch-900 dark:text-pitch-100">
                 <TeamLogo name={match.homeTeam} logoUrl={match.homeTeamLogo} size="sm" />
-                #{match.dayOrder} {match.homeTeam} vs {match.awayTeam}
+                #{numberMap.get(match.id) ?? 0} {match.homeTeam} vs {match.awayTeam}
                 <TeamLogo name={match.awayTeam} logoUrl={match.awayTeamLogo} size="sm" />
               </p>
               <p className="font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">

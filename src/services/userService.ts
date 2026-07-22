@@ -15,6 +15,7 @@ import {
 import { db } from '@/config/firebase';
 import type { UserProfile, Prediction, Badge } from '@/types';
 import { calculateCurrentStreak, calculateBestStreak, STREAK_TARGET } from '@/utils/streakUtils';
+import { compareMatchesAscending } from '@/utils/matchNumbering';
 
 /** Firestore Timestamp alanlarını ISO string'e çevirerek UserProfile'a dönüştürür. */
 function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
@@ -74,14 +75,16 @@ export async function updateDisplayName(uid: string, displayName: string): Promi
 }
 
 /**
- * Verilen maç ID'lerinin `kickoffAt` (başlama saati) değerlerini toplu olarak getirir.
- * matchService.ts'deki benzer fonksiyonun küçük bir kopyasıdır; matchService zaten bu
- * dosyadaki recalculateUserStreak'i çağırdığı için döngüsel import'tan kaçınmak amacıyla
- * burada ayrıca (ve sade şekilde) tanımlanmıştır.
+ * Verilen maç ID'lerinin sıralama için gereken bilgilerini (kickoffAt ve
+ * homeTeam) toplu olarak getirir. matchService.ts'deki benzer fonksiyonun
+ * küçük bir kopyasıdır; matchService zaten bu dosyadaki recalculateUserStreak'i
+ * çağırdığı için döngüsel import'tan kaçınmak amacıyla burada ayrıca tanımlanmıştır.
  */
-async function getKickoffTimesByMatchIds(matchIds: string[]): Promise<Map<string, string>> {
+async function getMatchOrderingInfoByIds(
+  matchIds: string[],
+): Promise<Map<string, { kickoffAt: string; homeTeam: string }>> {
   const uniqueIds = Array.from(new Set(matchIds));
-  const result = new Map<string, string>();
+  const result = new Map<string, { kickoffAt: string; homeTeam: string }>();
   if (uniqueIds.length === 0) return result;
 
   const chunks: string[][] = [];
@@ -94,9 +97,10 @@ async function getKickoffTimesByMatchIds(matchIds: string[]): Promise<Map<string
       const q = query(collection(db, 'matches'), where(documentId(), 'in', chunk));
       const snap = await getDocs(q);
       snap.docs.forEach((d) => {
-        const kickoffAt = d.data().kickoffAt;
+        const data = d.data();
+        const kickoffAt = data.kickoffAt;
         const iso = kickoffAt instanceof Timestamp ? kickoffAt.toDate().toISOString() : (kickoffAt as string);
-        result.set(d.id, iso ?? '');
+        result.set(d.id, { kickoffAt: iso ?? '', homeTeam: (data.homeTeam as string) ?? '' });
       });
     }),
   );
@@ -110,20 +114,20 @@ async function getKickoffTimesByMatchIds(matchIds: string[]): Promise<Map<string
  * ve 15'lik hedefe ulaşıldıysa yeni rozeti hesaplayıp kaydeder.
  *
  * ÖNEMLİ: Sıralama, maçın admin panelinde EKLENME sırasına göre değil, gerçek
- * `kickoffAt` saatine göre yapılır. Aksi halde admin maçları farklı bir sırayla
- * eklerse (örn. önce geç saatli bir maçı, sonra erken saatli bir maçı eklerse)
- * seri yanlış hesaplanır.
+ * `kickoffAt` saatine (aynı saatte başlayan maçlarda ev sahibi takım adına göre
+ * alfabetik sıraya) göre yapılır - bu, ana sayfada ve profil sayfalarında
+ * kullanıcının GÖRDÜĞÜ sıralamayla birebir aynıdır (bkz. utils/matchNumbering.ts).
  */
 export async function recalculateUserStreak(uid: string): Promise<void> {
   const predSnap = await getDocs(query(collection(db, 'predictions'), where('userId', '==', uid)));
   const predictions = predSnap.docs.map((d) => d.data() as Prediction);
 
   const resolved = predictions.filter((p) => p.isCorrect !== null);
-  const kickoffByMatchId = await getKickoffTimesByMatchIds(resolved.map((p) => p.matchId));
+  const orderingInfo = await getMatchOrderingInfoByIds(resolved.map((p) => p.matchId));
 
   const ordered = resolved
-    .map((p) => ({ ...p, kickoffAt: kickoffByMatchId.get(p.matchId) ?? '' }))
-    .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime());
+    .map((p) => ({ ...p, ...(orderingInfo.get(p.matchId) ?? { kickoffAt: '', homeTeam: '' }) }))
+    .sort(compareMatchesAscending);
 
   const currentStreak = calculateCurrentStreak(ordered);
   const bestStreak = calculateBestStreak(ordered);
