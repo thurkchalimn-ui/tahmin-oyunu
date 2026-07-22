@@ -35,6 +35,47 @@ function mapMatchDoc(id: string, data: Record<string, unknown>): Match {
   };
 }
 
+/**
+ * Verilen takım adının EV SAHİBİ ya da DEPLASMAN olarak daha önce eklendiği
+ * maçları arar ve bulduğu logolardan en son eklenmiş olanı döner. Admin
+ * panelinde takım adı yazılıp alandan çıkıldığında (blur), logo linkini
+ * otomatik doldurmak için kullanılır. Composite index gerektirmemesi için
+ * sıralama Firestore'da değil, istemci tarafında yapılır (bkz.
+ * subscribeMatchesByDate'teki aynı gerekçe).
+ */
+export async function getTeamLogoByName(teamName: string): Promise<string | undefined> {
+  const trimmed = teamName.trim();
+  if (!trimmed) return undefined;
+
+  const [homeSnap, awaySnap] = await Promise.all([
+    getDocs(query(collection(db, 'matches'), where('homeTeam', '==', trimmed))),
+    getDocs(query(collection(db, 'matches'), where('awayTeam', '==', trimmed))),
+  ]);
+
+  const candidates: { logo: string; createdAtMs: number }[] = [];
+
+  homeSnap.docs.forEach((d) => {
+    const data = d.data();
+    const logo = data.homeTeamLogo as string | undefined;
+    if (logo) {
+      const createdAt = data.createdAt;
+      candidates.push({ logo, createdAtMs: createdAt instanceof Timestamp ? createdAt.toMillis() : 0 });
+    }
+  });
+  awaySnap.docs.forEach((d) => {
+    const data = d.data();
+    const logo = data.awayTeamLogo as string | undefined;
+    if (logo) {
+      const createdAt = data.createdAt;
+      candidates.push({ logo, createdAtMs: createdAt instanceof Timestamp ? createdAt.toMillis() : 0 });
+    }
+  });
+
+  if (candidates.length === 0) return undefined;
+  candidates.sort((a, b) => b.createdAtMs - a.createdAtMs);
+  return candidates[0].logo;
+}
+
 /** Sıradaki global kronolojik sıra numarasını hesaplar (seri hesaplaması bu sıraya göre yapılır). */
 async function getNextGlobalOrder(): Promise<number> {
   const q = query(collection(db, 'matches'), orderBy('globalOrder', 'desc'), fbLimit(1));
@@ -108,13 +149,6 @@ export function subscribeMatchesByDate(
   onChange: (matches: Match[]) => void,
   onError: (message: string) => void,
 ): () => void {
-  // Not: Burada bilinçli olarak orderBy kullanılmıyor. `where('date', ...)` ile
-  // farklı bir alanda `orderBy` birleştirmek Firestore'da composite index
-  // gerektirir (Firebase Console'da manuel oluşturulması gerekir). Günde en
-  // fazla 20 maç olacağı için sıralamayı burada, istemci tarafında (gerçek
-  // başlama saatine - kickoffAt - göre, admin panelinde eklenme sırasına göre
-  // DEĞİL) yapmak hem index derdini ortadan kaldırıyor hem de performans
-  // açısından sorun teşkil etmiyor.
   const q = query(collection(db, 'matches'), where('date', '==', date));
   return onSnapshot(
     q,
@@ -146,11 +180,10 @@ export async function setMatchResult(matchId: string, result: PredictionChoice):
       const data = predDoc.data();
       const isCorrect = data.choice === result;
       affectedUserIds.add(data.userId as string);
-      await updateDoc(doc(db, 'predictions', predDoc.id), { isCorrect, resolvedAt: Timestamp.now() });
+      await updateDoc(doc(db, 'predictions', predDoc.id), { isCorrect });
     }),
   );
 
-  // Her etkilenen kullanıcı için seriyi yeniden hesapla (sıralı, race condition'ı azaltmak için)
   for (const uid of affectedUserIds) {
     await recalculateUserStreak(uid);
   }
