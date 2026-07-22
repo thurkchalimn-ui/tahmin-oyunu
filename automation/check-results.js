@@ -8,17 +8,6 @@
 // Maçı API'de bulamazsa (takım adı eşleşmezse vb.) sessizce atlar; o maç admin
 // panelinden elle girilmeye devam edilebilir.
 //
-// NOT: GitHub Actions'ın ücretsiz zamanlanmış görevleri saniyesinde değil,
-// birkaç dakika gecikmeli çalışabilir - "canlı" skor bu yüzden gerçek zamanlıdan
-// birkaç dakika geride kalabilir. Tamamen anlık istiyorsan ücretli bir servis
-// (Cloud Functions + Cloud Scheduler, saniyeler içinde tetiklenebilir) gerekir.
-//
-// KOTA NOTU: API-Football'un RapidAPI ücretsiz planı günde 100 / ayda 1000
-// istek ile sınırlı. Bu script aynı güne ait tüm maçlar için tek istek attığı
-// için maç sayısı değil, ÇALIŞMA SIKLIĞI (cron) ve maçın bitince ne kadar
-// çabuk sonuçlanacağı kotayı belirler. Maç bitince hemen sonuçlandırmak
-// (aşağıda artık sabit bir gecikme YOK) gereksiz sorguları önler.
-//
 // Gerekli ortam değişkenleri (GitHub Actions "Secrets" olarak eklenir):
 //   FIREBASE_SERVICE_ACCOUNT_KEY  -> Firebase servis hesabı JSON'ının tamamı (tek satır)
 //   API_FOOTBALL_KEY              -> dashboard.api-football.com üzerinden alınan
@@ -28,9 +17,8 @@
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
-const STREAK_TARGET = 15; // src/utils/streakUtils.ts ile aynı değer - değiştirirsen orada da değiştir
+const STREAK_TARGET = 15;
 
-// --- Firebase Admin SDK başlatma -------------------------------------------
 const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 if (!serviceAccountRaw) {
   console.error('HATA: FIREBASE_SERVICE_ACCOUNT_KEY ortam değişkeni bulunamadı.');
@@ -40,26 +28,20 @@ const serviceAccount = JSON.parse(serviceAccountRaw);
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
-// RapidAPI yerine API-Football'un kendi sunucusuna (dashboard.api-football.com
-// üzerinden alınan ücretsiz anahtarla) doğrudan bağlanıyoruz.
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
 if (!API_FOOTBALL_KEY) {
   console.error('HATA: API_FOOTBALL_KEY ortam değişkeni bulunamadı.');
   process.exit(1);
 }
 
-// --- Yardımcı fonksiyonlar ---------------------------------------------------
-
-/** Takım adlarını karşılaştırılabilir hale getirir (küçük harf, boşluk/aksan temizliği). */
 function normalizeTeamName(name) {
   return name
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // aksan işaretlerini kaldır
-    .replace(/[^a-z0-9]/g, ''); // harf/rakam dışını kaldır
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
 }
 
-/** Sıralanmış (kronolojik) tahminlerden güncel seriyi hesaplar (src/utils/streakUtils.ts ile aynı mantık). */
 function calculateCurrentStreak(orderedPredictions) {
   let streak = 0;
   for (const p of orderedPredictions) {
@@ -80,7 +62,6 @@ function calculateBestStreak(orderedPredictions) {
   return best;
 }
 
-/** Verilen maç ID'lerinin kickoffAt değerlerini toplu olarak getirir. */
 async function getKickoffTimesByMatchIds(matchIds) {
   const uniqueIds = [...new Set(matchIds)];
   const result = new Map();
@@ -100,12 +81,6 @@ async function getKickoffTimesByMatchIds(matchIds) {
   return result;
 }
 
-/**
- * Bir kullanıcının serisini yeniden hesaplayıp Firestore'a yazar. Sıralama,
- * maçların gerçek kickoffAt (başlama saati) bilgisine göre yapılır - admin
- * panelinde eklenme sırasına göre DEĞİL (bkz. src/services/userService.ts'deki
- * aynı isimli fonksiyonun yorumu, aynı hata burada da düzeltilmiştir).
- */
 async function recalculateUserStreak(uid) {
   const predSnap = await db.collection('predictions').where('userId', '==', uid).get();
   const predictions = predSnap.docs.map((d) => d.data());
@@ -144,16 +119,12 @@ async function fetchFixturesForDate(date) {
   const res = await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}`, {
     headers: {
       'x-apisports-key': API_FOOTBALL_KEY,
-      // Bazı sağlayıcılar/CDN'ler (ör. Cloudflare bot koruması), Node'un varsayılan
-      // fetch User-Agent'ını "robotik" bulup daha kimlik doğrulamaya gelmeden
-      // isteği engelleyebiliyor. Normal bir tarayıcı gibi görünmesi için ekliyoruz.
       'User-Agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
       Accept: 'application/json',
     },
   });
   if (!res.ok) {
-    // Teşhis için: sadece durum kodunu değil, sunucunun döndürdüğü gerçek gövdeyi de yazdır.
     const bodyText = await res.text().catch(() => '(gövde okunamadı)');
     throw new Error(
       `API-Football isteği başarısız: ${res.status} ${res.statusText} - Gövde: ${bodyText.slice(0, 500)}`,
@@ -163,7 +134,6 @@ async function fetchFixturesForDate(date) {
   return json.response ?? [];
 }
 
-/** Bizim kayıtlı maçımızı, API'den gelen fikstür listesinden takım adına göre bulur. */
 function findMatchingFixture(match, fixtures) {
   const home = normalizeTeamName(match.homeTeam);
   const away = normalizeTeamName(match.awayTeam);
@@ -174,10 +144,9 @@ function findMatchingFixture(match, fixtures) {
   });
 }
 
-/** API'den gelen skora göre 'HOME' | 'DRAW' | 'AWAY' sonucunu belirler. Maç bitmemişse null döner. */
 function extractResult(fixture) {
   const status = fixture.fixture?.status?.short;
-  const finishedStatuses = ['FT', 'AET', 'PEN']; // Normal süre, uzatma, penaltı sonrası biten maçlar
+  const finishedStatuses = ['FT', 'AET', 'PEN'];
   if (!finishedStatuses.includes(status)) return null;
 
   const homeGoals = fixture.goals?.home;
@@ -189,13 +158,6 @@ function extractResult(fixture) {
   return 'DRAW';
 }
 
-/**
- * API'den gelen fikstürden anlık skor bilgisini çıkarır. Maç henüz başlamamışsa
- * (NS) null döner - gösterilecek bir şey yoktur. Devam eden, devre arası, uzatma,
- * ertelenen/iptal edilen maçlar dahil her durumda bir liveScore nesnesi döner;
- * front-end bu `status` koduna göre uygun etiketi ("CANLI", "Devre Arası",
- * "Ertelendi" vb.) kendisi belirler.
- */
 function extractLiveScore(fixture) {
   const status = fixture.fixture?.status?.short;
   if (!status || status === 'NS') return null;
@@ -212,17 +174,12 @@ function extractLiveScore(fixture) {
   };
 }
 
-// --- Ana akış -----------------------------------------------------------------
-
 async function main() {
   console.log('[check-results] Kontrol başlıyor:', new Date().toISOString());
 
-  // Sonucu boş olan tüm maçları çek (Admin SDK'da eşitlik filtresi index gerektirmez)
   const pendingSnap = await db.collection('matches').where('result', '==', null).get();
   const now = Date.now();
 
-  // Başlamış (kickoff geçmiş) ve henüz sonuçlanmamış tüm maçlar: canlı skor ve/veya
-  // final sonuç için aday. Henüz başlamamış maçlar için API'ye hiç sorulmaz.
   const startedMatches = pendingSnap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((m) => new Date(m.kickoffAt).getTime() <= now);
@@ -233,7 +190,6 @@ async function main() {
   }
   console.log(`[check-results] ${startedMatches.length} başlamış maç kontrol edilecek.`);
 
-  // API isteklerini azaltmak için maçları tarihe göre grupla (günde 1 istek)
   const byDate = new Map();
   for (const match of startedMatches) {
     if (!byDate.has(match.date)) byDate.set(match.date, []);
@@ -259,14 +215,9 @@ async function main() {
         continue;
       }
 
-      // Maç bittiği an (API 'FT' / 'AET' / 'PEN' dediği an) hemen sonuçlandır.
-      // Eskiden kickoff'tan 3 saat sonrasını bekleyen sabit bir gecikme vardı;
-      // bu, maç bitmiş olsa bile gereksiz yere ek API isteği harcatıyordu.
-      // Artık gecikme yok - kota daha verimli kullanılıyor, sonuçlar daha hızlı işleniyor.
       const result = extractResult(fixture);
 
       if (result) {
-        // --- Kesin sonucu yaz, tahminleri değerlendir, serileri güncelle ---
         await db.collection('matches').doc(match.id).update({ result, liveScore: null });
 
         const predSnap = await db.collection('predictions').where('matchId', '==', match.id).get();
@@ -288,7 +239,6 @@ async function main() {
         continue;
       }
 
-      // --- Henüz kesinleşmemiş: sadece anlık skoru güncelle ---
       const liveScore = extractLiveScore(fixture);
       if (liveScore) {
         await db.collection('matches').doc(match.id).update({ liveScore });
