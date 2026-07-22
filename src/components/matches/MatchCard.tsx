@@ -49,7 +49,7 @@ export function MatchCard({ match, prediction, onPredict, isSubmitting = false }
         dark:border-pitch-700 dark:bg-pitch-800"
     >
       <div className="mb-3 flex items-center justify-between text-xs font-mono text-pitch-700/60 dark:text-pitch-100/50">
-        <span>{match.league || 'Maç'}</span>
+        <span>{match.league || 'Maç'} · #{match.dayOrder}</span>
         <span>{formatMatchTime(match.kickoffAt)}</span>
       </div>
 
@@ -65,9 +65,9 @@ export function MatchCard({ match, prediction, onPredict, isSubmitting = false }
         </span>
       </div>
 
-      {!hasResult && match.liveScore && (
-        <LiveScoreBar liveScore={match.liveScore} />
-      )}
+      {/* Skor çubuğu artık sadece maç devam ederken değil, sonuçlandıktan sonra da
+          gösteriliyor - check-results.js sonuçlandırırken skoru artık silmiyor. */}
+      {match.liveScore && <LiveScoreBar liveScore={match.liveScore} />}
 
       <div className="grid grid-cols-3 gap-2">
         {(Object.keys(CHOICE_LABELS) as PredictionChoice[]).map((choice) => {
