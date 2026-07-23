@@ -25,7 +25,8 @@ jobs:
       - name: Bağımlılıkları kur
         run: npm install
 
-      - name: Bildirim/hatırlatma scriptini çalıştır
+      - name: Bildirim/hatırlatma/canlı skor scriptini çalıştır
         env:
           FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
         run: npm run check-results
