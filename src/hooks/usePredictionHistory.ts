@@ -49,7 +49,7 @@ export function usePredictionHistory(uid: string | undefined): AsyncState<Predic
               if (aPending !== bPending) return aPending ? -1 : 1; // sonuçlanmamışlar önce
               return aPending
                 ? compareMatchesAscending(a.match, b.match)
-                : compareMatchesDescendingReverseAlpha(a.match, b.match);
+                : compareMatchesDescending(a.match, b.match);
             });
           setState({ data: items, loading: false, error: null });
         } catch {
