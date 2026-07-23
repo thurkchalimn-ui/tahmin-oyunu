@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AsyncState, Match, Prediction } from '@/types';
 import { subscribeUserPredictions } from '@/services/predictionService';
 import { getMatchesByIds } from '@/services/matchService';
-import { compareMatchesAscending, compareMatchesDescendingReverseAlpha } from '@/utils/matchNumbering';
+import { compareMatchesAscending, compareMatchesDescending } from '@/utils/matchNumbering';
 
 export interface PredictionHistoryItem {
   match: Match;

@@ -17,30 +17,19 @@ export function compareMatchesAscending(
   return a.homeTeam.localeCompare(b.homeTeam, 'tr');
 }
 
-/** Aynı kurala göre, en son (en geç) başlayan maç önce olacak şekilde karşılaştırır. */
+/**
+ * Aynı kurala göre, en son (en geç) başlayan maç önce olacak şekilde karşılaştırır.
+ * Bilinçli olarak compareMatchesAscending'in ARGÜMANLARI TAKAS EDİLEREK çağrılması
+ * şeklinde tanımlanmıştır (ayrı bir mantık yazılmamıştır) - böylece bu, ascending
+ * sıralamanın matematiksel olarak BİREBİR TAM TERSİ olur (tie-break dahil). Ayrı
+ * bir tie-break tanımlansaydı, aynı anda başlayan maçlarda ekrandaki sıra ile
+ * seri hesaplamasındaki sıranın tutarsız olma riski olurdu.
+ */
 export function compareMatchesDescending(
   a: { kickoffAt: string; homeTeam: string },
   b: { kickoffAt: string; homeTeam: string },
 ): number {
-  const timeDiff = new Date(b.kickoffAt).getTime() - new Date(a.kickoffAt).getTime();
-  if (timeDiff !== 0) return timeDiff;
-  return a.homeTeam.localeCompare(b.homeTeam, 'tr');
-}
-
-/**
- * compareMatchesDescending ile aynı, ama aynı saatte başlayan maçlarda
- * alfabetik sıralamayı TERSTEN (Z'den A'ya) uygular. Sadece tahmin geçmişi
- * (usePredictionHistory) ekranındaki sonuçlanmış tahminler için kullanılır -
- * ana sayfa/profil sayfalarındaki genel sıralamayı (orderMatchesForDisplay)
- * etkilemez.
- */
-export function compareMatchesDescendingReverseAlpha(
-  a: { kickoffAt: string; homeTeam: string },
-  b: { kickoffAt: string; homeTeam: string },
-): number {
-  const timeDiff = new Date(b.kickoffAt).getTime() - new Date(a.kickoffAt).getTime();
-  if (timeDiff !== 0) return timeDiff;
-  return b.homeTeam.localeCompare(a.homeTeam, 'tr');
+  return compareMatchesAscending(b, a);
 }
 
 /**
