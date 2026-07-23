@@ -119,13 +119,31 @@ async function fetchFixturesForDate(date) {
 }
 
 /** Bizim kayıtlı maçımızı, API'den gelen fikstür listesinden takım adına göre bulur. */
+/**
+ * Bizim kayıtlı maçımızı, API'den gelen fikstür listesinden takım adına göre bulur.
+ * Önce TAM eşleşme dener (ör. "besiktas" === "besiktas"). Bulamazsa, biri
+ * diğerini İÇERİYOR mu diye bakar (ör. "besiktas" ile "besiktasjk" - API'nin
+ * takım isimlerine "FC", "JK", "1879" gibi ekler eklemesi çok yaygındır ve tam
+ * eşleşmeyi engeller). Bu ikinci adım, admin panelindeki kısa/sade isimlerle
+ * API'nin resmi (uzun) isimleri arasındaki farkların çoğunu çözer.
+ */
 function findMatchingFixture(match, fixtures) {
   const home = normalizeTeamName(match.homeTeam);
   const away = normalizeTeamName(match.awayTeam);
-  return fixtures.find((f) => {
+
+  const exact = fixtures.find((f) => {
     const fHome = normalizeTeamName(f.teams?.home?.name ?? '');
     const fAway = normalizeTeamName(f.teams?.away?.name ?? '');
     return fHome === home && fAway === away;
+  });
+  if (exact) return exact;
+
+  return fixtures.find((f) => {
+    const fHome = normalizeTeamName(f.teams?.home?.name ?? '');
+    const fAway = normalizeTeamName(f.teams?.away?.name ?? '');
+    const homeMatches = fHome.length > 2 && home.length > 2 && (fHome.includes(home) || home.includes(fHome));
+    const awayMatches = fAway.length > 2 && away.length > 2 && (fAway.includes(away) || away.includes(fAway));
+    return homeMatches && awayMatches;
   });
 }
 
