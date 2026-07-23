@@ -1,10 +1,12 @@
-name: Bildirim ve Hatırlatma Kontrolü
+name: Bildirim, Hatırlatma ve Canlı Skor Kontrolü
 
-# Her 5 dakikada bir otomatik çalışır; "workflow_dispatch" ile GitHub arayüzünden
-# elle de tetiklenebilir (test etmek için kullanışlı).
+# ÖNEMLİ: Burada bilinçli olarak "schedule" (GitHub'ın kendi zamanlayıcısı) YOK.
+# Sadece cron-job.org'un her 5 dakikada bir gönderdiği workflow_dispatch isteğiyle
+# çalışır. Daha önce hem GitHub'ın kendi zamanlayıcısı hem cron-job.org aynı anda
+# aktifken, ikisi zaman zaman çakışıp script'i eş zamanlı iki kez çalıştırıyor ve
+# bu da her bildirimin İKİ KEZ gönderilmesine yol açıyordu. Tek tetikleyici
+# kaynağı bırakarak bu çakışma tamamen ortadan kaldırılır.
 on:
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:

@@ -25,6 +25,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
 const REMINDER_WINDOW_MS = 30 * 60 * 1000; // Maç başlamadan 30 dakika önce hatırlatma gönder
+const LOCK_TTL_MS = 4 * 60 * 1000; // Kilit en fazla 4 dakika geçerli sayılır (script normalde çok daha hızlı biter)
 
 // --- Firebase Admin SDK başlatma (ZORUNLU) ---------------------------------
 const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
@@ -36,6 +37,32 @@ const serviceAccount = JSON.parse(serviceAccountRaw);
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 const messaging = getMessaging();
+
+/**
+ * Aynı anda iki çalışmanın (ör. cron-job.org'un bir isteği tekrarlaması ya da
+ * elle "Run workflow" ile otomatik tetiklemenin çakışması) aynı bildirimleri
+ * İKİ KEZ göndermesini önlemek için basit bir kilit. `automationState/lock`
+ * dokümanını bir transaction içinde okuyup-yazarak, hâlâ "taze" (LOCK_TTL_MS'den
+ * yeni) bir kilit varsa bu çalışmayı hemen sonlandırır.
+ */
+async function acquireLockOrExit() {
+  const lockRef = db.collection('automationState').doc('lock');
+  const acquired = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(lockRef);
+    const now = Date.now();
+    const lockedAt = snap.exists ? snap.data().lockedAt : 0;
+    if (snap.exists && now - lockedAt < LOCK_TTL_MS) {
+      return false; // Başka bir çalışma hâlâ devam ediyor (ya da az önce bitti)
+    }
+    tx.set(lockRef, { lockedAt: now });
+    return true;
+  });
+
+  if (!acquired) {
+    console.log('[check-results] Başka bir çalışma zaten devam ediyor gibi görünüyor, bu çalışma atlanıyor.');
+    process.exit(0);
+  }
+}
 
 // API_FOOTBALL_KEY opsiyonel: tanımlı değilse canlı skor adımı sessizce atlanır,
 // bildirim/hatırlatma işlevleri bundan tamamen bağımsız çalışmaya devam eder.
@@ -147,6 +174,25 @@ function findMatchingFixture(match, fixtures) {
   });
 }
 
+/**
+ * Eşleşme bulunamadığında, API'deki fikstür listesi içinde adı en çok benzeyen
+ * takımları bulup önerir (ilk 4 harfi aynı olanlar). Sadece teşhis/loglama
+ * amaçlıdır - admin panelindeki yazımı API'nin kullandığı resmi isimle
+ * düzeltmek için hangi ismin doğru olduğunu görmeyi sağlar.
+ */
+function suggestCandidateNames(teamName, fixtures) {
+  const key = normalizeTeamName(teamName).slice(0, 4);
+  if (key.length < 3) return [];
+  const names = new Set();
+  fixtures.forEach((f) => {
+    const h = f.teams?.home?.name ?? '';
+    const a = f.teams?.away?.name ?? '';
+    if (normalizeTeamName(h).startsWith(key)) names.add(h);
+    if (normalizeTeamName(a).startsWith(key)) names.add(a);
+  });
+  return [...names];
+}
+
 /** API'den gelen fikstürden anlık skor bilgisini çıkarır. Maç henüz başlamamışsa (NS) null döner. */
 function extractLiveScore(fixture) {
   const status = fixture.fixture?.status?.short;
@@ -191,9 +237,17 @@ async function updateLiveScores(allPending, now) {
     for (const match of matches) {
       const fixture = findMatchingFixture(match, fixtures);
       if (!fixture) {
+        const homeCandidates = suggestCandidateNames(match.homeTeam, fixtures);
+        const awayCandidates = suggestCandidateNames(match.awayTeam, fixtures);
         console.log(
           `[check-results] Eşleşme bulunamadı: ${match.homeTeam} vs ${match.awayTeam} (${date}) - ${fixtures.length} maç içinden hiçbiri isim olarak eşleşmedi.`,
         );
+        if (homeCandidates.length > 0) {
+          console.log(`  → "${match.homeTeam}" için API'deki olası isimler: ${homeCandidates.join(', ')}`);
+        }
+        if (awayCandidates.length > 0) {
+          console.log(`  → "${match.awayTeam}" için API'deki olası isimler: ${awayCandidates.join(', ')}`);
+        }
         continue;
       }
 
@@ -216,6 +270,8 @@ async function updateLiveScores(allPending, now) {
 
 async function main() {
   console.log('[check-results] Kontrol başlıyor:', new Date().toISOString());
+
+  await acquireLockOrExit();
 
   // --- 1) Admin panelinden elle girilen sonuçlara ait bekleyen bildirimler ---
   await processNotificationQueue();
