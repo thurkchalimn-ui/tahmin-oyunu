@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePredictionHistory } from '@/hooks/usePredictionHistory';
 import { updateDisplayName } from '@/services/userService';
 import { markProfileSeen } from '@/services/readStatusService';
+import { enablePushNotifications, type PushPermissionResult } from '@/services/notificationService';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistoryList';
 import { Button } from '@/components/common/Button';
@@ -20,6 +21,7 @@ export function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [pushStatus, setPushStatus] = useState<PushPermissionResult | 'idle' | 'requesting'>('idle');
 
   // Sayfa açılınca profili "görüldü" olarak işaretle - BottomNav'daki kırmızı nokta kaybolur.
   useEffect(() => {
@@ -45,6 +47,12 @@ export function ProfilePage() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleEnablePush() {
+    setPushStatus('requesting');
+    const result = await enablePushNotifications(firebaseUser!.uid);
+    setPushStatus(result);
   }
 
   return (
@@ -95,6 +103,35 @@ export function ProfilePage() {
           </div>
         </section>
       )}
+
+      <section className="rounded-xl border border-pitch-700/15 bg-white p-4 dark:border-pitch-700 dark:bg-pitch-800">
+        <h2 className="mb-1 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
+          🔔 Push Bildirimleri
+        </h2>
+        <p className="mb-3 font-body text-xs text-pitch-700/60 dark:text-pitch-100/50">
+          Tahmin ettiğin maçlar başlamadan 30 dakika önce ve sonuçlandığında telefonuna/tarayıcına
+          bildirim gönderelim.
+        </p>
+        {pushStatus === 'granted' ? (
+          <p className="font-mono text-xs text-pick-correct">✓ Bildirimler açık.</p>
+        ) : pushStatus === 'denied' ? (
+          <p className="font-mono text-xs text-pick-wrong">
+            İzin verilmedi. Tarayıcı ayarlarından bu site için bildirim iznini açman gerekiyor.
+          </p>
+        ) : pushStatus === 'unsupported' ? (
+          <p className="font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
+            Bu tarayıcı/cihaz push bildirimlerini desteklemiyor.
+          </p>
+        ) : pushStatus === 'error' ? (
+          <p className="font-mono text-xs text-pick-wrong">
+            Bir sorun oluştu, tekrar dener misin?
+          </p>
+        ) : (
+          <Button onClick={handleEnablePush} isLoading={pushStatus === 'requesting'} className="text-xs">
+            Bildirimleri Aç
+          </Button>
+        )}
+      </section>
 
       <form onSubmit={handleSave} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm text-pitch-900 dark:text-pitch-100">

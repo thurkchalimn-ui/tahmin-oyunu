@@ -20,9 +20,11 @@
 
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
 
 const STREAK_TARGET = 15; // src/utils/streakUtils.ts ile aynı değer - değiştirirsen orada da değiştir
 const RESULT_DELAY_MS = 3 * 60 * 60 * 1000; // Maç başlangıcından 3 saat sonra kontrol et
+const REMINDER_WINDOW_MS = 30 * 60 * 1000; // Maç başlamadan 30 dakika önce hatırlatma gönder
 
 // --- Firebase Admin SDK başlatma -------------------------------------------
 const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
@@ -33,11 +35,44 @@ if (!serviceAccountRaw) {
 const serviceAccount = JSON.parse(serviceAccountRaw);
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
+const messaging = getMessaging();
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 if (!RAPIDAPI_KEY) {
   console.error('HATA: RAPIDAPI_KEY ortam değişkeni bulunamadı.');
   process.exit(1);
+}
+
+/**
+ * Verilen kullanıcı ID'lerine push bildirimi gönderir. Her kullanıcının
+ * kayıtlı FCM token'larını (bkz. src/services/notificationService.ts,
+ * users/{uid}.fcmTokens alanı) okuyup hepsine gönderir. Token artık geçersizse
+ * (kullanıcı bildirimleri kapattıysa/uygulamayı kaldırdıysa) sessizce atlanır.
+ */
+async function sendPushToUsers(userIds, title, body) {
+  for (const uid of userIds) {
+    try {
+      const userSnap = await db.collection('users').doc(uid).get();
+      const tokens = userSnap.data()?.fcmTokens ?? [];
+      if (tokens.length === 0) continue;
+
+      const response = await messaging.sendEachForMulticast({
+        tokens,
+        notification: { title, body },
+      });
+
+      // Artık geçersiz olan token'ları temizle (kullanıcı izni kaldırmış/uygulamayı silmiş olabilir)
+      const invalidTokens = response.responses
+        .map((r, i) => (!r.success ? tokens[i] : null))
+        .filter(Boolean);
+      if (invalidTokens.length > 0) {
+        const validTokens = tokens.filter((t) => !invalidTokens.includes(t));
+        await db.collection('users').doc(uid).update({ fcmTokens: validTokens });
+      }
+    } catch (err) {
+      console.error(`[check-results] Bildirim gönderilemedi (${uid}):`, err.message);
+    }
+  }
 }
 
 // --- Yardımcı fonksiyonlar ---------------------------------------------------
@@ -214,12 +249,35 @@ async function main() {
   // Sonucu boş olan tüm maçları çek (Admin SDK'da eşitlik filtresi index gerektirmez)
   const pendingSnap = await db.collection('matches').where('result', '==', null).get();
   const now = Date.now();
+  const allPending = pendingSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
+  // --- 1) 30 dakika kala hatırlatma bildirimi (henüz başlamamış maçlar) ---
+  const upcomingMatches = allPending.filter((m) => {
+    if (m.reminderSent) return false; // Bu maç için hatırlatma zaten gönderildi
+    const msUntilKickoff = new Date(m.kickoffAt).getTime() - now;
+    return msUntilKickoff > 0 && msUntilKickoff <= REMINDER_WINDOW_MS;
+  });
+
+  for (const match of upcomingMatches) {
+    const predSnap = await db.collection('predictions').where('matchId', '==', match.id).get();
+    const userIds = [...new Set(predSnap.docs.map((d) => d.data().userId))];
+
+    if (userIds.length > 0) {
+      await sendPushToUsers(
+        userIds,
+        '⏰ Maç Yakında Başlıyor',
+        `${match.homeTeam} vs ${match.awayTeam} 30 dakika içinde başlıyor!`,
+      );
+      console.log(`[check-results] Hatırlatma gönderildi: ${match.homeTeam} vs ${match.awayTeam} (${userIds.length} kullanıcı)`);
+    }
+    // Tahmin yapan kimse olmasa bile bir daha denenmesin diye işaretle
+    await db.collection('matches').doc(match.id).update({ reminderSent: true });
+  }
+
+  // --- 2) Başlamış maçlar için canlı skor / kesin sonuç ---
   // Başlamış (kickoff geçmiş) ve henüz sonuçlanmamış tüm maçlar: canlı skor ve/veya
   // final sonuç için aday. Henüz başlamamış maçlar için API'ye hiç sorulmaz.
-  const startedMatches = pendingSnap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .filter((m) => new Date(m.kickoffAt).getTime() <= now);
+  const startedMatches = allPending.filter((m) => new Date(m.kickoffAt).getTime() <= now);
 
   if (startedMatches.length === 0) {
     console.log('[check-results] Başlamış, sonucu bekleyen maç yok. Çıkılıyor.');
@@ -262,14 +320,26 @@ async function main() {
 
         const predSnap = await db.collection('predictions').where('matchId', '==', match.id).get();
         const affectedUserIds = new Set();
+        const correctUserIds = [];
+        const wrongUserIds = [];
         for (const predDoc of predSnap.docs) {
           const data = predDoc.data();
           const isCorrect = data.choice === result;
           affectedUserIds.add(data.userId);
+          (isCorrect ? correctUserIds : wrongUserIds).push(data.userId);
           await predDoc.ref.update({ isCorrect, resolvedAt: Timestamp.now() });
         }
         for (const uid of affectedUserIds) {
           await recalculateUserStreak(uid);
+        }
+
+        // Maç sonuçlandı bildirimi (push)
+        const matchLabel = `${match.homeTeam} vs ${match.awayTeam}`;
+        if (correctUserIds.length > 0) {
+          await sendPushToUsers(correctUserIds, '✅ Doğru Tahmin!', `${matchLabel} maçını doğru bildin.`);
+        }
+        if (wrongUserIds.length > 0) {
+          await sendPushToUsers(wrongUserIds, '❌ Yanlış Tahmin', `${matchLabel} maçında tahminin tutmadı.`);
         }
 
         finalizedCount += 1;

@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getMessaging, isSupported } from 'firebase/messaging';
 
 // Firebase yapılandırması .env dosyasından okunur; API anahtarları asla
 // koda gömülmez (bkz. .env.example). Eksik değişken varsa erken uyarı verilir.
@@ -25,6 +26,12 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Push bildirimleri (FCM) tüm tarayıcılarda desteklenmiyor (ör. bazı eski
+// tarayıcılar, iOS'ta ana ekrana eklenmemiş Safari sekmeleri). isSupported()
+// bunu kontrol eder; desteklenmiyorsa null döner - kullanan kod buna göre
+// davranmalıdır (bkz. notificationService.ts).
+export const messagingPromise = isSupported().then((supported) => (supported ? getMessaging(app) : null));
 
 // Admin e-postaları: sadece istemci tarafı UI kontrolü içindir (menü göster/gizle).
 // Gerçek yetkilendirme her zaman firestore.rules'daki `admins` koleksiyonundan gelir.
