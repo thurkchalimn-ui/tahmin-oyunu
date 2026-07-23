@@ -15,7 +15,6 @@ import {
 import { db } from '@/config/firebase';
 import type { UserProfile, Prediction, Badge } from '@/types';
 import { calculateCurrentStreak, calculateBestStreak, STREAK_TARGET } from '@/utils/streakUtils';
-import { compareMatchesAscending } from '@/utils/matchNumbering';
 
 /** Firestore Timestamp alanlarını ISO string'e çevirerek UserProfile'a dönüştürür. */
 function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
@@ -128,9 +127,10 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
   const resolved = predictions.filter((p) => p.isCorrect !== null);
   const orderingInfo = await getMatchOrderingInfoByIds(resolved.map((p) => p.matchId));
 
-  const ordered = resolved
-    .map((p) => ({ ...p, ...(orderingInfo.get(p.matchId) ?? { kickoffAt: '', homeTeam: '' }) }))
-    .sort(compareMatchesAscending);
+  const ordered = resolved.map((p) => ({
+    ...p,
+    ...(orderingInfo.get(p.matchId) ?? { kickoffAt: '', homeTeam: '' }),
+  }));
 
   const currentStreak = calculateCurrentStreak(ordered);
   const bestStreak = calculateBestStreak(ordered);
