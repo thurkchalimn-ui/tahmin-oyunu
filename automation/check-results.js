@@ -243,8 +243,33 @@ function extractLiveScore(fixture) {
 
 // --- Ana akış -----------------------------------------------------------------
 
+/**
+ * Admin panelinden elle sonuç girildiğinde `notificationQueue` koleksiyonuna
+ * bırakılan bekleyen bildirimleri okuyup gönderir, sonra siler. Bu, main()
+ * içindeki her şeyden ÖNCE (herhangi bir erken çıkıştan etkilenmeden) çalışır -
+ * böylece admin sonucu otomasyon o maçı bulmadan ELLE girse bile bildirim
+ * garantili şekilde, en geç bir sonraki 5 dakikalık çalıştırmada gönderilir.
+ */
+async function processNotificationQueue() {
+  const snap = await db.collection('notificationQueue').get();
+  if (snap.empty) return;
+
+  for (const queueDoc of snap.docs) {
+    const { userId, title, body } = queueDoc.data();
+    if (userId && title) {
+      await sendPushToUsers([userId], title, body ?? '');
+    }
+    await queueDoc.ref.delete();
+  }
+  console.log(`[check-results] Kuyruktaki ${snap.size} bildirim gönderildi.`);
+}
+
 async function main() {
   console.log('[check-results] Kontrol başlıyor:', new Date().toISOString());
+
+  // Admin panelinden elle girilen sonuçlara ait bekleyen bildirimleri her zaman
+  // (aşağıdaki hiçbir erken çıkıştan etkilenmeden) işle.
+  await processNotificationQueue();
 
   // Sonucu boş olan tüm maçları çek (Admin SDK'da eşitlik filtresi index gerektirmez)
   const pendingSnap = await db.collection('matches').where('result', '==', null).get();

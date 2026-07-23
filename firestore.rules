@@ -53,6 +53,18 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // notificationQueue/{id}: admin panelinden elle bir maç sonucu girildiğinde
+    // buraya bir "gönderilmesi gereken bildirim" kaydı bırakılır. İstemci
+    // doğrudan başka bir kullanıcıya push gönderemediği için gerçek gönderim,
+    // Admin SDK'ya sahip GitHub Actions otomasyon script'i tarafından yapılır
+    // (bkz. automation/check-results.js) - o da bu koleksiyonu okuyup temizler.
+    match /notificationQueue/{id} {
+      allow read: if false;
+      allow create: if isAdmin();
+      allow update: if false;
+      allow delete: if false;
+    }
+
     // predictions/{predictionId}: kullanıcı sadece kendi tahminini,
     // maç henüz kilitlenmemişken (kickoffAt gelecekte) VE e-postasını
     // doğrulamışken oluşturabilir. isCorrect alanı yalnız admin tarafından

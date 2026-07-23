@@ -202,9 +202,22 @@ export function subscribeMatchesByDate(
 
 /**
  * Admin: bir maçın sonucunu girer. Bu maça ait tüm tahminlerin doğruluğunu
- * günceller ve etkilenen her kullanıcının serisini yeniden hesaplatır.
+ * günceller, etkilenen her kullanıcının serisini yeniden hesaplatır ve her
+ * kullanıcı için bir bildirim kuyruğu kaydı oluşturur.
+ *
+ * ÖNEMLİ: İstemci (tarayıcı) başka bir kullanıcıya doğrudan push bildirimi
+ * gönderemez - bu yüzden burada sadece `notificationQueue` koleksiyonuna bir
+ * "gönderilmesi gereken bildirim" kaydı bırakılır. Gerçek gönderim, Admin SDK'ya
+ * sahip olan GitHub Actions otomasyon script'i (automation/check-results.js)
+ * tarafından, her çalıştığında bu kuyruğu okuyup temizleyerek yapılır. Böylece
+ * admin sonucu ELLE girse de (otomasyon henüz o maçı bulmamış olsa bile)
+ * bildirim garantili şekilde gönderilir.
  */
 export async function setMatchResult(matchId: string, result: PredictionChoice): Promise<void> {
+  const matchSnap = await getDoc(doc(db, 'matches', matchId));
+  const matchData = matchSnap.data();
+  const matchLabel = matchData ? `${matchData.homeTeam} vs ${matchData.awayTeam}` : 'Maç';
+
   await updateDoc(doc(db, 'matches', matchId), { result });
 
   const predSnap = await getDocs(query(collection(db, 'predictions'), where('matchId', '==', matchId)));
@@ -216,6 +229,12 @@ export async function setMatchResult(matchId: string, result: PredictionChoice):
       const isCorrect = data.choice === result;
       affectedUserIds.add(data.userId as string);
       await updateDoc(doc(db, 'predictions', predDoc.id), { isCorrect, resolvedAt: Timestamp.now() });
+      await addDoc(collection(db, 'notificationQueue'), {
+        userId: data.userId,
+        title: isCorrect ? '✅ Doğru Tahmin!' : '❌ Yanlış Tahmin',
+        body: `${matchLabel} maçı sonuçlandı.`,
+        createdAt: Timestamp.now(),
+      });
     }),
   );
 
