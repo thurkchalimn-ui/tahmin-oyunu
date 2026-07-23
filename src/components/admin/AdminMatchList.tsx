@@ -9,6 +9,7 @@ import { Button } from '@/components/common/Button';
 interface AdminMatchListProps {
   matches: Match[];
   onSetResult: (matchId: string, result: PredictionChoice) => Promise<void>;
+  onUndoResult: (matchId: string) => Promise<void>;
   onUpdateMatch: (
     matchId: string,
     updates: {
@@ -24,9 +25,13 @@ interface AdminMatchListProps {
 
 const CHOICE_LABELS: Record<PredictionChoice, string> = { HOME: '1', DRAW: 'X', AWAY: '2' };
 
-/** Admin için günün maçlarını listeler; sonuç girme ve maç düzenleme (takım/logo/saat) sağlar. */
-export function AdminMatchList({ matches, onSetResult, onUpdateMatch }: AdminMatchListProps) {
+/**
+ * Admin için günün maçlarını listeler; sonuç girme, maç düzenleme (takım/logo/saat)
+ * ve yanlışlıkla girilmiş bir sonucu geri alma imkanı sağlar.
+ */
+export function AdminMatchList({ matches, onSetResult, onUndoResult, onUpdateMatch }: AdminMatchListProps) {
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [undoingId, setUndoingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   async function handleResult(matchId: string, result: PredictionChoice) {
@@ -35,6 +40,20 @@ export function AdminMatchList({ matches, onSetResult, onUpdateMatch }: AdminMat
       await onSetResult(matchId, result);
     } finally {
       setSavingId(null);
+    }
+  }
+
+  async function handleUndo(matchId: string, label: string) {
+    const confirmed = window.confirm(
+      `${label} maçının sonucunu geri almak istediğine emin misin? Bu maça ait tüm tahminler yeniden "sonuçlanmamış" duruma dönecek ve kullanıcıların serileri buna göre güncellenecek.`,
+    );
+    if (!confirmed) return;
+
+    setUndoingId(matchId);
+    try {
+      await onUndoResult(matchId);
+    } finally {
+      setUndoingId(null);
     }
   }
 
@@ -76,30 +95,51 @@ export function AdminMatchList({ matches, onSetResult, onUpdateMatch }: AdminMat
               </p>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              {(Object.keys(CHOICE_LABELS) as PredictionChoice[]).map((choice) => (
-                <button
-                  key={choice}
-                  disabled={savingId === match.id}
-                  onClick={() => handleResult(match.id, choice)}
-                  className={`rounded-md px-3 py-1.5 font-mono text-xs font-bold transition
-                    disabled:opacity-50 ${
-                      match.result === choice
-                        ? 'bg-pick-correct text-white'
-                        : 'bg-pitch-100 text-pitch-900 hover:bg-scoreboard-amber/30 dark:bg-pitch-700 dark:text-pitch-100'
-                    }`}
+            {match.result !== null ? (
+              // --- Sonuç zaten girilmiş: onay rozeti + geri al butonu ---
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1 rounded-md bg-pick-correct/15 px-3 py-1.5 font-mono text-xs font-bold text-pick-correct">
+                  ✓ Sonuçlandı ({CHOICE_LABELS[match.result]})
+                </span>
+                <Button
+                  variant="danger"
+                  isLoading={undoingId === match.id}
+                  onClick={() => handleUndo(match.id, `${match.homeTeam} - ${match.awayTeam}`)}
+                  className="!px-2.5 !py-1.5 text-xs"
                 >
-                  {CHOICE_LABELS[choice]}
-                </button>
-              ))}
-              <Button
-                variant="ghost"
-                onClick={() => setEditingId(match.id)}
-                className="!px-2.5 !py-1.5 text-xs"
-              >
-                Düzenle
-              </Button>
-            </div>
+                  Geri Al
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setEditingId(match.id)}
+                  className="!px-2.5 !py-1.5 text-xs"
+                >
+                  Düzenle
+                </Button>
+              </div>
+            ) : (
+              // --- Sonuç henüz girilmemiş: seçim butonları ---
+              <div className="flex items-center gap-1.5">
+                {(Object.keys(CHOICE_LABELS) as PredictionChoice[]).map((choice) => (
+                  <button
+                    key={choice}
+                    disabled={savingId === match.id}
+                    onClick={() => handleResult(match.id, choice)}
+                    className="rounded-md bg-pitch-100 px-3 py-1.5 font-mono text-xs font-bold text-pitch-900
+                      transition hover:bg-scoreboard-amber/30 disabled:opacity-50 dark:bg-pitch-700 dark:text-pitch-100"
+                  >
+                    {CHOICE_LABELS[choice]}
+                  </button>
+                ))}
+                <Button
+                  variant="ghost"
+                  onClick={() => setEditingId(match.id)}
+                  className="!px-2.5 !py-1.5 text-xs"
+                >
+                  Düzenle
+                </Button>
+              </div>
+            )}
           </div>
         ),
       )}

@@ -45,6 +45,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // teamLogos/{normalizedTeamName}: daha önce eklenmiş takımların logo
+    // hafızası. Admin panelindeki "takım adı yazınca logo otomatik gelsin"
+    // özelliği için kullanılır; herkes okuyabilir, sadece admin yazar.
+    match /teamLogos/{teamKey} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // predictions/{predictionId}: kullanıcı sadece kendi tahminini,
     // maç henüz kilitlenmemişken (kickoffAt gelecekte) VE e-postasını
     // doğrulamışken oluşturabilir. isCorrect alanı yalnız admin tarafından

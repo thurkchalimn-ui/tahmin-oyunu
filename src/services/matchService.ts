@@ -2,6 +2,8 @@ import {
   collection,
   addDoc,
   doc,
+  setDoc,
+  getDoc,
   updateDoc,
   onSnapshot,
   query,
@@ -12,9 +14,19 @@ import {
   documentId,
   Timestamp,
 } from 'firebase/firestore';
-import { db, auth } from '@/config/firebase';
+import { db } from '@/config/firebase';
 import type { Match, PredictionChoice } from '@/types';
 import { recalculateUserStreak } from '@/services/userService';
+
+/** Takım adını, tutarlı bir Firestore doküman ID'sine çevirir (küçük harf, boşluk/aksan temizliği). */
+function normalizeTeamKey(teamName: string): string {
+  return teamName
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
 
 function mapMatchDoc(id: string, data: Record<string, unknown>): Match {
   const toIso = (v: unknown) => (v instanceof Timestamp ? v.toDate().toISOString() : (v as string) ?? '');
@@ -33,47 +45,6 @@ function mapMatchDoc(id: string, data: Record<string, unknown>): Match {
     liveScore: (data.liveScore as Match['liveScore']) ?? null,
     createdAt: toIso(data.createdAt),
   };
-}
-
-/**
- * Verilen takım adının EV SAHİBİ ya da DEPLASMAN olarak daha önce eklendiği
- * maçları arar ve bulduğu logolardan en son eklenmiş olanı döner. Admin
- * panelinde takım adı yazılıp alandan çıkıldığında (blur), logo linkini
- * otomatik doldurmak için kullanılır. Composite index gerektirmemesi için
- * sıralama Firestore'da değil, istemci tarafında yapılır (bkz.
- * subscribeMatchesByDate'teki aynı gerekçe).
- */
-export async function getTeamLogoByName(teamName: string): Promise<string | undefined> {
-  const trimmed = teamName.trim();
-  if (!trimmed) return undefined;
-
-  const [homeSnap, awaySnap] = await Promise.all([
-    getDocs(query(collection(db, 'matches'), where('homeTeam', '==', trimmed))),
-    getDocs(query(collection(db, 'matches'), where('awayTeam', '==', trimmed))),
-  ]);
-
-  const candidates: { logo: string; createdAtMs: number }[] = [];
-
-  homeSnap.docs.forEach((d) => {
-    const data = d.data();
-    const logo = data.homeTeamLogo as string | undefined;
-    if (logo) {
-      const createdAt = data.createdAt;
-      candidates.push({ logo, createdAtMs: createdAt instanceof Timestamp ? createdAt.toMillis() : 0 });
-    }
-  });
-  awaySnap.docs.forEach((d) => {
-    const data = d.data();
-    const logo = data.awayTeamLogo as string | undefined;
-    if (logo) {
-      const createdAt = data.createdAt;
-      candidates.push({ logo, createdAtMs: createdAt instanceof Timestamp ? createdAt.toMillis() : 0 });
-    }
-  });
-
-  if (candidates.length === 0) return undefined;
-  candidates.sort((a, b) => b.createdAtMs - a.createdAtMs);
-  return candidates[0].logo;
 }
 
 /** Sıradaki global kronolojik sıra numarasını hesaplar (seri hesaplaması bu sıraya göre yapılır). */
@@ -95,6 +66,54 @@ export interface NewMatchInput {
   kickoffAt: string; // ISO string
 }
 
+/**
+ * Bir takımın logosunu `teamLogos` koleksiyonunda kalıcı olarak saklar. Bir
+ * maça logo linki girildiğinde (elle ya da otomatik bulunarak) çağrılır -
+ * böylece aynı takım bir daha eklendiğinde dışarıya hiç çıkmadan, doğrudan
+ * buradan (anında) bulunur.
+ */
+async function saveTeamLogo(teamName: string, logoUrl: string): Promise<void> {
+  const key = normalizeTeamKey(teamName);
+  if (!key || !logoUrl) return;
+  await setDoc(doc(db, 'teamLogos', key), {
+    teamName: teamName.trim(),
+    logoUrl,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Bir takımın logosunu bulur. Önce daha önce eklenmiş takımların hafızasına
+ * (`teamLogos` koleksiyonu) bakar - bulursa anında, internete hiç çıkmadan döner.
+ * Orada yoksa TheSportsDB'nin herkese açık test anahtarı ("3", gizli olmayan
+ * genel bir demo anahtarıdır) ile dışarıdan arar; bulursa sonucu hafızaya da
+ * kaydeder ki bir sonraki sefer tekrar dışarı çıkmasın.
+ */
+export async function getTeamLogoByName(teamName: string): Promise<string | null> {
+  const trimmed = teamName.trim();
+  if (!trimmed) return null;
+
+  const key = normalizeTeamKey(trimmed);
+  const cachedSnap = await getDoc(doc(db, 'teamLogos', key));
+  if (cachedSnap.exists()) {
+    return (cachedSnap.data().logoUrl as string) ?? null;
+  }
+
+  try {
+    const res = await fetch(
+      `https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(trimmed)}`,
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    const team = json?.teams?.[0];
+    const logoUrl = team?.strTeamBadge ?? null;
+    if (logoUrl) await saveTeamLogo(trimmed, logoUrl);
+    return logoUrl;
+  } catch {
+    return null;
+  }
+}
+
 /** Admin: yeni bir maç ekler (günlük kupona). */
 export async function createMatch(input: NewMatchInput): Promise<void> {
   const globalOrder = await getNextGlobalOrder();
@@ -102,8 +121,14 @@ export async function createMatch(input: NewMatchInput): Promise<void> {
     ...input,
     globalOrder,
     result: null,
+    reminderSent: false, // Otomasyon script'i "30 dakika kala" bildirimini gönderince true yapar
     createdAt: Timestamp.now(),
   });
+
+  // Girilen logoları (elle yapıştırılmış olsa bile) hafızaya kaydet - aynı
+  // takım bir daha eklendiğinde otomatik doldurulabilsin.
+  if (input.homeTeamLogo) await saveTeamLogo(input.homeTeam, input.homeTeamLogo);
+  if (input.awayTeamLogo) await saveTeamLogo(input.awayTeam, input.awayTeamLogo);
 }
 
 /**
@@ -116,6 +141,9 @@ export async function updateMatch(
   updates: Partial<Omit<NewMatchInput, 'date' | 'dayOrder'>>,
 ): Promise<void> {
   await updateDoc(doc(db, 'matches', matchId), updates);
+
+  if (updates.homeTeam && updates.homeTeamLogo) await saveTeamLogo(updates.homeTeam, updates.homeTeamLogo);
+  if (updates.awayTeam && updates.awayTeamLogo) await saveTeamLogo(updates.awayTeam, updates.awayTeamLogo);
 }
 
 /**
@@ -149,6 +177,13 @@ export function subscribeMatchesByDate(
   onChange: (matches: Match[]) => void,
   onError: (message: string) => void,
 ): () => void {
+  // Not: Burada bilinçli olarak orderBy kullanılmıyor. `where('date', ...)` ile
+  // farklı bir alanda `orderBy` birleştirmek Firestore'da composite index
+  // gerektirir (Firebase Console'da manuel oluşturulması gerekir). Günde en
+  // fazla 20 maç olacağı için sıralamayı burada, istemci tarafında (gerçek
+  // başlama saatine - kickoffAt - göre, admin panelinde eklenme sırasına göre
+  // DEĞİL) yapmak hem index derdini ortadan kaldırıyor hem de performans
+  // açısından sorun teşkil etmiyor.
   const q = query(collection(db, 'matches'), where('date', '==', date));
   return onSnapshot(
     q,
@@ -180,7 +215,7 @@ export async function setMatchResult(matchId: string, result: PredictionChoice):
       const data = predDoc.data();
       const isCorrect = data.choice === result;
       affectedUserIds.add(data.userId as string);
-      await updateDoc(doc(db, 'predictions', predDoc.id), { isCorrect });
+      await updateDoc(doc(db, 'predictions', predDoc.id), { isCorrect, resolvedAt: Timestamp.now() });
     }),
   );
 
@@ -188,26 +223,29 @@ export async function setMatchResult(matchId: string, result: PredictionChoice):
   for (const uid of affectedUserIds) {
     await recalculateUserStreak(uid);
   }
-
-  // Push bildirimini gönder - automation/check-results.js'ten (bot) BAĞIMSIZ,
-  // kasıtlı olarak sadece admin panelinden elle sonuç girildiğinde tetiklenir.
-  await notifyMatchResult(matchId);
 }
 
-/** setMatchResult tarafından çağrılır: sonucu, ilgili API uç noktasına (Vercel serverless function) haber verir. */
-async function notifyMatchResult(matchId: string): Promise<void> {
-  try {
-    const idToken = await auth.currentUser?.getIdToken();
-    if (!idToken) return;
-    await fetch('/api/send-match-result-notification', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-      body: JSON.stringify({ matchId }),
-    });
-  } catch (err) {
-    // Bildirim gönderilemese bile sonuç zaten kaydedildi - kullanıcı deneyimini bozmasın,
-    // sadece logla.
-    // eslint-disable-next-line no-console
-    console.error('[matchService] Sonuç bildirimi gönderilemedi:', err);
+/**
+ * Admin: yanlışlıkla girilmiş bir maç sonucunu geri alır. Maçı yeniden
+ * "sonuçlanmamış" durumuna döndürür, bu maça ait tüm tahminlerin doğru/yanlış
+ * damgasını temizler ve etkilenen kullanıcıların serilerini bu değişikliği
+ * yansıtacak şekilde yeniden hesaplar.
+ */
+export async function undoMatchResult(matchId: string): Promise<void> {
+  await updateDoc(doc(db, 'matches', matchId), { result: null });
+
+  const predSnap = await getDocs(query(collection(db, 'predictions'), where('matchId', '==', matchId)));
+
+  const affectedUserIds = new Set<string>();
+  await Promise.all(
+    predSnap.docs.map(async (predDoc) => {
+      const data = predDoc.data();
+      affectedUserIds.add(data.userId as string);
+      await updateDoc(doc(db, 'predictions', predDoc.id), { isCorrect: null, resolvedAt: null });
+    }),
+  );
+
+  for (const uid of affectedUserIds) {
+    await recalculateUserStreak(uid);
   }
 }
