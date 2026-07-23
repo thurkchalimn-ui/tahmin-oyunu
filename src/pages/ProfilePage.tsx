@@ -28,6 +28,19 @@ export function ProfilePage() {
     if (firebaseUser) markProfileSeen(firebaseUser.uid).catch(() => {});
   }, [firebaseUser]);
 
+  // Tarayıcı izni daha önce zaten verilmişse (kalıcıdır, sayfa yenilense de
+  // kaybolmaz), butonu tekrar tıklatmadan "açık" durumuna getir - token'ı da
+  // sessizce tazeleyip Firestore'a yeniden kaydeder (arrayUnion olduğu için
+  // tekrar eklemek zararsızdır).
+  useEffect(() => {
+    if (!firebaseUser || typeof Notification === 'undefined') return;
+    if (Notification.permission === 'granted') {
+      enablePushNotifications(firebaseUser.uid).then(setPushStatus);
+    } else if (Notification.permission === 'denied') {
+      setPushStatus('denied');
+    }
+  }, [firebaseUser]);
+
   if (!firebaseUser || !profile) return <LoadingSpinner fullScreen label="Profil yükleniyor..." />;
 
   async function handleSave(e: FormEvent) {
