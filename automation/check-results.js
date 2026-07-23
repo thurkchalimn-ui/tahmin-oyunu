@@ -172,7 +172,12 @@ async function updateLiveScores(allPending, now) {
 
     for (const match of matches) {
       const fixture = findMatchingFixture(match, fixtures);
-      if (!fixture) continue;
+      if (!fixture) {
+        console.log(
+          `[check-results] Eşleşme bulunamadı: ${match.homeTeam} vs ${match.awayTeam} (${date}) - ${fixtures.length} maç içinden hiçbiri isim olarak eşleşmedi.`,
+        );
+        continue;
+      }
 
       const liveScore = extractLiveScore(fixture);
       if (liveScore) {
@@ -180,6 +185,10 @@ async function updateLiveScores(allPending, now) {
         updatedCount += 1;
         console.log(
           `[check-results] Canlı skor güncellendi: ${match.homeTeam} ${liveScore.homeGoals}-${liveScore.awayGoals} ${match.awayTeam} (${liveScore.status})`,
+        );
+      } else {
+        console.log(
+          `[check-results] Eşleşme bulundu ama skor bilgisi yok (muhtemelen 'NS' - başlamamış): ${match.homeTeam} vs ${match.awayTeam}`,
         );
       }
     }
