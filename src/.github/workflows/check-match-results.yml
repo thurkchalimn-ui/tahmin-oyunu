@@ -1,4 +1,4 @@
-name: Maç Sonuçlarını Otomatik Kontrol Et
+name: Bildirim ve Hatırlatma Kontrolü
 
 # Her 5 dakikada bir otomatik çalışır; "workflow_dispatch" ile GitHub arayüzünden
 # elle de tetiklenebilir (test etmek için kullanışlı).
@@ -25,8 +25,8 @@ jobs:
       - name: Bağımlılıkları kur
         run: npm install
 
-      - name: Sonuç kontrol scriptini çalıştır
+      - name: Bildirim/hatırlatma/canlı skor scriptini çalıştır
         env:
           FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
-          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
         run: npm run check-results
