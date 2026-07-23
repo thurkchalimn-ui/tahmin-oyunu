@@ -109,7 +109,7 @@ export function ProfilePage() {
           🔔 Push Bildirimleri
         </h2>
         <p className="mb-3 font-body text-xs text-pitch-700/60 dark:text-pitch-100/50">
-          Tahmin ettiğin maçlar başlamadan 30 dakika önce ve sonuçlandığında telefonuna/tarayıcına
+          Tahmin ettiğin maçlar başlamadan 15 dakika önce ve sonuçlandığında telefonuna/tarayıcına
           bildirim gönderelim.
         </p>
         {pushStatus === 'granted' ? (

@@ -12,7 +12,7 @@ import {
   documentId,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from '@/config/firebase';
+import { db, auth } from '@/config/firebase';
 import type { Match, PredictionChoice } from '@/types';
 import { recalculateUserStreak } from '@/services/userService';
 
@@ -33,6 +33,47 @@ function mapMatchDoc(id: string, data: Record<string, unknown>): Match {
     liveScore: (data.liveScore as Match['liveScore']) ?? null,
     createdAt: toIso(data.createdAt),
   };
+}
+
+/**
+ * Verilen takım adının EV SAHİBİ ya da DEPLASMAN olarak daha önce eklendiği
+ * maçları arar ve bulduğu logolardan en son eklenmiş olanı döner. Admin
+ * panelinde takım adı yazılıp alandan çıkıldığında (blur), logo linkini
+ * otomatik doldurmak için kullanılır. Composite index gerektirmemesi için
+ * sıralama Firestore'da değil, istemci tarafında yapılır (bkz.
+ * subscribeMatchesByDate'teki aynı gerekçe).
+ */
+export async function getTeamLogoByName(teamName: string): Promise<string | undefined> {
+  const trimmed = teamName.trim();
+  if (!trimmed) return undefined;
+
+  const [homeSnap, awaySnap] = await Promise.all([
+    getDocs(query(collection(db, 'matches'), where('homeTeam', '==', trimmed))),
+    getDocs(query(collection(db, 'matches'), where('awayTeam', '==', trimmed))),
+  ]);
+
+  const candidates: { logo: string; createdAtMs: number }[] = [];
+
+  homeSnap.docs.forEach((d) => {
+    const data = d.data();
+    const logo = data.homeTeamLogo as string | undefined;
+    if (logo) {
+      const createdAt = data.createdAt;
+      candidates.push({ logo, createdAtMs: createdAt instanceof Timestamp ? createdAt.toMillis() : 0 });
+    }
+  });
+  awaySnap.docs.forEach((d) => {
+    const data = d.data();
+    const logo = data.awayTeamLogo as string | undefined;
+    if (logo) {
+      const createdAt = data.createdAt;
+      candidates.push({ logo, createdAtMs: createdAt instanceof Timestamp ? createdAt.toMillis() : 0 });
+    }
+  });
+
+  if (candidates.length === 0) return undefined;
+  candidates.sort((a, b) => b.createdAtMs - a.createdAtMs);
+  return candidates[0].logo;
 }
 
 /** Sıradaki global kronolojik sıra numarasını hesaplar (seri hesaplaması bu sıraya göre yapılır). */
@@ -61,7 +102,6 @@ export async function createMatch(input: NewMatchInput): Promise<void> {
     ...input,
     globalOrder,
     result: null,
-    reminderSent: false, // Otomasyon script'i "30 dakika kala" bildirimini gönderince true yapar
     createdAt: Timestamp.now(),
   });
 }
@@ -109,13 +149,6 @@ export function subscribeMatchesByDate(
   onChange: (matches: Match[]) => void,
   onError: (message: string) => void,
 ): () => void {
-  // Not: Burada bilinçli olarak orderBy kullanılmıyor. `where('date', ...)` ile
-  // farklı bir alanda `orderBy` birleştirmek Firestore'da composite index
-  // gerektirir (Firebase Console'da manuel oluşturulması gerekir). Günde en
-  // fazla 20 maç olacağı için sıralamayı burada, istemci tarafında (gerçek
-  // başlama saatine - kickoffAt - göre, admin panelinde eklenme sırasına göre
-  // DEĞİL) yapmak hem index derdini ortadan kaldırıyor hem de performans
-  // açısından sorun teşkil etmiyor.
   const q = query(collection(db, 'matches'), where('date', '==', date));
   return onSnapshot(
     q,
@@ -147,12 +180,34 @@ export async function setMatchResult(matchId: string, result: PredictionChoice):
       const data = predDoc.data();
       const isCorrect = data.choice === result;
       affectedUserIds.add(data.userId as string);
-      await updateDoc(doc(db, 'predictions', predDoc.id), { isCorrect, resolvedAt: Timestamp.now() });
+      await updateDoc(doc(db, 'predictions', predDoc.id), { isCorrect });
     }),
   );
 
   // Her etkilenen kullanıcı için seriyi yeniden hesapla (sıralı, race condition'ı azaltmak için)
   for (const uid of affectedUserIds) {
     await recalculateUserStreak(uid);
+  }
+
+  // Push bildirimini gönder - automation/check-results.js'ten (bot) BAĞIMSIZ,
+  // kasıtlı olarak sadece admin panelinden elle sonuç girildiğinde tetiklenir.
+  await notifyMatchResult(matchId);
+}
+
+/** setMatchResult tarafından çağrılır: sonucu, ilgili API uç noktasına (Vercel serverless function) haber verir. */
+async function notifyMatchResult(matchId: string): Promise<void> {
+  try {
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) return;
+    await fetch('/api/send-match-result-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ matchId }),
+    });
+  } catch (err) {
+    // Bildirim gönderilemese bile sonuç zaten kaydedildi - kullanıcı deneyimini bozmasın,
+    // sadece logla.
+    // eslint-disable-next-line no-console
+    console.error('[matchService] Sonuç bildirimi gönderilemedi:', err);
   }
 }
