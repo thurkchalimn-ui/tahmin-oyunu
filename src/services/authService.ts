@@ -8,6 +8,8 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
+import { isUsernameTaken, claimUsername } from '@/services/usernameService';
+import { containsProfanity } from '@/utils/profanityFilter';
 
 /** Yeni kullanıcı kaydı oluşturur, doğrulama e-postası gönderir ve users/{uid} profil dokümanını başlatır. */
 export async function registerUser(
@@ -15,6 +17,13 @@ export async function registerUser(
   password: string,
   displayName: string,
 ): Promise<void> {
+  if (containsProfanity(displayName)) {
+    throw new Error('Kullanıcı adında uygunsuz bir kelime var, lütfen başka bir isim seç.');
+  }
+  if (await isUsernameTaken(displayName)) {
+    throw new Error('Bu kullanıcı adı zaten alınmış, lütfen başka bir isim dene.');
+  }
+
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(credential.user, { displayName });
 
@@ -22,6 +31,11 @@ export async function registerUser(
   // bir onay linki gönderilir. Doğrulanana kadar tahmin yapamaz (bkz. firestore.rules
   // ve HomePage'deki emailVerified kontrolü).
   await sendEmailVerification(credential.user);
+
+  // Kullanıcı adını kilitle - Firestore kuralı, bu isim başka biri tarafından
+  // aynı anda alınmışsa bu yazmayı reddeder (gerçek güvence burada, üstteki
+  // isUsernameTaken kontrolü sadece hızlı bir ön kontrol/UX içindir).
+  await claimUsername(credential.user.uid, displayName);
 
   // Yeni kullanıcı için başlangıç profil dokümanı (seri istatistikleri sıfırdan başlar)
   await setDoc(doc(db, 'users', credential.user.uid), {

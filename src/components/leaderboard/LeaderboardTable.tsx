@@ -43,7 +43,11 @@ export function LeaderboardTable({ users, currentUserId }: LeaderboardTableProps
                 {MEDALS[i] ?? i + 1}
               </td>
               <td className="px-4 py-3 font-medium text-pitch-900 dark:text-pitch-100">
-                <Link to={`/oyuncu/${user.uid}`} className="hover:text-scoreboard-amber hover:underline">
+                <Link
+                  to={`/oyuncu/${user.uid}`}
+                  className="inline-flex items-center gap-1.5 hover:text-scoreboard-amber hover:underline"
+                >
+                  <span aria-hidden="true">⚽</span>
                   {user.displayName}
                 </Link>
                 {user.badges.some((b) => b.streakLength >= 15) && <span className="ml-1">🏆</span>}

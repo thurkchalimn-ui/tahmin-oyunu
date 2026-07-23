@@ -39,6 +39,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // usernames/{normalizedName}: kullanıcı adı benzersizliğinin GERÇEK garantisi
+    // burada sağlanır. Doküman ID'si normalize edilmiş kullanıcı adıdır - bir isim
+    // zaten alınmışsa doküman zaten var demektir, bu durumda "create" değil "update"
+    // kuralına düşer ve `allow update: if false` bunu otomatik olarak engeller.
+    // Böylece iki kullanıcı aynı anda aynı ismi almaya çalışsa bile sadece biri başarılı olur.
+    match /usernames/{key} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.uid);
+      allow update: if false;
+      allow delete: if isOwner(resource.data.uid);
+    }
+
     // matches/{matchId}: herkes okuyabilir, sadece admin yazar/düzenler.
     match /matches/{matchId} {
       allow read: if true;

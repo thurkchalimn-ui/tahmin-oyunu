@@ -15,6 +15,8 @@ import {
 import { db } from '@/config/firebase';
 import type { UserProfile, Prediction, Badge } from '@/types';
 import { calculateCurrentStreak, calculateBestStreak, STREAK_TARGET } from '@/utils/streakUtils';
+import { isUsernameTaken, claimUsername, releaseUsername } from '@/services/usernameService';
+import { containsProfanity } from '@/utils/profanityFilter';
 
 /** Firestore Timestamp alanlarını ISO string'e çevirerek UserProfile'a dönüştürür. */
 function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
@@ -72,7 +74,27 @@ export function subscribeLeaderboard(
 }
 
 /** Kullanıcının görünen adını günceller. */
+/**
+ * Kullanıcının görünen adını günceller. Küfür/uygunsuz kelime içermediğini ve
+ * başka bir kullanıcı tarafından alınmadığını doğrular; eski ismin kilidini
+ * kaldırıp yeni ismi kilitler (bkz. usernameService.ts).
+ */
 export async function updateDisplayName(uid: string, displayName: string): Promise<void> {
+  if (containsProfanity(displayName)) {
+    throw new Error('Kullanıcı adında uygunsuz bir kelime var, lütfen başka bir isim seç.');
+  }
+  if (await isUsernameTaken(displayName, uid)) {
+    throw new Error('Bu kullanıcı adı zaten alınmış, lütfen başka bir isim dene.');
+  }
+
+  const currentSnap = await getDoc(doc(db, 'users', uid));
+  const previousName = currentSnap.data()?.displayName as string | undefined;
+
+  await claimUsername(uid, displayName);
+  if (previousName && previousName.trim().toLowerCase() !== displayName.trim().toLowerCase()) {
+    await releaseUsername(previousName);
+  }
+
   await updateDoc(doc(db, 'users', uid), { displayName, updatedAt: Timestamp.now() });
 }
 

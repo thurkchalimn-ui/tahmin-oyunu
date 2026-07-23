@@ -21,7 +21,8 @@ export function PlayerProfilePage() {
         ← Liderlik tablosuna dön
       </Link>
 
-      <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
+      <h1 className="flex items-center gap-2 font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
+        <span aria-hidden="true">⚽</span>
         {profile.displayName}
       </h1>
 

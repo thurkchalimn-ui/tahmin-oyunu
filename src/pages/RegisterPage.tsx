@@ -35,8 +35,16 @@ export function RegisterPage() {
       await registerUser(email, password, displayName);
       navigate('/');
     } catch (err) {
-      const code = (err as { code?: string }).code ?? '';
-      setError(translateAuthError(code));
+      const code = (err as { code?: string }).code;
+      if (code) {
+        // Firebase Auth hatası (ör. e-posta zaten kullanımda)
+        setError(translateAuthError(code));
+      } else if (err instanceof Error) {
+        // Kendi doğrulama hatalarımız (küfür filtresi, kullanıcı adı çakışması)
+        setError(err.message);
+      } else {
+        setError('Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.');
+      }
     } finally {
       setIsSubmitting(false);
     }

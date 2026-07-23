@@ -28,19 +28,6 @@ export function ProfilePage() {
     if (firebaseUser) markProfileSeen(firebaseUser.uid).catch(() => {});
   }, [firebaseUser]);
 
-  // Tarayıcı izni daha önce zaten verilmişse (kalıcıdır, sayfa yenilense de
-  // kaybolmaz), butonu tekrar tıklatmadan "açık" durumuna getir - token'ı da
-  // sessizce tazeleyip Firestore'a yeniden kaydeder (arrayUnion olduğu için
-  // tekrar eklemek zararsızdır).
-  useEffect(() => {
-    if (!firebaseUser || typeof Notification === 'undefined') return;
-    if (Notification.permission === 'granted') {
-      enablePushNotifications(firebaseUser.uid).then(setPushStatus);
-    } else if (Notification.permission === 'denied') {
-      setPushStatus('denied');
-    }
-  }, [firebaseUser]);
-
   if (!firebaseUser || !profile) return <LoadingSpinner fullScreen label="Profil yükleniyor..." />;
 
   async function handleSave(e: FormEvent) {
@@ -55,8 +42,8 @@ export function ProfilePage() {
     try {
       await updateDisplayName(firebaseUser!.uid, displayName);
       setSaved(true);
-    } catch {
-      setSaveError('Güncelleme başarısız oldu.');
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Güncelleme başarısız oldu.');
     } finally {
       setIsSaving(false);
     }
@@ -70,7 +57,13 @@ export function ProfilePage() {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-6">
-      <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">Profilim</h1>
+      <div>
+        <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">Profilim</h1>
+        <p className="mt-0.5 flex items-center gap-1.5 font-body text-sm text-pitch-700/60 dark:text-pitch-100/50">
+          <span aria-hidden="true">⚽</span>
+          {profile.displayName}
+        </p>
+      </div>
 
       <section className="rounded-xl border border-pitch-700/15 bg-white p-5 dark:border-pitch-700 dark:bg-pitch-800">
         <p className="mb-2 font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
@@ -122,7 +115,7 @@ export function ProfilePage() {
           🔔 Push Bildirimleri
         </h2>
         <p className="mb-3 font-body text-xs text-pitch-700/60 dark:text-pitch-100/50">
-          Tahmin ettiğin maçlar başlamadan 15 dakika önce ve sonuçlandığında telefonuna/tarayıcına
+          Tahmin ettiğin maçlar başlamadan 30 dakika önce ve sonuçlandığında telefonuna/tarayıcına
           bildirim gönderelim.
         </p>
         {pushStatus === 'granted' ? (
