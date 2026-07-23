@@ -79,11 +79,24 @@ if (!API_FOOTBALL_KEY) {
  * users/{uid}.fcmTokens alanı) okuyup hepsine gönderir. Token artık geçersizse
  * (kullanıcı bildirimleri kapattıysa/uygulamayı kaldırdıysa) sessizce atlanır.
  */
+// Aynı script çalıştırması içinde (ör. hem hatırlatma hem kuyruk işleme aynı
+// kullanıcıyı etkiliyorsa) aynı kullanıcı dokümanının birden fazla kez
+// okunmasını önlemek için basit bir önbellek. Firestore'un ücretsiz günlük
+// okuma kotasını gereksiz yere tüketmemek için önemlidir.
+const userDocCache = new Map();
+
+async function getUserTokens(uid) {
+  if (userDocCache.has(uid)) return userDocCache.get(uid);
+  const userSnap = await db.collection('users').doc(uid).get();
+  const tokens = userSnap.data()?.fcmTokens ?? [];
+  userDocCache.set(uid, tokens);
+  return tokens;
+}
+
 async function sendPushToUsers(userIds, title, body) {
   for (const uid of userIds) {
     try {
-      const userSnap = await db.collection('users').doc(uid).get();
-      const tokens = userSnap.data()?.fcmTokens ?? [];
+      const tokens = await getUserTokens(uid);
       if (tokens.length === 0) continue;
 
       const response = await messaging.sendEachForMulticast({
@@ -97,6 +110,7 @@ async function sendPushToUsers(userIds, title, body) {
       if (invalidTokens.length > 0) {
         const validTokens = tokens.filter((t) => !invalidTokens.includes(t));
         await db.collection('users').doc(uid).update({ fcmTokens: validTokens });
+        userDocCache.set(uid, validTokens); // önbelleği de güncelle
       }
     } catch (err) {
       console.error(`[check-results] Bildirim gönderilemedi (${uid}):`, err.message);
