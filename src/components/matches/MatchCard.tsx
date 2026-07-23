@@ -3,7 +3,6 @@ import type { Match, Prediction, PredictionChoice } from '@/types';
 import { formatMatchTime, isMatchLocked } from '@/utils/dateUtils';
 import { Button } from '@/components/common/Button';
 import { TeamLogo } from '@/components/common/TeamLogo';
-import { LiveScoreBar } from '@/components/matches/LiveScoreBar';
 
 interface MatchCardProps {
   match: Match;
@@ -64,10 +63,6 @@ export function MatchCard({ match, prediction, onPredict, isSubmitting = false }
           {match.awayTeam}
         </span>
       </div>
-
-      {/* Skor çubuğu artık sadece maç devam ederken değil, sonuçlandıktan sonra da
-          gösteriliyor - check-results.js sonuçlandırırken skoru artık silmiyor. */}
-      {match.liveScore && <LiveScoreBar liveScore={match.liveScore} />}
 
       <div className="grid grid-cols-3 gap-2">
         {(Object.keys(CHOICE_LABELS) as PredictionChoice[]).map((choice) => {
