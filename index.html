@@ -3,6 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- iPhone/iPad "Ana Ekrana Ekle" simgesi - bu olmadan tarayıcı otomatik olarak
+         sayfa başlığının ilk harfini kullanır. Şeffaflık desteklenmediği için PNG kullanılır. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Tahmin Serisi" />
+
+    <!-- Android/PWA: ana ekrana ekleme, uygulama simgesi ve tema rengi -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0E1A16" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Günlük 20 maç tahmin oyunu - 15 maçlık seriyi tamamla, rozetini kazan." />
     <title>Tahmin Serisi</title>
