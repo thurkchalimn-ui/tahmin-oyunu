@@ -1,7 +1,9 @@
 import { useState, useEffect, type FormEvent } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePredictionHistory } from '@/hooks/usePredictionHistory';
 import { updateDisplayName, updateAvatarUrl } from '@/services/userService';
+import { deleteAccount } from '@/services/authService';
 import { markProfileSeen } from '@/services/readStatusService';
 import { enablePushNotifications, type PushPermissionResult } from '@/services/notificationService';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
@@ -15,6 +17,7 @@ import { isNonEmpty } from '@/utils/validators';
 
 /** Kullanıcının kendi istatistiklerini ve rozetlerini gördüğü profil sayfası. */
 export function ProfilePage() {
+  const navigate = useNavigate();
   const { firebaseUser, profile } = useAuth();
   const { data: history, loading: historyLoading, error: historyError } = usePredictionHistory(
     firebaseUser?.uid,
@@ -29,6 +32,11 @@ export function ProfilePage() {
 
   const [pushStatus, setPushStatus] = useState<PushPermissionResult | 'idle' | 'requesting'>('idle');
   const { data: avatarOptions, loading: avatarOptionsLoading, error: avatarOptionsError } = useAvatarOptions();
+
+  const [showDeleteForm, setShowDeleteForm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Sayfa açılınca profili "görüldü" olarak işaretle - BottomNav'daki kırmızı nokta kaybolur.
   useEffect(() => {
@@ -74,16 +82,40 @@ export function ProfilePage() {
     setPushStatus(result);
   }
 
+  async function handleDeleteAccount(e: FormEvent) {
+    e.preventDefault();
+    setDeleteError(null);
+    if (!isNonEmpty(deletePassword)) {
+      setDeleteError('Şifreni girmen gerekiyor.');
+      return;
+    }
+    const confirmed = window.confirm(
+      'Hesabını kalıcı olarak silmek istediğine emin misin? Bu işlem geri alınamaz.',
+    );
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteAccount(deletePassword);
+      navigate('/');
+    } catch (err) {
+      setDeleteError(
+        err instanceof Error && 'code' in err && (err as { code: string }).code === 'auth/invalid-credential'
+          ? 'Şifre hatalı.'
+          : 'Hesap silinemedi. Şifreni kontrol edip tekrar dene.',
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-6">
       <div className="flex items-center gap-3">
         <Avatar avatarUrl={profile.avatarUrl} size="lg" />
-        <div>
-          <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">Profilim</h1>
-          <p className="mt-0.5 font-body text-sm text-pitch-700/60 dark:text-pitch-100/50">
-            {profile.displayName}
-          </p>
-        </div>
+        <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
+          {profile.displayName}
+        </h1>
       </div>
 
       <section className="rounded-xl border border-pitch-700/15 bg-white p-5 dark:border-pitch-700 dark:bg-pitch-800">
@@ -226,6 +258,55 @@ export function ProfilePage() {
           <ErrorMessage message={historyError} />
         ) : (
           <PredictionHistoryList items={history ?? []} />
+        )}
+      </section>
+
+      <p className="text-center font-mono text-xs">
+        <Link to="/gizlilik" className="text-pitch-700/50 hover:underline dark:text-pitch-100/40">
+          Gizlilik Politikası ve Kullanım Şartları
+        </Link>
+      </p>
+
+      <section className="rounded-xl border border-pick-wrong/30 bg-pick-wrong/5 p-4">
+        <h2 className="mb-1 font-display text-sm font-semibold text-pick-wrong">Tehlikeli Bölge</h2>
+        <p className="mb-3 font-body text-xs text-pitch-700/60 dark:text-pitch-100/50">
+          Hesabını sildiğinde profilin, tahminlerin ve kullanıcı adın kalıcı olarak kaldırılır. Bu
+          işlem geri alınamaz.
+        </p>
+        {!showDeleteForm ? (
+          <Button variant="danger" onClick={() => setShowDeleteForm(true)} className="text-xs">
+            Hesabımı Sil
+          </Button>
+        ) : (
+          <form onSubmit={handleDeleteAccount} className="flex flex-col gap-2">
+            <label className="flex flex-col gap-1 text-xs text-pitch-900 dark:text-pitch-100">
+              Onaylamak için şifreni gir
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                className="rounded-md border border-pick-wrong/30 bg-transparent px-3 py-2 text-sm"
+              />
+            </label>
+            {deleteError && <p className="text-xs text-pick-wrong">{deleteError}</p>}
+            <div className="flex gap-2">
+              <Button type="submit" variant="danger" isLoading={isDeleting} className="text-xs">
+                Kalıcı Olarak Sil
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setShowDeleteForm(false);
+                  setDeletePassword('');
+                  setDeleteError(null);
+                }}
+                className="text-xs"
+              >
+                Vazgeç
+              </Button>
+            </div>
+          </form>
         )}
       </section>
     </div>

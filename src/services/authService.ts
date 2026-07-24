@@ -4,11 +4,15 @@ import {
   signOut,
   updateProfile,
   sendEmailVerification,
+  sendPasswordResetEmail,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  deleteUser,
   type User,
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, getDocs, collection, query, where, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
-import { isUsernameTaken, claimUsername } from '@/services/usernameService';
+import { isUsernameTaken, claimUsername, releaseUsername } from '@/services/usernameService';
 import { containsProfanity } from '@/utils/profanityFilter';
 
 /** Yeni kullanıcı kaydı oluşturur, doğrulama e-postası gönderir ve users/{uid} profil dokümanını başlatır. */
@@ -65,4 +69,41 @@ export async function loginUser(email: string, password: string): Promise<void> 
 /** Oturumu kapatır. */
 export async function logoutUser(): Promise<void> {
   await signOut(auth);
+}
+
+/** Verilen e-postaya şifre sıfırlama linki gönderir. */
+export async function resetPassword(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
+}
+
+/**
+ * Kullanıcının hesabını kalıcı olarak siler: önce şifresiyle yeniden kimlik
+ * doğrulaması yapılır (Firebase, güvenlik gereği hesap silmeden önce yakın
+ * zamanlı bir giriş ister), sonra kendi tahminleri ve kullanıcı adı kilidi
+ * silinir, en son da Firebase Authentication hesabının kendisi silinir.
+ *
+ * Not: Sohbet mesajları ve liderlik geçmişi (başka kullanıcıların gördüğü
+ * genel istatistikler) bu MVP'de silinmez - sadece kişisel hesap erişimi ve
+ * kendi tahmin geçmişi kaldırılır. Tam bir "unutulma hakkı" uygulaması için
+ * bu kapsam genişletilebilir.
+ */
+export async function deleteAccount(password: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user || !user.email) throw new Error('Oturum bulunamadı, lütfen tekrar giriş yap.');
+
+  const credential = EmailAuthProvider.credential(user.email, password);
+  await reauthenticateWithCredential(user, credential);
+
+  const displayName = user.displayName ?? '';
+
+  const predSnap = await getDocs(query(collection(db, 'predictions'), where('userId', '==', user.uid)));
+  await Promise.all(predSnap.docs.map((d) => deleteDoc(d.ref)));
+
+  if (displayName) {
+    await releaseUsername(displayName).catch(() => {});
+  }
+
+  await deleteDoc(doc(db, 'users', user.uid)).catch(() => {});
+
+  await deleteUser(user);
 }

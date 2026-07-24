@@ -36,7 +36,7 @@ service cloud.firestore {
         (isOwner(uid) &&
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['displayName', 'updatedAt', 'lastSeenChatAt', 'lastSeenRank', 'lastSeenProfileAt', 'fcmTokens', 'avatarUrl']));
-      allow delete: if false;
+      allow delete: if isOwner(uid);
     }
 
     // usernames/{normalizedName}: kullanıcı adı benzersizliğinin GERÇEK garantisi
@@ -100,7 +100,7 @@ service cloud.firestore {
         request.resource.data.date is string &&
         request.auth.token.email_verified == true;
       allow update: if isAdmin();
-      allow delete: if false;
+      allow delete: if isOwner(resource.data.userId); // Hesap silme akışında kullanıcı kendi tahminlerini kaldırabilir
     }
 
     // dailyBonusCredits/{uid}_{date}: kullanıcı, reklam izleyerek kazandığı

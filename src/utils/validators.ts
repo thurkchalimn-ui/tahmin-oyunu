@@ -24,6 +24,7 @@ export function translateAuthError(code: string): string {
     'auth/invalid-credential': 'E-posta veya şifre hatalı.',
     'auth/too-many-requests': 'Çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyin.',
     'auth/network-request-failed': 'Ağ bağlantısı hatası. İnternetinizi kontrol edin.',
+    'auth/requires-recent-login': 'Bu işlem için tekrar giriş yapman gerekiyor.',
   };
   return map[code] ?? 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.';
 }

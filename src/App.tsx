@@ -13,6 +13,7 @@ import { ChatPage } from '@/pages/ChatPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { PlayerProfilePage } from '@/pages/PlayerProfilePage';
 import { AdminPage } from '@/pages/AdminPage';
+import { PrivacyPolicyPage } from '@/pages/PrivacyPolicyPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 /** Uygulamanın kök bileşeni: provider'ları kurar ve rota tablosunu tanımlar. */
@@ -32,6 +33,7 @@ export default function App() {
                 <Route path="/liderlik" element={<LeaderboardPage />} />
                 <Route path="/sohbet" element={<ChatPage />} />
                 <Route path="/oyuncu/:uid" element={<PlayerProfilePage />} />
+                <Route path="/gizlilik" element={<PrivacyPolicyPage />} />
                 <Route
                   path="/profil"
                   element={
