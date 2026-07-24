@@ -7,10 +7,26 @@ import { Avatar } from '@/components/common/Avatar';
 interface ChatMessageListProps {
   messages: ChatMessage[];
   currentUserId?: string;
+  isAdmin?: boolean;
+  canReply?: boolean;
+  onReply?: (message: ChatMessage) => void;
+  onDelete?: (messageId: string) => void;
 }
 
-/** Sohbet mesajlarını listeler; yeni mesaj geldiğinde otomatik olarak en alta kayar. */
-export function ChatMessageList({ messages, currentUserId }: ChatMessageListProps) {
+/**
+ * Sohbet mesajlarını listeler; yeni mesaj geldiğinde otomatik olarak en alta kayar.
+ * Her mesajın altında "Yanıtla" (giriş yapmış herkes) ve "Sil" (sadece admin)
+ * bağlantıları bulunur. Bir mesaj başka bir mesajı yanıtlıyorsa, alıntılanan
+ * kısım metnin üstünde küçük bir kutuda gösterilir.
+ */
+export function ChatMessageList({
+  messages,
+  currentUserId,
+  isAdmin = false,
+  canReply = false,
+  onReply,
+  onDelete,
+}: ChatMessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,7 +73,39 @@ export function ChatMessageList({ messages, currentUserId }: ChatMessageListProp
                 {formatChatTime(message.createdAt)}
               </span>
             </div>
+
+            {message.replyTo && (
+              <div className="mb-1 rounded-md border-l-2 border-pitch-700/20 bg-pitch-700/5 px-2 py-1 dark:border-pitch-700 dark:bg-pitch-900/40">
+                <p className="truncate font-mono text-xs text-pitch-700/60 dark:text-pitch-100/40">
+                  <strong>{message.replyTo.displayName}</strong>: {message.replyTo.text}
+                </p>
+              </div>
+            )}
+
             <p className="whitespace-pre-wrap break-words font-body">{message.text}</p>
+
+            {(canReply || isAdmin) && (
+              <div className="mt-1 flex gap-3">
+                {canReply && (
+                  <button
+                    type="button"
+                    onClick={() => onReply?.(message)}
+                    className="font-mono text-[10px] text-pitch-700/50 hover:text-scoreboard-amber dark:text-pitch-100/40"
+                  >
+                    Yanıtla
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete?.(message.id)}
+                    className="font-mono text-[10px] text-pitch-700/50 hover:text-pick-wrong dark:text-pitch-100/40"
+                  >
+                    Sil
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         );
       })}

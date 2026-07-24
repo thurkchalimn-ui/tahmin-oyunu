@@ -1,17 +1,20 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useChatMessages } from '@/hooks/useChatMessages';
-import { sendMessage } from '@/services/chatService';
+import { sendMessage, deleteMessage } from '@/services/chatService';
 import { markChatSeen } from '@/services/readStatusService';
 import { ChatMessageList } from '@/components/chat/ChatMessageList';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import type { ChatMessage } from '@/types';
 
 /** Kullanıcıların birbirine kullanıcı adlarıyla göründüğü, herkese açık sohbet kanalı. */
 export function ChatPage() {
   const { firebaseUser, profile, emailVerified, isAdmin } = useAuth();
   const { data: messages, loading, error } = useChatMessages();
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Sayfa açılınca sohbeti "görüldü" olarak işaretle - BottomNav'daki kırmızı nokta kaybolur.
   useEffect(() => {
@@ -20,7 +23,26 @@ export function ChatPage() {
 
   async function handleSend(text: string) {
     if (!firebaseUser || !profile) return;
-    await sendMessage(firebaseUser.uid, profile.displayName, text, isAdmin, profile.avatarUrl);
+    await sendMessage(
+      firebaseUser.uid,
+      profile.displayName,
+      text,
+      isAdmin,
+      profile.avatarUrl,
+      replyingTo ? { messageId: replyingTo.id, displayName: replyingTo.displayName, text: replyingTo.text } : null,
+    );
+    setReplyingTo(null);
+  }
+
+  async function handleDelete(messageId: string) {
+    const confirmed = window.confirm('Bu mesajı silmek istediğine emin misin?');
+    if (!confirmed) return;
+    setActionError(null);
+    try {
+      await deleteMessage(messageId);
+    } catch {
+      setActionError('Mesaj silinemedi.');
+    }
   }
 
   const disabled = !firebaseUser || !emailVerified;
@@ -36,16 +58,31 @@ export function ChatPage() {
         Sohbet
       </h1>
 
+      {actionError && <ErrorMessage message={actionError} />}
+
       {loading ? (
         <LoadingSpinner fullScreen label="Mesajlar yükleniyor..." />
       ) : error ? (
         <ErrorMessage message={error} />
       ) : (
-        <ChatMessageList messages={messages ?? []} currentUserId={firebaseUser?.uid} />
+        <ChatMessageList
+          messages={messages ?? []}
+          currentUserId={firebaseUser?.uid}
+          isAdmin={isAdmin}
+          canReply={!disabled}
+          onReply={setReplyingTo}
+          onDelete={handleDelete}
+        />
       )}
 
       <div className="mt-3">
-        <ChatInput onSend={handleSend} disabled={disabled} disabledReason={disabledReason} />
+        <ChatInput
+          onSend={handleSend}
+          disabled={disabled}
+          disabledReason={disabledReason}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
+        />
       </div>
     </div>
   );

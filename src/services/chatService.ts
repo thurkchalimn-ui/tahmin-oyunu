@@ -1,6 +1,8 @@
 import {
   collection,
   addDoc,
+  deleteDoc,
+  doc,
   onSnapshot,
   query,
   orderBy,
@@ -12,10 +14,12 @@ import type { ChatMessage } from '@/types';
 
 export const MAX_MESSAGE_LENGTH = 500;
 const MESSAGE_HISTORY_LIMIT = 100; // Sadece son 100 mesaj yüklenir (performans için)
+const QUOTE_SNIPPET_LENGTH = 120; // Alıntılanan mesajın kısaltılacağı karakter sayısı
 
 function mapMessageDoc(id: string, data: Record<string, unknown>): ChatMessage {
   const createdAt = data.createdAt;
   const iso = createdAt instanceof Timestamp ? createdAt.toDate().toISOString() : (createdAt as string) ?? '';
+  const replyTo = data.replyTo as { messageId: string; displayName: string; text: string } | undefined;
   return {
     id,
     userId: data.userId as string,
@@ -23,17 +27,24 @@ function mapMessageDoc(id: string, data: Record<string, unknown>): ChatMessage {
     avatarUrl: (data.avatarUrl as string) || null,
     text: data.text as string,
     isAdmin: (data.isAdmin as boolean) ?? false,
+    replyTo: replyTo ?? null,
     createdAt: iso,
   };
 }
 
-/** Sohbet kanalına yeni bir mesaj gönderir. */
+/**
+ * Sohbet kanalına yeni bir mesaj gönderir. `replyTo` verilirse, alıntılanan
+ * mesajın kısa bir özeti (kimin yazdığı + metnin ilk ~120 karakteri) yeni
+ * mesajla birlikte kalıcı olarak kaydedilir - böylece alıntılanan orijinal
+ * mesaj daha sonra silinse bile alıntı görünmeye devam eder.
+ */
 export async function sendMessage(
   userId: string,
   displayName: string,
   text: string,
   isAdmin: boolean,
   avatarUrl?: string | null,
+  replyTo?: { messageId: string; displayName: string; text: string } | null,
 ): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) throw new Error('Boş mesaj gönderilemez.');
@@ -46,8 +57,20 @@ export async function sendMessage(
     avatarUrl: avatarUrl || null,
     text: trimmed,
     isAdmin,
+    replyTo: replyTo
+      ? {
+          messageId: replyTo.messageId,
+          displayName: replyTo.displayName,
+          text: replyTo.text.slice(0, QUOTE_SNIPPET_LENGTH),
+        }
+      : null,
     createdAt: Timestamp.now(),
   });
+}
+
+/** Admin: bir mesajı sohbetten kalıcı olarak siler (bkz. firestore.rules - sadece admin silebilir). */
+export async function deleteMessage(messageId: string): Promise<void> {
+  await deleteDoc(doc(db, 'messages', messageId));
 }
 
 /**

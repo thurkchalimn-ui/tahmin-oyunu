@@ -84,5 +84,10 @@ export interface ChatMessage {
   avatarUrl?: string | null; // Gönderenin mesaj anındaki profil görseli
   text: string;
   isAdmin: boolean; // Gönderen admin mi? (Firestore kuralında doğrulanır, sahte etiket takılamaz)
+  replyTo?: {
+    messageId: string;
+    displayName: string;
+    text: string; // Alıntılanan mesajın kısa özeti (gönderim anında kopyalanır)
+  } | null;
   createdAt: string; // ISO 8601
 }
