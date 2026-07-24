@@ -35,7 +35,7 @@ service cloud.firestore {
       allow update: if isAdmin() ||
         (isOwner(uid) &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['displayName', 'updatedAt', 'lastSeenChatAt', 'lastSeenRank', 'lastSeenProfileAt', 'fcmTokens']));
+            .hasOnly(['displayName', 'updatedAt', 'lastSeenChatAt', 'lastSeenRank', 'lastSeenProfileAt', 'fcmTokens', 'avatarUrl']));
       allow delete: if false;
     }
 

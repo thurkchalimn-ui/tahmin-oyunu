@@ -34,6 +34,7 @@ function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
     lastSeenChatAt: data.lastSeenChatAt ? toIso(data.lastSeenChatAt) : null,
     lastSeenRank: (data.lastSeenRank as number | undefined) ?? null,
     lastSeenProfileAt: data.lastSeenProfileAt ? toIso(data.lastSeenProfileAt) : null,
+    avatarUrl: (data.avatarUrl as string) || null,
     createdAt: toIso(data.createdAt),
     updatedAt: toIso(data.updatedAt),
   };
@@ -96,6 +97,19 @@ export async function updateDisplayName(uid: string, displayName: string): Promi
   }
 
   await updateDoc(doc(db, 'users', uid), { displayName, updatedAt: Timestamp.now() });
+}
+
+/**
+ * Kullanıcının profil görselini (bir futbolcu fotoğrafı, takım logosu ya da
+ * başka bir görsel linki) günceller. Boş bırakılırsa avatar kaldırılır ve
+ * varsayılan ⚽ ikonuna dönülür.
+ */
+export async function updateAvatarUrl(uid: string, avatarUrl: string): Promise<void> {
+  const trimmed = avatarUrl.trim();
+  await updateDoc(doc(db, 'users', uid), {
+    avatarUrl: trimmed || null,
+    updatedAt: Timestamp.now(),
+  });
 }
 
 /**
