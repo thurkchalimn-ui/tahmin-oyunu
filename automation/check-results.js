@@ -25,7 +25,9 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
 const REMINDER_WINDOW_MS = 30 * 60 * 1000; // Maç başlamadan 30 dakika önce hatırlatma gönder
-const LOCK_TTL_MS = 4 * 60 * 1000; // Kilit en fazla 4 dakika geçerli sayılır (script normalde çok daha hızlı biter)
+// Kilit, döngünün her turunda (5 dakikada bir) tazelenir; TTL'i döngü
+// aralığından biraz büyük tutuyoruz ki küçük gecikmeler kilidi düşürmesin.
+const LOCK_TTL_MS = 7 * 60 * 1000;
 
 // --- Firebase Admin SDK başlatma (ZORUNLU) ---------------------------------
 const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
@@ -62,6 +64,15 @@ async function acquireLockOrExit() {
     console.log('[check-results] Başka bir çalışma zaten devam ediyor gibi görünüyor, bu çalışma atlanıyor.');
     process.exit(0);
   }
+}
+
+/**
+ * Kilidi koşulsuz olarak tazeler (acquireLockOrExit'in aksine, "başkası mı
+ * tutuyor" kontrolü yapmaz - çünkü kilidi zaten BİZ tutuyoruz, sadece süresini
+ * uzatıyoruz). Döngünün her turunda çağrılır.
+ */
+async function refreshLock() {
+  await db.collection('automationState').doc('lock').set({ lockedAt: Date.now() });
 }
 
 // API_FOOTBALL_KEY opsiyonel: tanımlı değilse canlı skor adımı sessizce atlanır,
@@ -282,10 +293,9 @@ async function updateLiveScores(allPending, now) {
   console.log(`[check-results] ${updatedCount} maçın canlı skoru güncellendi.`);
 }
 
-async function main() {
-  console.log('[check-results] Kontrol başlıyor:', new Date().toISOString());
-
-  await acquireLockOrExit();
+/** Tek bir kontrol turunu çalıştırır: bildirim kuyruğu + hatırlatma + canlı skor. */
+async function runOnce() {
+  console.log('[check-results] Tur başlıyor:', new Date().toISOString());
 
   // --- 1) Admin panelinden elle girilen sonuçlara ait bekleyen bildirimler ---
   await processNotificationQueue();
@@ -323,7 +333,45 @@ async function main() {
     await updateLiveScores(allPending, now);
   }
 
-  console.log('[check-results] Tamamlandı.');
+  console.log('[check-results] Tur tamamlandı.');
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Ana giriş noktası. Eskiden bu script her 5 dakikada bir GitHub Actions
+ * tarafından SIFIRDAN başlatılıyordu (288 ayrı çalışma/gün). Şimdi TEK bir
+ * çalışma başlıyor ve kendi içinde 5 dakikada bir `runOnce()`'u tekrarlayan
+ * bir döngüye giriyor - GitHub'ın barındırılan runner'larda izin verdiği
+ * maksimum 6 saatlik süreye kadar (güvenli pay için 5 saat 45 dakikada
+ * kendiliğinden durur). cron-job.org'un artık her 5 dakikada değil, her
+ * ~5.5-6 saatte bir tetiklemesi yeterlidir - bu hem ayrı çalışma başlatma
+ * yükünü hem de "runner bekleme" gecikmesine maruz kalma sıklığını azaltır.
+ */
+const LOOP_INTERVAL_MS = 5 * 60 * 1000; // Tur arası bekleme: 5 dakika
+const MAX_RUNTIME_MS = 5 * 60 * 60 * 1000 + 45 * 60 * 1000; // ~5 saat 45 dakika (6 saatlik sınırın altında güvenli pay)
+
+async function main() {
+  await acquireLockOrExit();
+
+  const startTime = Date.now();
+  let turNo = 0;
+
+  while (Date.now() - startTime < MAX_RUNTIME_MS) {
+    turNo += 1;
+    await refreshLock(); // Kilidi tazele - bu süre boyunca başka bir çalışma başlarsa hemen çıkar
+    console.log(`[check-results] === Tur ${turNo} ===`);
+    try {
+      await runOnce();
+    } catch (err) {
+      console.error('[check-results] Bu turda beklenmeyen hata (döngü devam ediyor):', err);
+    }
+    await sleep(LOOP_INTERVAL_MS);
+  }
+
+  console.log('[check-results] Maksimum çalışma süresine ulaşıldı, script düzgün şekilde sonlanıyor.');
 }
 
 main().catch((err) => {
