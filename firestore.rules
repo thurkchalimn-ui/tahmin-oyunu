@@ -65,6 +65,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // avatarOptions/{key}: admin tarafından belirlenen, kullanıcıların profil
+    // avatarı olarak seçebileceği sabit logo listesi. Kullanıcılar sadece bu
+    // listeden seçer, kendi görsel linki giremez; herkes okuyabilir, sadece admin yazar.
+    match /avatarOptions/{key} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // notificationQueue/{id}: admin panelinden elle bir maç sonucu girildiğinde
     // buraya bir "gönderilmesi gereken bildirim" kaydı bırakılır. İstemci
     // doğrudan başka bir kullanıcıya push gönderemediği için gerçek gönderim,

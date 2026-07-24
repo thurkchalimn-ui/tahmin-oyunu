@@ -3,6 +3,7 @@ import { useMatches } from '@/hooks/useMatches';
 import { createMatch, setMatchResult, undoMatchResult, updateMatch } from '@/services/matchService';
 import { AdminMatchForm } from '@/components/admin/AdminMatchForm';
 import { AdminMatchList } from '@/components/admin/AdminMatchList';
+import { AdminAvatarOptions } from '@/components/admin/AdminAvatarOptions';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { todayKey } from '@/utils/dateUtils';
@@ -83,6 +84,13 @@ export function AdminPage() {
             }}
           />
         )}
+      </section>
+
+      <section>
+        <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
+          Avatar Seçenekleri (Kullanıcıların Seçebileceği Logolar)
+        </h2>
+        <AdminAvatarOptions />
       </section>
     </div>
   );

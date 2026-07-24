@@ -7,7 +7,7 @@ import { enablePushNotifications, type PushPermissionResult } from '@/services/n
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistoryList';
 import { Avatar } from '@/components/common/Avatar';
-import { useTeamLogos } from '@/hooks/useTeamLogos';
+import { useAvatarOptions } from '@/hooks/useAvatarOptions';
 import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
@@ -24,13 +24,11 @@ export function ProfilePage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const [avatarUrl, setAvatarUrl] = useState(profile?.avatarUrl ?? '');
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
-  const [avatarSaved, setAvatarSaved] = useState(false);
 
   const [pushStatus, setPushStatus] = useState<PushPermissionResult | 'idle' | 'requesting'>('idle');
-  const { data: teamLogos, loading: teamLogosLoading } = useTeamLogos();
+  const { data: avatarOptions, loading: avatarOptionsLoading, error: avatarOptionsError } = useAvatarOptions();
 
   // Sayfa açılınca profili "görüldü" olarak işaretle - BottomNav'daki kırmızı nokta kaybolur.
   useEffect(() => {
@@ -58,29 +56,11 @@ export function ProfilePage() {
     }
   }
 
-  async function handlePickPreset(presetUrl: string) {
-    setAvatarUrl(presetUrl);
+  async function handlePickAvatar(logoUrl: string) {
     setAvatarError(null);
-    setAvatarSaved(false);
     setIsSavingAvatar(true);
     try {
-      await updateAvatarUrl(firebaseUser!.uid, presetUrl);
-      setAvatarSaved(true);
-    } catch (err) {
-      setAvatarError(err instanceof Error ? err.message : 'Görsel kaydedilemedi.');
-    } finally {
-      setIsSavingAvatar(false);
-    }
-  }
-
-  async function handleSaveAvatar(e: FormEvent) {
-    e.preventDefault();
-    setAvatarError(null);
-    setAvatarSaved(false);
-    setIsSavingAvatar(true);
-    try {
-      await updateAvatarUrl(firebaseUser!.uid, avatarUrl);
-      setAvatarSaved(true);
+      await updateAvatarUrl(firebaseUser!.uid, logoUrl);
     } catch (err) {
       setAvatarError(err instanceof Error ? err.message : 'Görsel kaydedilemedi.');
     } finally {
@@ -185,55 +165,39 @@ export function ProfilePage() {
           Profil Görseli
         </h2>
         <p className="mb-3 font-body text-xs text-pitch-700/60 dark:text-pitch-100/50">
-          Tuttuğun takımın logosunu seç, ya da istersen kendi görsel linkini yapıştır.
+          Aşağıdaki listeden bir logo seç.
         </p>
 
-        {teamLogosLoading ? (
-          <LoadingSpinner label="Takım logoları yükleniyor..." />
-        ) : teamLogos.length === 0 ? (
-          <p className="mb-4 font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
-            Henüz sistemde kayıtlı bir takım logosu yok - admin maç ekledikçe burada birikecek.
-            Şimdilik kendi görsel linkini aşağıya yapıştırabilirsin.
+        {avatarOptionsLoading ? (
+          <LoadingSpinner label="Seçenekler yükleniyor..." />
+        ) : avatarOptionsError ? (
+          <ErrorMessage message={avatarOptionsError} />
+        ) : !avatarOptions || avatarOptions.length === 0 ? (
+          <p className="font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
+            Henüz seçilebilecek bir avatar eklenmedi.
           </p>
         ) : (
-          <div className="mb-4 grid max-h-64 grid-cols-6 gap-2 overflow-y-auto sm:grid-cols-8">
-            {teamLogos.map((team) => (
+          <div className="grid grid-cols-6 gap-2 sm:grid-cols-8">
+            {avatarOptions.map((opt) => (
               <button
-                key={team.teamName}
+                key={opt.key}
                 type="button"
-                onClick={() => handlePickPreset(team.logoUrl)}
+                onClick={() => handlePickAvatar(opt.logoUrl)}
                 disabled={isSavingAvatar}
-                title={team.teamName}
-                aria-label={`${team.teamName} logosunu seç`}
+                title={opt.label}
+                aria-label={`${opt.label} logosunu seç`}
                 className={`rounded-full transition disabled:opacity-50 ${
-                  profile.avatarUrl === team.logoUrl
+                  profile.avatarUrl === opt.logoUrl
                     ? 'ring-2 ring-scoreboard-amber ring-offset-2 ring-offset-white dark:ring-offset-pitch-800'
                     : 'hover:opacity-80'
                 }`}
               >
-                <Avatar avatarUrl={team.logoUrl} size="md" />
+                <Avatar avatarUrl={opt.logoUrl} size="md" />
               </button>
             ))}
           </div>
         )}
-
-        <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-pitch-700/50 dark:text-pitch-100/40">
-          Ya da kendi görsel linkini yapıştır
-        </p>
-        <form onSubmit={handleSaveAvatar} className="flex items-center gap-3">
-          <Avatar avatarUrl={avatarUrl} size="md" />
-          <input
-            value={avatarUrl}
-            onChange={(e) => setAvatarUrl(e.target.value)}
-            placeholder="https://..."
-            className="flex-1 rounded-md border border-pitch-700/20 bg-transparent px-3 py-2 font-mono text-xs dark:border-pitch-700"
-          />
-          <Button type="submit" isLoading={isSavingAvatar} className="!px-3 !py-2 text-xs">
-            Kaydet
-          </Button>
-        </form>
         {avatarError && <p className="mt-2 text-sm text-pick-wrong">{avatarError}</p>}
-        {avatarSaved && <p className="mt-2 text-sm text-pick-correct">Kaydedildi.</p>}
       </section>
 
       <form onSubmit={handleSave} className="flex flex-col gap-3">
