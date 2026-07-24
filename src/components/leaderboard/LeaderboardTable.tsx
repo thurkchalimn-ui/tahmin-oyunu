@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { UserProfile } from '@/types';
+import { Avatar } from '@/components/common/Avatar';
 
 interface LeaderboardTableProps {
   users: UserProfile[];
@@ -47,7 +48,7 @@ export function LeaderboardTable({ users, currentUserId }: LeaderboardTableProps
                   to={`/oyuncu/${user.uid}`}
                   className="inline-flex items-center gap-1.5 hover:text-scoreboard-amber hover:underline"
                 >
-                  <span aria-hidden="true">⚽</span>
+                  <Avatar avatarUrl={user.avatarUrl} size="sm" />
                   {user.displayName}
                 </Link>
                 {user.badges.some((b) => b.streakLength >= 15) && <span className="ml-1">🏆</span>}

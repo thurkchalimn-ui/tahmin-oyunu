@@ -20,7 +20,7 @@ export function ChatPage() {
 
   async function handleSend(text: string) {
     if (!firebaseUser || !profile) return;
-    await sendMessage(firebaseUser.uid, profile.displayName, text, isAdmin);
+    await sendMessage(firebaseUser.uid, profile.displayName, text, isAdmin, profile.avatarUrl);
   }
 
   const disabled = !firebaseUser || !emailVerified;

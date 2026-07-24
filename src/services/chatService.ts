@@ -20,6 +20,7 @@ function mapMessageDoc(id: string, data: Record<string, unknown>): ChatMessage {
     id,
     userId: data.userId as string,
     displayName: (data.displayName as string) ?? 'İsimsiz Oyuncu',
+    avatarUrl: (data.avatarUrl as string) || null,
     text: data.text as string,
     isAdmin: (data.isAdmin as boolean) ?? false,
     createdAt: iso,
@@ -32,6 +33,7 @@ export async function sendMessage(
   displayName: string,
   text: string,
   isAdmin: boolean,
+  avatarUrl?: string | null,
 ): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) throw new Error('Boş mesaj gönderilemez.');
@@ -41,6 +43,7 @@ export async function sendMessage(
   await addDoc(collection(db, 'messages'), {
     userId,
     displayName,
+    avatarUrl: avatarUrl || null,
     text: trimmed,
     isAdmin,
     createdAt: Timestamp.now(),

@@ -64,6 +64,7 @@ export interface UserProfile {
   lastSeenChatAt?: string | null;
   lastSeenRank?: number | null;
   lastSeenProfileAt?: string | null;
+  avatarUrl?: string | null; // Kullanıcının kendi seçtiği profil görseli (futbolcu fotoğrafı, takım logosu vb.)
   createdAt: string;
   updatedAt: string;
 }
@@ -80,6 +81,7 @@ export interface ChatMessage {
   id: string;
   userId: string;
   displayName: string;
+  avatarUrl?: string | null; // Gönderenin mesaj anındaki profil görseli
   text: string;
   isAdmin: boolean; // Gönderen admin mi? (Firestore kuralında doğrulanır, sahte etiket takılamaz)
   createdAt: string; // ISO 8601

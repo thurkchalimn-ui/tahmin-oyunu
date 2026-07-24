@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { ChatMessage } from '@/types';
 import { formatChatTime } from '@/utils/dateUtils';
 import { Link } from 'react-router-dom';
+import { Avatar } from '@/components/common/Avatar';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -39,7 +40,8 @@ export function ChatMessageList({ messages, currentUserId }: ChatMessageListProp
                 : 'mr-auto max-w-[85%] bg-pitch-700/5 text-pitch-900 dark:bg-pitch-800 dark:text-pitch-100'
             }`}
           >
-            <div className="mb-0.5 flex items-baseline gap-2">
+            <div className="mb-0.5 flex items-center gap-2">
+              <Avatar avatarUrl={message.avatarUrl} size="sm" />
               <Link
                 to={`/oyuncu/${message.userId}`}
                 className="font-display text-xs font-semibold text-scoreboard-amberDark hover:underline dark:text-scoreboard-amber"
