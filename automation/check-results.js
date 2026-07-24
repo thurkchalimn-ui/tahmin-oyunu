@@ -300,7 +300,18 @@ async function runOnce() {
   // --- 1) Admin panelinden elle girilen sonuçlara ait bekleyen bildirimler ---
   await processNotificationQueue();
 
-  const pendingSnap = await db.collection('matches').where('result', '==', null).get();
+  // ÖNEMLİ: Sorgu bilinçli olarak son 3 günle sınırlandırılmıştır. Sınırsız
+  // "result == null" sorgusu, zamanla biriken (ör. test için eklenip hiç
+  // sonuçlandırılmamış) eski maçları HER turda yeniden okur - bu, Firestore'un
+  // günlük ücretsiz okuma kotasını hızla tüketip "Quota exceeded" hatasına yol
+  // açar. 3 günden eski, hâlâ sonucu girilmemiş bir maç varsa admin panelinden
+  // elle sonuçlandırılmalı/silinmeli; otomasyon artık onu görmeyecektir.
+  const cutoffDateKey = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const pendingSnap = await db
+    .collection('matches')
+    .where('result', '==', null)
+    .where('date', '>=', cutoffDateKey)
+    .get();
   const now = Date.now();
   const allPending = pendingSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
