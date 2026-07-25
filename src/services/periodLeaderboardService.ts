@@ -75,7 +75,14 @@ export async function getPeriodLeaderboard(period: LeaderboardPeriod): Promise<U
     });
   }
 
+  // Sıralama: önce doğru tahmin sayısına göre (çoktan aza). Eşitlik durumunda,
+  // daha AZ maça daha çok isabet ettiren (yani isabet YÜZDESİ daha yüksek olan)
+  // kullanıcı üstte olur - "toplam tahmin sayısı fazla" değil.
+  function accuracy(p: UserProfile): number {
+    return p.totalPredictions > 0 ? p.correctPredictions / p.totalPredictions : 0;
+  }
+
   return profiles.sort(
-    (a, b) => b.correctPredictions - a.correctPredictions || b.totalPredictions - a.totalPredictions,
+    (a, b) => b.correctPredictions - a.correctPredictions || accuracy(b) - accuracy(a),
   );
 }
