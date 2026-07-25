@@ -7,44 +7,52 @@ export type LeaderboardPeriod = 'week' | 'month';
 
 /**
  * Belirli bir dönem (bu hafta / bu ay) için liderlik tablosunu hesaplar.
- * Ayrı bir "haftalık sayaç" alanı tutmak yerine (ki bunun periyodik olarak
- * sıfırlanması bir Cloud Function gerektirirdi), o döneme ait tüm tahminler
- * anlık olarak okunup kullanıcı bazında gruplanır. Sıralama, dönem içindeki
- * DOĞRU TAHMİN SAYISINA göre yapılır (dönem-özel bir "seri" hesaplanmaz -
- * bu, "Genel" sekmesindeki tüm-zamanlar serisinden farklı bir kavramdır).
+ *
+ * ÖNEMLİ: Tahminlerin kendi üzerindeki `date` alanına GÜVENİLMEZ - bu alan
+ * sadece belirli bir tarihten sonra eklenen tahminlerde var (daha eski
+ * tahminlerde hiç yok), bu da onları sessizce dışarıda bırakırdı. Bunun
+ * yerine profil sayfalarındaki (usePredictionHistory) yöntemle BİREBİR AYNI
+ * mantık kullanılır: önce o dönemdeki MAÇLAR bulunur (maçın `date` alanı her
+ * zaman güvenilirdir), sonra o maçlara ait tahminler toplu çekilir.
  */
 export async function getPeriodLeaderboard(period: LeaderboardPeriod): Promise<UserProfile[]> {
   const range = getPeriodRange(period);
   if (!range) return [];
 
-  const predSnap = await getDocs(
-    query(
-      collection(db, 'predictions'),
-      where('date', '>=', range.start),
-      where('date', '<', range.end),
-    ),
+  // Adım 1: O döneme ait maçların ID'lerini bul
+  const matchesSnap = await getDocs(
+    query(collection(db, 'matches'), where('date', '>=', range.start), where('date', '<', range.end)),
   );
+  const matchIds = matchesSnap.docs.map((d) => d.id);
+  if (matchIds.length === 0) return [];
+
+  // Adım 2: Bu maçlara ait tahminleri toplu (30'arlık gruplar halinde) çek
+  const matchIdChunks: string[][] = [];
+  for (let i = 0; i < matchIds.length; i += 30) matchIdChunks.push(matchIds.slice(i, i + 30));
 
   const statsByUser = new Map<string, { total: number; correct: number }>();
-  predSnap.docs.forEach((d) => {
-    const data = d.data();
-    if (data.isCorrect !== true && data.isCorrect !== false) return; // sadece sonuçlananlar
-    const uid = data.userId as string;
-    const entry = statsByUser.get(uid) ?? { total: 0, correct: 0 };
-    entry.total += 1;
-    if (data.isCorrect === true) entry.correct += 1;
-    statsByUser.set(uid, entry);
-  });
+  for (const chunk of matchIdChunks) {
+    const predSnap = await getDocs(query(collection(db, 'predictions'), where('matchId', 'in', chunk)));
+    predSnap.docs.forEach((d) => {
+      const data = d.data();
+      if (data.isCorrect !== true && data.isCorrect !== false) return; // sadece sonuçlananlar
+      const uid = data.userId as string;
+      const entry = statsByUser.get(uid) ?? { total: 0, correct: 0 };
+      entry.total += 1;
+      if (data.isCorrect === true) entry.correct += 1;
+      statsByUser.set(uid, entry);
+    });
+  }
 
   const uids = [...statsByUser.keys()];
   if (uids.length === 0) return [];
 
-  // Kullanıcı profillerini (isim, avatar, rozet) toplu çek - 30'arlık gruplar halinde
-  const chunks: string[][] = [];
-  for (let i = 0; i < uids.length; i += 30) chunks.push(uids.slice(i, i + 30));
+  // Adım 3: Kullanıcı profillerini (isim, avatar, rozet) toplu çek - 30'arlık gruplar halinde
+  const userIdChunks: string[][] = [];
+  for (let i = 0; i < uids.length; i += 30) userIdChunks.push(uids.slice(i, i + 30));
 
   const profiles: UserProfile[] = [];
-  for (const chunk of chunks) {
+  for (const chunk of userIdChunks) {
     const snap = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk)));
     snap.docs.forEach((d) => {
       const stats = statsByUser.get(d.id);
