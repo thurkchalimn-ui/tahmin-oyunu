@@ -1,88 +1,43 @@
-import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { UserProfile } from '@/types';
-import { getPeriodRange } from '@/utils/periodUtils';
 
 export type LeaderboardPeriod = 'week' | 'month';
 
+interface CachedEntry {
+  uid: string;
+  displayName: string;
+  avatarUrl: string | null;
+  badges: UserProfile['badges'];
+  totalPredictions: number;
+  correctPredictions: number;
+}
+
 /**
- * Belirli bir dönem (bu hafta / bu ay) için liderlik tablosunu hesaplar.
- *
- * ÖNEMLİ: Tahminlerin kendi üzerindeki `date` alanına GÜVENİLMEZ - bu alan
- * sadece belirli bir tarihten sonra eklenen tahminlerde var (daha eski
- * tahminlerde hiç yok), bu da onları sessizce dışarıda bırakırdı. Bunun
- * yerine profil sayfalarındaki (usePredictionHistory) yöntemle BİREBİR AYNI
- * mantık kullanılır: önce o dönemdeki MAÇLAR bulunur (maçın `date` alanı her
- * zaman güvenilirdir), sonra o maçlara ait tahminler toplu çekilir.
+ * Haftalık/aylık liderlik tablosunu getirir. ÖNEMLİ: Bu hesaplama artık
+ * istemci tarafında YAPILMAZ - otomasyon script'i (automation/check-results.js)
+ * bunu arka planda her ~6 saatte bir hesaplayıp `leaderboardCache/{period}`
+ * dokümanına yazıyor; burada sadece o hazır dokümanı TEK bir okuma ile
+ * çekiyoruz. Bu, önceki (her sayfa açılışında onlarca sorgu yapan) yönteme
+ * göre Firestore okuma kotasını ciddi şekilde azaltır.
  */
 export async function getPeriodLeaderboard(period: LeaderboardPeriod): Promise<UserProfile[]> {
-  const range = getPeriodRange(period);
-  if (!range) return [];
+  const snap = await getDoc(doc(db, 'leaderboardCache', period));
+  if (!snap.exists()) return [];
 
-  // Adım 1: O döneme ait maçların ID'lerini bul
-  const matchesSnap = await getDocs(
-    query(collection(db, 'matches'), where('date', '>=', range.start), where('date', '<', range.end)),
-  );
-  const matchIds = matchesSnap.docs.map((d) => d.id);
-  if (matchIds.length === 0) return [];
-
-  // Adım 2: Bu maçlara ait tahminleri toplu (30'arlık gruplar halinde) çek
-  const matchIdChunks: string[][] = [];
-  for (let i = 0; i < matchIds.length; i += 30) matchIdChunks.push(matchIds.slice(i, i + 30));
-
-  const statsByUser = new Map<string, { total: number; correct: number }>();
-  for (const chunk of matchIdChunks) {
-    const predSnap = await getDocs(query(collection(db, 'predictions'), where('matchId', 'in', chunk)));
-    predSnap.docs.forEach((d) => {
-      const data = d.data();
-      if (data.isCorrect !== true && data.isCorrect !== false) return; // sadece sonuçlananlar
-      const uid = data.userId as string;
-      const entry = statsByUser.get(uid) ?? { total: 0, correct: 0 };
-      entry.total += 1;
-      if (data.isCorrect === true) entry.correct += 1;
-      statsByUser.set(uid, entry);
-    });
-  }
-
-  const uids = [...statsByUser.keys()];
-  if (uids.length === 0) return [];
-
-  // Adım 3: Kullanıcı profillerini (isim, avatar, rozet) toplu çek - 30'arlık gruplar halinde
-  const userIdChunks: string[][] = [];
-  for (let i = 0; i < uids.length; i += 30) userIdChunks.push(uids.slice(i, i + 30));
-
-  const profiles: UserProfile[] = [];
-  for (const chunk of userIdChunks) {
-    const snap = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk)));
-    snap.docs.forEach((d) => {
-      const stats = statsByUser.get(d.id);
-      if (!stats) return;
-      const data = d.data();
-      profiles.push({
-        uid: d.id,
-        email: '',
-        displayName: (data.displayName as string) ?? 'İsimsiz Oyuncu',
-        currentStreak: 0,
-        bestStreak: 0,
-        totalPredictions: stats.total,
-        correctPredictions: stats.correct,
-        badges: (data.badges as UserProfile['badges']) ?? [],
-        isAdmin: false,
-        avatarUrl: (data.avatarUrl as string) || null,
-        createdAt: '',
-        updatedAt: '',
-      });
-    });
-  }
-
-  // Sıralama: önce doğru tahmin sayısına göre (çoktan aza). Eşitlik durumunda,
-  // daha AZ maça daha çok isabet ettiren (yani isabet YÜZDESİ daha yüksek olan)
-  // kullanıcı üstte olur - "toplam tahmin sayısı fazla" değil.
-  function accuracy(p: UserProfile): number {
-    return p.totalPredictions > 0 ? p.correctPredictions / p.totalPredictions : 0;
-  }
-
-  return profiles.sort(
-    (a, b) => b.correctPredictions - a.correctPredictions || accuracy(b) - accuracy(a),
-  );
+  const entries = (snap.data().entries as CachedEntry[]) ?? [];
+  return entries.map((e) => ({
+    uid: e.uid,
+    email: '',
+    displayName: e.displayName,
+    currentStreak: 0,
+    bestStreak: 0,
+    totalPredictions: e.totalPredictions,
+    correctPredictions: e.correctPredictions,
+    badges: e.badges ?? [],
+    isAdmin: false,
+    avatarUrl: e.avatarUrl,
+    createdAt: '',
+    updatedAt: '',
+  }));
 }

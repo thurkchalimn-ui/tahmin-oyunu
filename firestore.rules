@@ -73,6 +73,16 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // leaderboardCache/{period}: haftalık/aylık liderlik tablosunun ÖNCEDEN
+    // HESAPLANMIŞ hali. Otomasyon script'i (automation/check-results.js, Admin
+    // SDK ile - kural bypass eder) bunu her ~6 saatte bir günceller. İstemciden
+    // asla yazılamaz, sadece okunabilir - böylece her sayfa açılışında pahalı
+    // bir hesaplama tekrarlanmaz.
+    match /leaderboardCache/{period} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // notificationQueue/{id}: admin panelinden elle bir maç sonucu girildiğinde
     // buraya bir "gönderilmesi gereken bildirim" kaydı bırakılır. İstemci
     // doğrudan başka bir kullanıcıya push gönderemediği için gerçek gönderim,

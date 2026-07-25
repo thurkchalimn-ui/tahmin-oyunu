@@ -1,12 +1,16 @@
 // ============================================================================
 // Bu script GitHub Actions tarafından zamanlanmış olarak (cron-job.org
-// tetiklemesiyle, güvenilir şekilde) çalışır. Üç işi vardır:
+// tetiklemesiyle, güvenilir şekilde) çalışır. Dört işi vardır:
 //   1) Admin panelinden ELLE girilen sonuçlar için bekleyen bildirimleri gönderir
 //      (notificationQueue koleksiyonu).
 //   2) Maç başlamadan 30 dakika önce hatırlatma bildirimi gönderir.
 //   3) [OPSİYONEL - API_FOOTBALL_KEY tanımlıysa] Başlamış ama sonucu admin tarafından
 //      henüz girilmemiş maçlar için ANLIK SKORU (canlı skor) çeker ve Firestore'a
 //      yazar - site bunu gerçek zamanlı okuyup gösterir.
+//   4) Haftalık/aylık liderlik tablosunu hesaplayıp `leaderboardCache` koleksiyonuna
+//      yazar (her ~6 saatlik çalışmada BİR KEZ - iteration 1'de). Site, bu ağır
+//      hesaplamayı her sayfa açılışında tekrar yapmak yerine sadece bu hazır,
+//      küçük dokümanı okur - Firestore okuma kotasını ciddi şekilde azaltır.
 //
 // ÖNEMLİ: Kesin sonuç (match.result) HİÇBİR ZAMAN burada otomatik belirlenmez -
 // bu her zaman admin panelinden ELLE girilir. Bu script sadece maç sırasında
@@ -21,7 +25,7 @@
 // ============================================================================
 
 import { initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldPath } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
 const REMINDER_WINDOW_MS = 30 * 60 * 1000; // Maç başlamadan 30 dakika önce hatırlatma gönder
@@ -347,6 +351,107 @@ async function runOnce() {
   console.log('[check-results] Tur tamamlandı.');
 }
 
+// --- Haftalık/aylık liderlik önbellekleme (site burada değil, sadece bu önbelleği okur) ---
+
+/** İçinde bulunulan haftanın Pazartesi'sini 'YYYY-MM-DD' olarak döner. */
+function startOfWeekKey() {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+  return monday.toISOString().slice(0, 10);
+}
+
+/** Bir sonraki Pazartesi'yi 'YYYY-MM-DD' olarak döner (üst sınır - dahil değil). */
+function endOfWeekKey() {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = day === 0 ? 6 : day - 1;
+  const nextMonday = new Date(now);
+  nextMonday.setDate(now.getDate() - diffToMonday + 7);
+  nextMonday.setHours(0, 0, 0, 0);
+  return nextMonday.toISOString().slice(0, 10);
+}
+
+function startOfMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function endOfMonthKey() {
+  const now = new Date();
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return nextMonth.toISOString().slice(0, 10);
+}
+
+/**
+ * Verilen dönem (hafta/ay) için liderlik tablosunu hesaplayıp `leaderboardCache/{period}`
+ * dokümanına yazar. Site bu ağır hesaplamayı KENDİSİ yapmaz - sadece bu hazır
+ * dokümanı okur. Bu, günlük Firestore okuma kotasını ciddi şekilde azaltır çünkü
+ * her kullanıcının her sayfa açılışında tekrarladığı pahalı sorgular yerine, bu
+ * hesaplama günde birkaç kez (her ~6 saatte bir) SADECE BİR KEZ yapılır.
+ */
+async function cachePeriodLeaderboard(period) {
+  const start = period === 'week' ? startOfWeekKey() : startOfMonthKey();
+  const end = period === 'week' ? endOfWeekKey() : endOfMonthKey();
+
+  const matchesSnap = await db.collection('matches').where('date', '>=', start).where('date', '<', end).get();
+  const matchIds = matchesSnap.docs.map((d) => d.id);
+
+  if (matchIds.length === 0) {
+    await db.collection('leaderboardCache').doc(period).set({ entries: [], computedAt: Date.now() });
+    console.log(`[check-results] ${period} liderlik önbelleği güncellendi (0 maç, boş).`);
+    return;
+  }
+
+  const statsByUser = new Map();
+  for (let i = 0; i < matchIds.length; i += 30) {
+    const chunk = matchIds.slice(i, i + 30);
+    const predSnap = await db.collection('predictions').where('matchId', 'in', chunk).get();
+    predSnap.docs.forEach((d) => {
+      const data = d.data();
+      if (data.isCorrect !== true && data.isCorrect !== false) return;
+      const uid = data.userId;
+      const entry = statsByUser.get(uid) ?? { total: 0, correct: 0 };
+      entry.total += 1;
+      if (data.isCorrect === true) entry.correct += 1;
+      statsByUser.set(uid, entry);
+    });
+  }
+
+  const uids = [...statsByUser.keys()];
+  const entries = [];
+  for (let i = 0; i < uids.length; i += 30) {
+    const chunk = uids.slice(i, i + 30);
+    const snap = await db.collection('users').where(FieldPath.documentId(), 'in', chunk).get();
+    snap.docs.forEach((d) => {
+      const stats = statsByUser.get(d.id);
+      if (!stats) return;
+      const data = d.data();
+      entries.push({
+        uid: d.id,
+        displayName: data.displayName ?? 'İsimsiz Oyuncu',
+        avatarUrl: data.avatarUrl ?? null,
+        badges: data.badges ?? [],
+        totalPredictions: stats.total,
+        correctPredictions: stats.correct,
+      });
+    });
+  }
+
+  entries.sort((a, b) => {
+    if (b.correctPredictions !== a.correctPredictions) return b.correctPredictions - a.correctPredictions;
+    const accA = a.totalPredictions > 0 ? a.correctPredictions / a.totalPredictions : 0;
+    const accB = b.totalPredictions > 0 ? b.correctPredictions / b.totalPredictions : 0;
+    return accB - accA;
+  });
+
+  await db.collection('leaderboardCache').doc(period).set({ entries, computedAt: Date.now() });
+  console.log(`[check-results] ${period} liderlik önbelleği güncellendi (${entries.length} kullanıcı).`);
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -379,6 +484,20 @@ async function main() {
     } catch (err) {
       console.error('[check-results] Bu turda beklenmeyen hata (döngü devam ediyor):', err);
     }
+
+    // Haftalık/aylık liderlik önbelleğini SADECE bu çalışmanın ilk turunda
+    // güncelle (yani her ~6 saatte bir kez) - her 5 dakikada bir yapmak
+    // gereksiz yere pahalı olurdu, liderlik verisinin bu kadar taze olmasına
+    // gerek yok.
+    if (turNo === 1) {
+      try {
+        await cachePeriodLeaderboard('week');
+        await cachePeriodLeaderboard('month');
+      } catch (err) {
+        console.error('[check-results] Liderlik önbelleği güncellenemedi:', err);
+      }
+    }
+
     await sleep(LOOP_INTERVAL_MS);
   }
 
