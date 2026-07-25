@@ -5,17 +5,19 @@ import { Avatar } from '@/components/common/Avatar';
 interface LeaderboardTableProps {
   users: UserProfile[];
   currentUserId?: string;
+  /** 'all': tüm-zamanlar serisi sütunları da gösterilir. 'period': sadece o döneme ait tahmin istatistikleri gösterilir. */
+  mode?: 'all' | 'period';
 }
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
-/** En yüksek seriye göre sıralanmış kullanıcıları gösteren tablo. */
-export function LeaderboardTable({ users, currentUserId }: LeaderboardTableProps) {
+/** Sıralanmış kullanıcıları gösteren tablo (tüm-zamanlar ya da dönemsel görünüm). */
+export function LeaderboardTable({ users, currentUserId, mode = 'all' }: LeaderboardTableProps) {
   if (users.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-pitch-700/20 p-8 text-center dark:border-pitch-700">
         <p className="font-body text-sm text-pitch-700/60 dark:text-pitch-100/50">
-          Henüz sıralamada kimse yok. İlk tahminini yap!
+          {mode === 'all' ? 'Henüz sıralamada kimse yok. İlk tahminini yap!' : 'Bu dönemde henüz tahmin yapılmamış.'}
         </p>
       </div>
     );
@@ -28,8 +30,12 @@ export function LeaderboardTable({ users, currentUserId }: LeaderboardTableProps
           <tr className="font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
             <th className="px-4 py-3">#</th>
             <th className="px-4 py-3">Oyuncu</th>
-            <th className="px-4 py-3 text-right">En İyi Seri</th>
-            <th className="px-4 py-3 text-right">Güncel Seri</th>
+            {mode === 'all' && (
+              <>
+                <th className="px-4 py-3 text-right">En İyi Seri</th>
+                <th className="px-4 py-3 text-right">Güncel Seri</th>
+              </>
+            )}
             <th className="px-4 py-3 text-right">Toplam Tahmin</th>
             <th className="px-4 py-3 text-right">Doğru Tahmin</th>
             <th className="px-4 py-3 text-right">Doğru %</th>
@@ -61,10 +67,14 @@ export function LeaderboardTable({ users, currentUserId }: LeaderboardTableProps
                   </Link>
                   {user.badges.some((b) => b.streakLength >= 15) && <span className="ml-1">🏆</span>}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-scoreboard-amber">{user.bestStreak}</td>
-                <td className="px-4 py-3 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60">
-                  {user.currentStreak}
-                </td>
+                {mode === 'all' && (
+                  <>
+                    <td className="px-4 py-3 text-right font-mono text-scoreboard-amber">{user.bestStreak}</td>
+                    <td className="px-4 py-3 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60">
+                      {user.currentStreak}
+                    </td>
+                  </>
+                )}
                 <td className="px-4 py-3 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60">
                   {user.totalPredictions}
                 </td>
