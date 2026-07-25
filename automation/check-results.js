@@ -304,19 +304,30 @@ async function runOnce() {
   // --- 1) Admin panelinden elle girilen sonuçlara ait bekleyen bildirimler ---
   await processNotificationQueue();
 
-  // ÖNEMLİ: Sorgu bilinçli olarak son 3 günle sınırlandırılmıştır. Sınırsız
-  // "result == null" sorgusu, zamanla biriken (ör. test için eklenip hiç
-  // sonuçlandırılmamış) eski maçları HER turda yeniden okur - bu, Firestore'un
-  // günlük ücretsiz okuma kotasını hızla tüketip "Quota exceeded" hatasına yol
-  // açar. 3 günden eski, hâlâ sonucu girilmemiş bir maç varsa admin panelinden
-  // elle sonuçlandırılmalı/silinmeli; otomasyon artık onu görmeyecektir.
-  const cutoffDateKey = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  // ÖNEMLİ: Sorgu `kickoffAt` (tam saat) üzerinden şu aralıkla sınırlıdır:
+  //  - Alt sınır (bugünün başlangıcı, 00:00): dünden önceki maçlar zaten
+  //    admin tarafından günü gününe sonuçlandırılmış olmalı; otomasyonun
+  //    onları bir daha okumasına gerek yok - bu, "unutulmuş eski maç"
+  //    birikmesini tamamen ortadan kaldırır.
+  //  - Üst sınır (şu an + 30 dakika = hatırlatma penceresi): henüz yaklaşmamış
+  //    (30 dakikadan uzun süre sonra başlayacak) maçlar sorguya hiç dahil
+  //    edilmez - onlara zaten hiçbir işlem yapılmıyor, sadece kota tüketiyorlardı.
+  const now = Date.now();
+  // "Bugünün başlangıcı" Türkiye saatine (UTC+3) göre hesaplanır - GitHub Actions
+  // runner'ları UTC'de çalıştığı için, bu düzeltme yapılmazsa gece yarısına yakın
+  // (ör. Türkiye saatiyle 00:30) başlayan maçlar yanlışlıkla "dünün maçı" sayılıp
+  // sorgudan dışlanabilirdi.
+  const TR_OFFSET_MS = 3 * 60 * 60 * 1000;
+  const trNow = new Date(now + TR_OFFSET_MS);
+  const trMidnightUtc = Date.UTC(trNow.getUTCFullYear(), trNow.getUTCMonth(), trNow.getUTCDate(), 0, 0, 0);
+  const startOfTodayIso = new Date(trMidnightUtc - TR_OFFSET_MS).toISOString();
+  const horizonIso = new Date(now + REMINDER_WINDOW_MS).toISOString();
   const pendingSnap = await db
     .collection('matches')
     .where('result', '==', null)
-    .where('date', '>=', cutoffDateKey)
+    .where('kickoffAt', '>=', startOfTodayIso)
+    .where('kickoffAt', '<=', horizonIso)
     .get();
-  const now = Date.now();
   const allPending = pendingSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
   // --- 2) Maç başlamadan 30 dakika önce hatırlatma bildirimi ---
