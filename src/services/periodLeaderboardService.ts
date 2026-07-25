@@ -16,10 +16,28 @@ function startOfWeekKey(): string {
   return toDateKey(monday);
 }
 
+/** İçinde bulunulan haftadan SONRAKİ Pazartesi'yi 'YYYY-MM-DD' olarak döner (üst sınır - dahil değil). */
+function endOfWeekKey(): string {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = day === 0 ? 6 : day - 1;
+  const nextMonday = new Date(now);
+  nextMonday.setDate(now.getDate() - diffToMonday + 7);
+  nextMonday.setHours(0, 0, 0, 0);
+  return toDateKey(nextMonday);
+}
+
 /** İçinde bulunulan ayın 1'ini 'YYYY-MM-DD' olarak döner. */
 function startOfMonthKey(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+/** İçinde bulunulan aydan SONRAKİ ayın 1'ini 'YYYY-MM-DD' olarak döner (üst sınır - dahil değil). */
+function endOfMonthKey(): string {
+  const now = new Date();
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return toDateKey(nextMonth);
 }
 
 /**
@@ -32,9 +50,14 @@ function startOfMonthKey(): string {
  */
 export async function getPeriodLeaderboard(period: LeaderboardPeriod): Promise<UserProfile[]> {
   const startKey = period === 'week' ? startOfWeekKey() : startOfMonthKey();
+  const endKey = period === 'week' ? endOfWeekKey() : endOfMonthKey();
 
   const predSnap = await getDocs(
-    query(collection(db, 'predictions'), where('date', '>=', startKey)),
+    query(
+      collection(db, 'predictions'),
+      where('date', '>=', startKey),
+      where('date', '<', endKey),
+    ),
   );
 
   const statsByUser = new Map<string, { total: number; correct: number }>();
