@@ -4,21 +4,15 @@ import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { usePeriodLeaderboard } from '@/hooks/usePeriodLeaderboard';
 import { markLeaderboardSeen } from '@/services/readStatusService';
 import { LeaderboardTable } from '@/components/leaderboard/LeaderboardTable';
+import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
-
-type Tab = 'week' | 'month' | 'all';
-
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'week', label: 'Haftalık' },
-  { key: 'month', label: 'Aylık' },
-  { key: 'all', label: 'Genel' },
-];
+import type { StatsPeriod } from '@/utils/periodUtils';
 
 /** Liderlik tablosu sayfası: haftalık, aylık ve tüm-zamanlar sekmeleri arasında geçiş yapılabilir. */
 export function LeaderboardPage() {
   const { firebaseUser } = useAuth();
-  const [tab, setTab] = useState<Tab>('all');
+  const [tab, setTab] = useState<StatsPeriod>('all');
 
   const allTime = useLeaderboard();
   const week = usePeriodLeaderboard('week');
@@ -41,20 +35,8 @@ export function LeaderboardPage() {
         Liderlik Tablosu
       </h1>
 
-      <div className="mb-4 flex gap-1 rounded-lg bg-pitch-700/5 p-1 dark:bg-pitch-800">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex-1 rounded-md py-1.5 font-mono text-xs font-bold uppercase tracking-wide transition ${
-              tab === t.key
-                ? 'bg-scoreboard-amber text-pitch-950 shadow-glow'
-                : 'text-pitch-700/60 hover:text-pitch-900 dark:text-pitch-100/50 dark:hover:text-pitch-100'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="mb-4">
+        <PeriodTabs value={tab} onChange={setTab} />
       </div>
 
       {active.loading ? (

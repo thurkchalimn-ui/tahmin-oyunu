@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePredictionHistory } from '@/hooks/usePredictionHistory';
@@ -8,12 +8,14 @@ import { markProfileSeen } from '@/services/readStatusService';
 import { enablePushNotifications, type PushPermissionResult } from '@/services/notificationService';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistoryList';
+import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { Avatar } from '@/components/common/Avatar';
 import { useAvatarOptions } from '@/hooks/useAvatarOptions';
 import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { isNonEmpty } from '@/utils/validators';
+import { getPeriodRange, type StatsPeriod } from '@/utils/periodUtils';
 
 /** Kullanıcının kendi istatistiklerini ve rozetlerini gördüğü profil sayfası. */
 export function ProfilePage() {
@@ -22,6 +24,7 @@ export function ProfilePage() {
   const { data: history, loading: historyLoading, error: historyError } = usePredictionHistory(
     firebaseUser?.uid,
   );
+  const [tab, setTab] = useState<StatsPeriod>('all');
   const [displayName, setDisplayName] = useState(profile?.displayName ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -42,6 +45,25 @@ export function ProfilePage() {
   useEffect(() => {
     if (firebaseUser) markProfileSeen(firebaseUser.uid).catch(() => {});
   }, [firebaseUser]);
+
+  // Seçilen döneme (hafta/ay/genel) göre tahmin geçmişini filtrele. 'all' için
+  // filtre uygulanmaz. Filtreleme, zaten çekilmiş olan `history` listesi
+  // üzerinde istemci tarafında yapılır - ekstra bir Firestore sorgusu gerekmez.
+  const filteredHistory = useMemo(() => {
+    if (!history) return null;
+    const range = getPeriodRange(tab);
+    if (!range) return history;
+    return history.filter((item) => item.match.date >= range.start && item.match.date < range.end);
+  }, [history, tab]);
+
+  const periodStats = useMemo(() => {
+    if (!filteredHistory) return { total: 0, correct: 0 };
+    const resolved = filteredHistory.filter((item) => item.prediction.isCorrect !== null);
+    return {
+      total: resolved.length,
+      correct: resolved.filter((item) => item.prediction.isCorrect === true).length,
+    };
+  }, [filteredHistory]);
 
   if (!firebaseUser || !profile) return <LoadingSpinner fullScreen label="Profil yükleniyor..." />;
 
@@ -118,31 +140,56 @@ export function ProfilePage() {
         </h1>
       </div>
 
+      <div>
+        <PeriodTabs value={tab} onChange={setTab} />
+      </div>
+
       <section className="rounded-xl border border-pitch-700/15 bg-white p-5 dark:border-pitch-700 dark:bg-pitch-800">
         <p className="mb-2 font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
           Güncel Serin
         </p>
         <StreakBadge currentStreak={profile.currentStreak} />
-        <div className="mt-4 grid grid-cols-3 gap-3 border-t border-pitch-700/10 pt-4 text-center dark:border-pitch-100/10">
-          <div>
-            <p className="font-mono text-lg font-bold text-scoreboard-amber">{profile.bestStreak}</p>
-            <p className="font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">
-              En İyi Seri
-            </p>
+        {tab === 'all' ? (
+          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-pitch-700/10 pt-4 text-center dark:border-pitch-100/10">
+            <div>
+              <p className="font-mono text-lg font-bold text-scoreboard-amber">{profile.bestStreak}</p>
+              <p className="font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">
+                En İyi Seri
+              </p>
+            </div>
+            <div>
+              <p className="font-mono text-lg font-bold text-pitch-900 dark:text-pitch-100">
+                {profile.correctPredictions}
+              </p>
+              <p className="font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">Doğru</p>
+            </div>
+            <div>
+              <p className="font-mono text-lg font-bold text-pitch-900 dark:text-pitch-100">
+                {profile.totalPredictions}
+              </p>
+              <p className="font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">Toplam</p>
+            </div>
           </div>
-          <div>
-            <p className="font-mono text-lg font-bold text-pitch-900 dark:text-pitch-100">
-              {profile.correctPredictions}
-            </p>
-            <p className="font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">Doğru</p>
+        ) : (
+          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-pitch-700/10 pt-4 text-center dark:border-pitch-100/10">
+            <div>
+              <p className="font-mono text-lg font-bold text-pitch-900 dark:text-pitch-100">
+                {periodStats.correct}
+              </p>
+              <p className="font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">
+                Doğru ({tab === 'week' ? 'Bu Hafta' : 'Bu Ay'})
+              </p>
+            </div>
+            <div>
+              <p className="font-mono text-lg font-bold text-pitch-900 dark:text-pitch-100">
+                {periodStats.total}
+              </p>
+              <p className="font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">
+                Toplam ({tab === 'week' ? 'Bu Hafta' : 'Bu Ay'})
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-mono text-lg font-bold text-pitch-900 dark:text-pitch-100">
-              {profile.totalPredictions}
-            </p>
-            <p className="font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">Toplam</p>
-          </div>
-        </div>
+        )}
       </section>
 
       {profile.badges.length > 0 && (
@@ -250,14 +297,14 @@ export function ProfilePage() {
 
       <section>
         <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
-          Tahmin Geçmişim
+          Tahmin Geçmişim {tab !== 'all' && `(${tab === 'week' ? 'Bu Hafta' : 'Bu Ay'})`}
         </h2>
         {historyLoading ? (
           <LoadingSpinner label="Tahminler yükleniyor..." />
         ) : historyError ? (
           <ErrorMessage message={historyError} />
         ) : (
-          <PredictionHistoryList items={history ?? []} />
+          <PredictionHistoryList items={filteredHistory ?? []} />
         )}
       </section>
 
