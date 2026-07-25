@@ -11,7 +11,11 @@ interface LeaderboardTableProps {
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
-/** Sıralanmış kullanıcıları gösteren tablo (tüm-zamanlar ya da dönemsel görünüm). */
+/**
+ * Sıralanmış kullanıcıları gösteren tablo (tüm-zamanlar ya da dönemsel görünüm).
+ * Mobilde yatay kaydırma gerekmeden sığması için başlıklar kısaltılmış,
+ * boşluklar sadeleştirilmiştir; geniş ekranlarda (sm: ve üzeri) daha ferah görünür.
+ */
 export function LeaderboardTable({ users, currentUserId, mode = 'all' }: LeaderboardTableProps) {
   if (users.length === 0) {
     return (
@@ -24,21 +28,33 @@ export function LeaderboardTable({ users, currentUserId, mode = 'all' }: Leaderb
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-pitch-700/15 dark:border-pitch-700">
-      <table className="w-full min-w-[640px] text-left">
+    <div className="overflow-hidden rounded-xl border border-pitch-700/15 dark:border-pitch-700">
+      <table className="w-full text-left">
         <thead className="bg-pitch-700/5 dark:bg-pitch-800">
-          <tr className="font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
-            <th className="px-4 py-3">#</th>
-            <th className="px-4 py-3">Oyuncu</th>
+          <tr className="font-mono text-[9px] uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50 sm:text-xs">
+            <th className="px-1.5 py-2 sm:px-4 sm:py-3">#</th>
+            <th className="px-1.5 py-2 sm:px-4 sm:py-3">Oyuncu</th>
             {mode === 'all' && (
               <>
-                <th className="px-4 py-3 text-right">En İyi Seri</th>
-                <th className="px-4 py-3 text-right">Güncel Seri</th>
+                <th className="px-1 py-2 text-right sm:px-4 sm:py-3">
+                  <span className="sm:hidden">En İyi</span>
+                  <span className="hidden sm:inline">En İyi Seri</span>
+                </th>
+                <th className="px-1 py-2 text-right sm:px-4 sm:py-3">
+                  <span className="sm:hidden">Güncel</span>
+                  <span className="hidden sm:inline">Güncel Seri</span>
+                </th>
               </>
             )}
-            <th className="px-4 py-3 text-right">Toplam Tahmin</th>
-            <th className="px-4 py-3 text-right">Doğru Tahmin</th>
-            <th className="px-4 py-3 text-right">Doğru %</th>
+            <th className="px-1 py-2 text-right sm:px-4 sm:py-3">
+              <span className="sm:hidden">Top.</span>
+              <span className="hidden sm:inline">Toplam Tahmin</span>
+            </th>
+            <th className="px-1 py-2 text-right sm:px-4 sm:py-3">
+              <span className="sm:hidden">Doğru</span>
+              <span className="hidden sm:inline">Doğru Tahmin</span>
+            </th>
+            <th className="px-1.5 py-2 text-right sm:px-4 sm:py-3">%</th>
           </tr>
         </thead>
         <tbody>
@@ -50,39 +66,41 @@ export function LeaderboardTable({ users, currentUserId, mode = 'all' }: Leaderb
             return (
               <tr
                 key={user.uid}
-                className={`border-t border-pitch-700/10 font-body text-sm dark:border-pitch-700/50 ${
+                className={`border-t border-pitch-700/10 font-body text-xs dark:border-pitch-700/50 sm:text-sm ${
                   user.uid === currentUserId ? 'bg-scoreboard-amber/10' : ''
                 }`}
               >
-                <td className="px-4 py-3 font-mono text-pitch-700/70 dark:text-pitch-100/60">
+                <td className="px-1.5 py-2 font-mono text-pitch-700/70 dark:text-pitch-100/60 sm:px-4 sm:py-3">
                   {MEDALS[i] ?? i + 1}
                 </td>
-                <td className="px-4 py-3 font-medium text-pitch-900 dark:text-pitch-100">
+                <td className="max-w-[90px] truncate px-1.5 py-2 font-medium text-pitch-900 dark:text-pitch-100 sm:max-w-none sm:px-4 sm:py-3">
                   <Link
                     to={`/oyuncu/${user.uid}`}
-                    className="inline-flex items-center gap-1.5 hover:text-scoreboard-amber hover:underline"
+                    className="inline-flex items-center gap-1 hover:text-scoreboard-amber hover:underline sm:gap-1.5"
                   >
                     <Avatar avatarUrl={user.avatarUrl} size="sm" />
-                    {user.displayName}
+                    <span className="truncate">{user.displayName}</span>
                   </Link>
                   {user.badges.some((b) => b.streakLength >= 15) && <span className="ml-1">🏆</span>}
                 </td>
                 {mode === 'all' && (
                   <>
-                    <td className="px-4 py-3 text-right font-mono text-scoreboard-amber">{user.bestStreak}</td>
-                    <td className="px-4 py-3 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60">
+                    <td className="px-1 py-2 text-right font-mono text-scoreboard-amber sm:px-4 sm:py-3">
+                      {user.bestStreak}
+                    </td>
+                    <td className="px-1 py-2 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60 sm:px-4 sm:py-3">
                       {user.currentStreak}
                     </td>
                   </>
                 )}
-                <td className="px-4 py-3 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60">
+                <td className="px-1 py-2 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60 sm:px-4 sm:py-3">
                   {user.totalPredictions}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-pick-correct">
+                <td className="px-1 py-2 text-right font-mono text-pick-correct sm:px-4 sm:py-3">
                   {user.correctPredictions}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60">
-                  {accuracy === null ? '—' : `%${accuracy}`}
+                <td className="px-1.5 py-2 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60 sm:px-4 sm:py-3">
+                  {accuracy === null ? '—' : `${accuracy}%`}
                 </td>
               </tr>
             );
