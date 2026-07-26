@@ -233,6 +233,7 @@ export async function setMatchResult(matchId: string, result: PredictionChoice):
         userId: data.userId,
         title: isCorrect ? '✅ Doğru Tahmin!' : '❌ Yanlış Tahmin',
         body: `${matchLabel} maçı sonuçlandı.`,
+        type: 'result', // Otomasyon script'i, kullanıcının bu türü kapatıp kapatmadığını kontrol eder
         createdAt: Timestamp.now(),
       });
     }),

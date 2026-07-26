@@ -4,6 +4,7 @@ import { createMatch, setMatchResult, undoMatchResult, updateMatch } from '@/ser
 import { AdminMatchForm } from '@/components/admin/AdminMatchForm';
 import { AdminMatchList } from '@/components/admin/AdminMatchList';
 import { AdminAvatarOptions } from '@/components/admin/AdminAvatarOptions';
+import { AdminStatsPanel } from '@/components/admin/AdminStatsPanel';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { todayKey } from '@/utils/dateUtils';
@@ -21,6 +22,8 @@ export function AdminPage() {
       <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
         Admin Paneli
       </h1>
+
+      <AdminStatsPanel />
 
       <label className="flex max-w-xs flex-col gap-1 text-sm text-pitch-900 dark:text-pitch-100">
         Yönetilecek Tarih

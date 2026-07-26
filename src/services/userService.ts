@@ -35,6 +35,8 @@ function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
     lastSeenRank: (data.lastSeenRank as number | undefined) ?? null,
     lastSeenProfileAt: data.lastSeenProfileAt ? toIso(data.lastSeenProfileAt) : null,
     avatarUrl: (data.avatarUrl as string) || null,
+    notifyOnResult: data.notifyOnResult !== false, // belirtilmemişse (eski kullanıcılar) varsayılan true
+    notifyOnReminder: data.notifyOnReminder !== false,
     createdAt: toIso(data.createdAt),
     updatedAt: toIso(data.updatedAt),
   };
@@ -110,6 +112,14 @@ export async function updateAvatarUrl(uid: string, avatarUrl: string): Promise<v
     avatarUrl: trimmed || null,
     updatedAt: Timestamp.now(),
   });
+}
+
+/** Kullanıcının hangi bildirim türlerini almak istediğini günceller. */
+export async function updateNotificationPreferences(
+  uid: string,
+  prefs: { notifyOnResult?: boolean; notifyOnReminder?: boolean },
+): Promise<void> {
+  await updateDoc(doc(db, 'users', uid), { ...prefs, updatedAt: Timestamp.now() });
 }
 
 /**

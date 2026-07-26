@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePredictionHistory } from '@/hooks/usePredictionHistory';
-import { updateDisplayName, updateAvatarUrl } from '@/services/userService';
+import { updateDisplayName, updateAvatarUrl, updateNotificationPreferences } from '@/services/userService';
 import { deleteAccount } from '@/services/authService';
 import { markProfileSeen } from '@/services/readStatusService';
 import { enablePushNotifications, type PushPermissionResult } from '@/services/notificationService';
@@ -102,6 +102,10 @@ export function ProfilePage() {
     setPushStatus('requesting');
     const result = await enablePushNotifications(firebaseUser!.uid);
     setPushStatus(result);
+  }
+
+  async function handleTogglePreference(key: 'notifyOnResult' | 'notifyOnReminder', value: boolean) {
+    await updateNotificationPreferences(firebaseUser!.uid, { [key]: value });
   }
 
   async function handleDeleteAccount(e: FormEvent) {
@@ -237,6 +241,27 @@ export function ProfilePage() {
             Bildirimleri Aç
           </Button>
         )}
+
+        <div className="mt-4 flex flex-col gap-2 border-t border-pitch-700/10 pt-4 dark:border-pitch-100/10">
+          <label className="flex items-center justify-between gap-3 text-sm text-pitch-900 dark:text-pitch-100">
+            <span>Maç sonucu bildirimleri</span>
+            <input
+              type="checkbox"
+              checked={profile.notifyOnResult ?? true}
+              onChange={(e) => handleTogglePreference('notifyOnResult', e.target.checked)}
+              className="h-4 w-4 accent-scoreboard-amber"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 text-sm text-pitch-900 dark:text-pitch-100">
+            <span>Maç başlamadan 30 dk kala hatırlatma</span>
+            <input
+              type="checkbox"
+              checked={profile.notifyOnReminder ?? true}
+              onChange={(e) => handleTogglePreference('notifyOnReminder', e.target.checked)}
+              className="h-4 w-4 accent-scoreboard-amber"
+            />
+          </label>
+        </div>
       </section>
 
       <section className="rounded-xl border border-pitch-700/15 bg-white p-4 dark:border-pitch-700 dark:bg-pitch-800">

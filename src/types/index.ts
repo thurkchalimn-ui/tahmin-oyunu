@@ -65,6 +65,8 @@ export interface UserProfile {
   lastSeenRank?: number | null;
   lastSeenProfileAt?: string | null;
   avatarUrl?: string | null; // Kullanıcının kendi seçtiği profil görseli (futbolcu fotoğrafı, takım logosu vb.)
+  notifyOnResult?: boolean; // Maç sonucu bildirimi istiyor mu? (belirtilmemişse true sayılır)
+  notifyOnReminder?: boolean; // Maç başlamadan 30 dk kala hatırlatma istiyor mu? (belirtilmemişse true sayılır)
   createdAt: string;
   updatedAt: string;
 }

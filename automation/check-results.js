@@ -100,32 +100,45 @@ if (!API_FOOTBALL_KEY) {
 // okuma kotasını gereksiz yere tüketmemek için önemlidir.
 const userDocCache = new Map();
 
-async function getUserTokens(uid) {
+/** Kullanıcının token'larını VE bildirim tercihlerini getirir (önbellekli). */
+async function getUserNotifyInfo(uid) {
   if (userDocCache.has(uid)) return userDocCache.get(uid);
   const userSnap = await db.collection('users').doc(uid).get();
-  const tokens = userSnap.data()?.fcmTokens ?? [];
-  userDocCache.set(uid, tokens);
-  return tokens;
+  const data = userSnap.data() ?? {};
+  const info = {
+    tokens: data.fcmTokens ?? [],
+    notifyOnResult: data.notifyOnResult !== false, // belirtilmemişse varsayılan true
+    notifyOnReminder: data.notifyOnReminder !== false,
+  };
+  userDocCache.set(uid, info);
+  return info;
 }
 
-async function sendPushToUsers(userIds, title, body) {
+/**
+ * Verilen kullanıcı ID'lerine push bildirimi gönderir. `type` parametresi
+ * ('result' | 'reminder'), kullanıcının o türü kapatıp kapatmadığını kontrol
+ * etmek için kullanılır - kapattıysa o kullanıcıya sessizce gönderilmez.
+ */
+async function sendPushToUsers(userIds, title, body, type) {
   for (const uid of userIds) {
     try {
-      const tokens = await getUserTokens(uid);
-      if (tokens.length === 0) continue;
+      const info = await getUserNotifyInfo(uid);
+      const wantsThisType = type === 'reminder' ? info.notifyOnReminder : info.notifyOnResult;
+      if (!wantsThisType) continue;
+      if (info.tokens.length === 0) continue;
 
       const response = await messaging.sendEachForMulticast({
-        tokens,
+        tokens: info.tokens,
         notification: { title, body },
       });
 
       const invalidTokens = response.responses
-        .map((r, i) => (!r.success ? tokens[i] : null))
+        .map((r, i) => (!r.success ? info.tokens[i] : null))
         .filter(Boolean);
       if (invalidTokens.length > 0) {
-        const validTokens = tokens.filter((t) => !invalidTokens.includes(t));
+        const validTokens = info.tokens.filter((t) => !invalidTokens.includes(t));
         await db.collection('users').doc(uid).update({ fcmTokens: validTokens });
-        userDocCache.set(uid, validTokens); // önbelleği de güncelle
+        userDocCache.set(uid, { ...info, tokens: validTokens }); // önbelleği de güncelle
       }
     } catch (err) {
       console.error(`[check-results] Bildirim gönderilemedi (${uid}):`, err.message);
@@ -136,19 +149,27 @@ async function sendPushToUsers(userIds, title, body) {
 /**
  * Admin panelinden elle sonuç girildiğinde `notificationQueue` koleksiyonuna
  * bırakılan bekleyen bildirimleri okuyup gönderir, sonra siler.
+ *
+ * ÖNEMLİ SIRA: Kuyruk kaydı ÖNCE silinir, bildirim SONRA gönderilir (tam
+ * tersi değil). Böylece script gönderim sırasında bir hataya (ör. kota
+ * dolması) çarparsa, kayıt zaten silinmiş olduğu için bir sonraki turda
+ * tekrar gönderilip ÇİFT bildirime yol açmaz - en kötü ihtimalle o tek
+ * bildirim hiç gitmemiş olur, bu iki kez gitmesinden çok daha az rahatsız edici.
  */
 async function processNotificationQueue() {
   const snap = await db.collection('notificationQueue').get();
   if (snap.empty) return;
 
+  let sentCount = 0;
   for (const queueDoc of snap.docs) {
     const { userId, title, body } = queueDoc.data();
-    if (userId && title) {
-      await sendPushToUsers([userId], title, body ?? '');
-    }
     await queueDoc.ref.delete();
+    if (userId && title) {
+      await sendPushToUsers([userId], title, body ?? '', 'result');
+      sentCount += 1;
+    }
   }
-  console.log(`[check-results] Kuyruktaki ${snap.size} bildirim gönderildi.`);
+  console.log(`[check-results] Kuyruktaki ${sentCount} bildirim işlendi.`);
 }
 
 // --- Canlı skor yardımcı fonksiyonları (sadece API_FOOTBALL_KEY varsa kullanılır) ---
@@ -346,6 +367,7 @@ async function runOnce() {
         userIds,
         '⏰ Maç Yakında Başlıyor',
         `${match.homeTeam} vs ${match.awayTeam} 30 dakika içinde başlıyor!`,
+        'reminder',
       );
       console.log(`[check-results] Hatırlatma gönderildi: ${match.homeTeam} vs ${match.awayTeam} (${userIds.length} kullanıcı)`);
       await db.collection('matches').doc(match.id).update({ reminderSent: true });
