@@ -40,7 +40,7 @@ function normalizeBadges(raw: unknown): Badge[] {
 }
 
 /** Firestore Timestamp alanlarını ISO string'e çevirerek UserProfile'a dönüştürür. */
-function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
+export function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
   const toIso = (v: unknown) => (v instanceof Timestamp ? v.toDate().toISOString() : (v as string) ?? '');
   return {
     uid: id,

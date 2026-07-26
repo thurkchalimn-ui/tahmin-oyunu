@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { usePeriodLeaderboard } from '@/hooks/usePeriodLeaderboard';
@@ -31,9 +32,19 @@ export function LeaderboardPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
-      <h1 className="mb-4 font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
-        Liderlik Tablosu
-      </h1>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
+          Liderlik Tablosu
+        </h1>
+        {firebaseUser && (
+          <Link
+            to="/ligler"
+            className="rounded-md bg-scoreboard-amber/15 px-3 py-1.5 font-mono text-xs font-semibold text-scoreboard-amberDark hover:bg-scoreboard-amber/25 dark:text-scoreboard-amber"
+          >
+            👥 Liglerim
+          </Link>
+        )}
+      </div>
 
       <div className="mb-4">
         <PeriodTabs value={tab} onChange={setTab} />

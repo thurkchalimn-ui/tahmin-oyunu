@@ -12,6 +12,8 @@ import { LeaderboardPage } from '@/pages/LeaderboardPage';
 import { ChatPage } from '@/pages/ChatPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { PlayerProfilePage } from '@/pages/PlayerProfilePage';
+import { LeaguesPage } from '@/pages/LeaguesPage';
+import { LeaguePage } from '@/pages/LeaguePage';
 import { AdminPage } from '@/pages/AdminPage';
 import { PrivacyPolicyPage } from '@/pages/PrivacyPolicyPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
@@ -34,6 +36,22 @@ export default function App() {
                 <Route path="/sohbet" element={<ChatPage />} />
                 <Route path="/oyuncu/:uid" element={<PlayerProfilePage />} />
                 <Route path="/gizlilik" element={<PrivacyPolicyPage />} />
+                <Route
+                  path="/ligler"
+                  element={
+                    <ProtectedRoute>
+                      <LeaguesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/lig/:leagueId"
+                  element={
+                    <ProtectedRoute>
+                      <LeaguePage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/profil"
                   element={

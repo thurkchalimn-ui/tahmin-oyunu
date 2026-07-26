@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { usePredictionHistory } from '@/hooks/usePredictionHistory';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistoryList';
 import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { Avatar } from '@/components/common/Avatar';
+import { FollowButton } from '@/components/common/FollowButton';
 import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
@@ -14,6 +16,7 @@ import { getPeriodRange, type StatsPeriod } from '@/utils/periodUtils';
 /** Liderlik tablosunda bir oyuncunun adına tıklandığında açılan, herkese açık salt-okunur profil. */
 export function PlayerProfilePage() {
   const { uid } = useParams<{ uid: string }>();
+  const { firebaseUser } = useAuth();
   const { data: profile, loading: profileLoading, error: profileError } = usePlayerProfile(uid);
   const { data: history, loading: historyLoading, error: historyError } = usePredictionHistory(uid);
   const [tab, setTab] = useState<StatsPeriod>('all');
@@ -51,6 +54,8 @@ export function PlayerProfilePage() {
           {profile.displayName}
         </h1>
       </div>
+
+      {uid && <FollowButton currentUid={firebaseUser?.uid} targetUid={uid} />}
 
       <div>
         <PeriodTabs value={tab} onChange={setTab} />

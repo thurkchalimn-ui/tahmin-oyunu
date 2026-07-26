@@ -78,6 +78,15 @@ export interface UserProfile {
 }
 
 // Async veri çekme durumları için ortak tip (loading/error ekranları için)
+// Kullanıcının kurduğu/üye olduğu özel lig (arkadaş grubu liderlik tablosu)
+export interface League {
+  id: string;
+  name: string;
+  ownerUid: string;
+  memberUids: string[];
+  createdAt: string;
+}
+
 export interface AsyncState<T> {
   data: T | null;
   loading: boolean;
