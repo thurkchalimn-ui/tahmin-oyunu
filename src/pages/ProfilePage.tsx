@@ -2,7 +2,12 @@ import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePredictionHistory } from '@/hooks/usePredictionHistory';
-import { updateDisplayName, updateAvatarUrl, updateNotificationPreferences } from '@/services/userService';
+import {
+  updateDisplayName,
+  updateAvatarUrl,
+  updateNotificationPreferences,
+  ACTIVITY_STREAK_MILESTONES,
+} from '@/services/userService';
 import { deleteAccount } from '@/services/authService';
 import { markProfileSeen } from '@/services/readStatusService';
 import { enablePushNotifications, type PushPermissionResult } from '@/services/notificationService';
@@ -214,6 +219,42 @@ export function ProfilePage() {
           </div>
         </section>
       )}
+
+      <section className="rounded-xl border border-pitch-700/15 bg-white p-4 dark:border-pitch-700 dark:bg-pitch-800">
+        <h2 className="mb-1 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
+          🔥 Günlük Giriş Serin
+        </h2>
+        {(() => {
+          const streak = profile.activityStreak ?? 0;
+          const nextMilestone = ACTIVITY_STREAK_MILESTONES.find((m) => m > streak);
+          const prevMilestone = [...ACTIVITY_STREAK_MILESTONES].reverse().find((m) => m <= streak) ?? 0;
+          const target = nextMilestone ?? streak;
+          const rangeStart = prevMilestone;
+          const progress =
+            nextMilestone && nextMilestone > rangeStart
+              ? Math.min(100, Math.round(((streak - rangeStart) / (nextMilestone - rangeStart)) * 100))
+              : 100;
+          return (
+            <>
+              <p className="mb-2 font-body text-xs text-pitch-700/60 dark:text-pitch-100/50">
+                {streak} gün üst üste giriş yaptın.{' '}
+                {nextMilestone
+                  ? `${nextMilestone} güne ulaşınca yeni bir rozet kazanacaksın (${nextMilestone - streak} gün kaldı).`
+                  : 'Tüm giriş serisi rozetlerini kazandın! 🎉'}
+              </p>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-pitch-700/10 dark:bg-pitch-700">
+                <div
+                  className="h-full rounded-full bg-scoreboard-amber transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="mt-1 text-right font-mono text-[10px] text-pitch-700/50 dark:text-pitch-100/40">
+                {streak} / {target} gün
+              </p>
+            </>
+          );
+        })()}
+      </section>
 
       <section className="rounded-xl border border-pitch-700/15 bg-white p-4 dark:border-pitch-700 dark:bg-pitch-800">
         <h2 className="mb-1 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">

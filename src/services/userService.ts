@@ -23,7 +23,7 @@ import { toDateKey } from '@/utils/dateUtils';
 const CORRECT_TOTAL_MILESTONES = [50, 100, 250, 500, 1000];
 
 /** Art arda kaç gün uygulamayı açtığına göre kazanılan rozet eşikleri. */
-const ACTIVITY_STREAK_MILESTONES = [7, 30, 60, 90, 180, 365];
+export const ACTIVITY_STREAK_MILESTONES = [7, 30, 60, 90, 180, 365];
 
 /**
  * Ham rozet verisini güncel Badge şekline çevirir. Eski kayıtlarda (bu özellik
