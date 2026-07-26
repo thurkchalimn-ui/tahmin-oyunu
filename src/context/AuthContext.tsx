@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
-import { subscribeUserProfile, touchLastActive } from '@/services/userService';
+import { subscribeUserProfile, touchLastActive, touchDailyActivity } from '@/services/userService';
 import type { UserProfile } from '@/types';
 
 interface AuthContextValue {
@@ -72,7 +72,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // istatistikleri için. touchLastActive kendi içinde saatte bir
         // sınırlaması yapar, burada her profil güncellemesinde çağrılması
         // sorun yaratmaz (gereksiz yazma isteği göndermez).
-        if (p) touchLastActive(firebaseUser.uid, p.lastActiveAt ?? null).catch(() => {});
+        if (p) {
+          touchLastActive(firebaseUser.uid, p.lastActiveAt ?? null).catch(() => {});
+          touchDailyActivity(firebaseUser.uid, {
+            activityStreak: p.activityStreak ?? 0,
+            lastActiveDateKey: p.lastActiveDateKey ?? null,
+            badges: p.badges,
+          }).catch(() => {});
+        }
       },
       () => setProfile(null),
     );

@@ -3,6 +3,7 @@ import type { ChatMessage } from '@/types';
 import { formatChatTime } from '@/utils/dateUtils';
 import { Link } from 'react-router-dom';
 import { Avatar } from '@/components/common/Avatar';
+import { BadgeIcons } from '@/components/common/BadgeIcons';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -69,6 +70,7 @@ export function ChatMessageList({
                   </span>
                 )}
               </Link>
+              {message.badges && message.badges.length > 0 && <BadgeIcons badges={message.badges} />}
               <span className="font-mono text-[10px] text-pitch-700/40 dark:text-pitch-100/30">
                 {formatChatTime(message.createdAt)}
               </span>

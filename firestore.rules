@@ -28,14 +28,21 @@ service cloud.firestore {
     }
 
     // users/{uid}: herkes liderlik tablosu için okuyabilir.
-    // Sahibi sadece displayName günceller; seri/rozet alanlarını yalnız admin değiştirir.
+    // Sahibi displayName, avatar, bildirim tercihleri ve aktiflik/rozet
+    // alanlarını günceller; seri (streak) alanlarını yalnız admin değiştirir.
+    // GÜVENLİK NOTU: 'badges' alanı sahibi tarafından yazılabilir olduğu için
+    // (activityStreak/correctTotal rozetlerinin istemci tarafında verilmesi
+    // gerektiğinden), teorik olarak bir kullanıcı kendine sahte bir rozet
+    // yazabilir. Bu, düşük riskli/kozmetik bir özellik olduğu için MVP'de
+    // kabul edilmiştir; tam sunucu taraflı doğrulama bir Cloud Function
+    // gerektirir (bkz. bu dosyanın başındaki benzer not).
     match /users/{uid} {
       allow read: if true;
       allow create: if isOwner(uid);
       allow update: if isAdmin() ||
         (isOwner(uid) &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['displayName', 'updatedAt', 'lastSeenChatAt', 'lastSeenRank', 'lastSeenProfileAt', 'fcmTokens', 'avatarUrl', 'notifyOnResult', 'notifyOnReminder', 'lastActiveAt']));
+            .hasOnly(['displayName', 'updatedAt', 'lastSeenChatAt', 'lastSeenRank', 'lastSeenProfileAt', 'fcmTokens', 'avatarUrl', 'notifyOnResult', 'notifyOnReminder', 'lastActiveAt', 'activityStreak', 'lastActiveDateKey', 'badges']));
       allow delete: if isOwner(uid);
     }
 

@@ -10,6 +10,7 @@ import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistoryList';
 import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { Avatar } from '@/components/common/Avatar';
+import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
 import { useAvatarOptions } from '@/hooks/useAvatarOptions';
 import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -207,7 +208,7 @@ export function ProfilePage() {
                 key={i}
                 className="rounded-full bg-scoreboard-amber/15 px-3 py-1.5 font-mono text-xs text-scoreboard-amberDark dark:text-scoreboard-amber"
               >
-                🏆 {badge.streakLength} maçlık seri
+                {BADGE_ICONS[badge.type]} {BADGE_LABELS[badge.type](badge.value)}
               </span>
             ))}
           </div>

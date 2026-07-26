@@ -30,6 +30,7 @@ export function ChatPage() {
       isAdmin,
       profile.avatarUrl,
       replyingTo ? { messageId: replyingTo.id, displayName: replyingTo.displayName, text: replyingTo.text } : null,
+      profile.badges,
     );
     setReplyingTo(null);
   }

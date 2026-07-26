@@ -6,6 +6,7 @@ import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistoryList';
 import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { Avatar } from '@/components/common/Avatar';
+import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { getPeriodRange, type StatsPeriod } from '@/utils/periodUtils';
@@ -102,6 +103,24 @@ export function PlayerProfilePage() {
           </div>
         )}
       </section>
+
+      {profile.badges.length > 0 && (
+        <section>
+          <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
+            Rozetler
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {profile.badges.map((badge, i) => (
+              <span
+                key={i}
+                className="rounded-full bg-scoreboard-amber/15 px-3 py-1.5 font-mono text-xs text-scoreboard-amberDark dark:text-scoreboard-amber"
+              >
+                {BADGE_ICONS[badge.type]} {BADGE_LABELS[badge.type](badge.value)}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">

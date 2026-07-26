@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { UserProfile } from '@/types';
 import { Avatar } from '@/components/common/Avatar';
+import { BadgeIcons } from '@/components/common/BadgeIcons';
 
 interface LeaderboardTableProps {
   users: UserProfile[];
@@ -81,7 +82,11 @@ export function LeaderboardTable({ users, currentUserId, mode = 'all' }: Leaderb
                     <Avatar avatarUrl={user.avatarUrl} size="sm" />
                     <span className="truncate">{user.displayName}</span>
                   </Link>
-                  {user.badges.some((b) => b.streakLength >= 15) && <span className="ml-1">🏆</span>}
+                  {user.badges.length > 0 && (
+                    <span className="ml-1">
+                      <BadgeIcons badges={user.badges} />
+                    </span>
+                  )}
                 </td>
                 {mode === 'all' && (
                   <>

@@ -44,8 +44,11 @@ export interface Prediction {
 }
 
 // Kullanıcı profili ve seri istatistikleri
+export type BadgeType = 'matchStreak' | 'correctTotal' | 'activityStreak';
+
 export interface Badge {
-  streakLength: number; // Ulaşılan seri uzunluğu (ör. 15)
+  type: BadgeType; // 'matchStreak': art arda doğru tahmin serisi, 'correctTotal': toplam doğru tahmin eşiği, 'activityStreak': art arda giriş yapılan gün sayısı
+  value: number; // Ulaşılan eşik (ör. matchStreak=15, correctTotal=100, activityStreak=30)
   achievedAt: string;
 }
 
@@ -68,6 +71,8 @@ export interface UserProfile {
   notifyOnResult?: boolean; // Maç sonucu bildirimi istiyor mu? (belirtilmemişse true sayılır)
   notifyOnReminder?: boolean; // Maç başlamadan 30 dk kala hatırlatma istiyor mu? (belirtilmemişse true sayılır)
   lastActiveAt?: string | null; // Uygulamayı en son ne zaman açtığı (admin istatistikleri için - saatte bir güncellenir)
+  activityStreak?: number; // Art arda kaç gündür uygulamayı açtığı (bir gün atlarsa sıfırlanır)
+  lastActiveDateKey?: string | null; // activityStreak'in son sayıldığı gün ('YYYY-MM-DD')
   createdAt: string;
   updatedAt: string;
 }
@@ -85,6 +90,7 @@ export interface ChatMessage {
   userId: string;
   displayName: string;
   avatarUrl?: string | null; // Gönderenin mesaj anındaki profil görseli
+  badges?: Badge[]; // Gönderenin mesaj anındaki rozetleri
   text: string;
   isAdmin: boolean; // Gönderen admin mi? (Firestore kuralında doğrulanır, sahte etiket takılamaz)
   replyTo?: {

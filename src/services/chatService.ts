@@ -10,7 +10,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import type { ChatMessage } from '@/types';
+import type { ChatMessage, Badge } from '@/types';
 
 export const MAX_MESSAGE_LENGTH = 500;
 const MESSAGE_HISTORY_LIMIT = 100; // Sadece son 100 mesaj yüklenir (performans için)
@@ -25,6 +25,7 @@ function mapMessageDoc(id: string, data: Record<string, unknown>): ChatMessage {
     userId: data.userId as string,
     displayName: (data.displayName as string) ?? 'İsimsiz Oyuncu',
     avatarUrl: (data.avatarUrl as string) || null,
+    badges: (data.badges as Badge[]) ?? [],
     text: data.text as string,
     isAdmin: (data.isAdmin as boolean) ?? false,
     replyTo: replyTo ?? null,
@@ -45,6 +46,7 @@ export async function sendMessage(
   isAdmin: boolean,
   avatarUrl?: string | null,
   replyTo?: { messageId: string; displayName: string; text: string } | null,
+  badges?: Badge[],
 ): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) throw new Error('Boş mesaj gönderilemez.');
@@ -55,6 +57,7 @@ export async function sendMessage(
     userId,
     displayName,
     avatarUrl: avatarUrl || null,
+    badges: badges ?? [],
     text: trimmed,
     isAdmin,
     replyTo: replyTo

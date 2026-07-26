@@ -17,6 +17,27 @@ import type { UserProfile, Prediction, Badge } from '@/types';
 import { calculateCurrentStreak, calculateBestStreak, STREAK_TARGET } from '@/utils/streakUtils';
 import { isUsernameTaken, claimUsername, releaseUsername } from '@/services/usernameService';
 import { containsProfanity } from '@/utils/profanityFilter';
+import { toDateKey } from '@/utils/dateUtils';
+
+/** Toplam doğru tahmin sayısına göre kazanılan rozet eşikleri. */
+const CORRECT_TOTAL_MILESTONES = [50, 100, 250, 500, 1000];
+
+/** Art arda kaç gün uygulamayı açtığına göre kazanılan rozet eşikleri. */
+const ACTIVITY_STREAK_MILESTONES = [7, 30, 60, 90, 180, 365];
+
+/**
+ * Ham rozet verisini güncel Badge şekline çevirir. Eski kayıtlarda (bu özellik
+ * genişletilmeden önce) sadece `{ streakLength, achievedAt }` vardı, `type`
+ * alanı yoktu - hepsi o zamanlar sadece "seri" rozetiydi. Bu fonksiyon, eski
+ * kayıtları otomatik olarak `type: 'matchStreak'` olarak yorumlar.
+ */
+function normalizeBadges(raw: unknown): Badge[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((b: Record<string, unknown>) => {
+    if (b.type) return b as Badge;
+    return { type: 'matchStreak', value: b.streakLength as number, achievedAt: b.achievedAt as string };
+  });
+}
 
 /** Firestore Timestamp alanlarını ISO string'e çevirerek UserProfile'a dönüştürür. */
 function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
@@ -29,7 +50,7 @@ function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
     bestStreak: (data.bestStreak as number) ?? 0,
     totalPredictions: (data.totalPredictions as number) ?? 0,
     correctPredictions: (data.correctPredictions as number) ?? 0,
-    badges: (data.badges as Badge[]) ?? [],
+    badges: normalizeBadges(data.badges),
     isAdmin: false, // AuthContext içinde admins koleksiyonuna göre ayrıca belirlenir
     lastSeenChatAt: data.lastSeenChatAt ? toIso(data.lastSeenChatAt) : null,
     lastSeenRank: (data.lastSeenRank as number | undefined) ?? null,
@@ -38,6 +59,8 @@ function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
     notifyOnResult: data.notifyOnResult !== false, // belirtilmemişse (eski kullanıcılar) varsayılan true
     notifyOnReminder: data.notifyOnReminder !== false,
     lastActiveAt: data.lastActiveAt ? toIso(data.lastActiveAt) : null,
+    activityStreak: (data.activityStreak as number) ?? 0,
+    lastActiveDateKey: (data.lastActiveDateKey as string) || null,
     createdAt: toIso(data.createdAt),
     updatedAt: toIso(data.updatedAt),
   };
@@ -136,6 +159,42 @@ export async function touchLastActive(uid: string, currentLastActiveAt: string |
 }
 
 /**
+ * Kullanıcının "art arda kaç gündür uygulamayı açtığını" günceller ve eşik
+ * aşıldıkça otomatik rozet verir. Günde en fazla bir kez sayar (aynı gün
+ * içinde tekrar çağrılırsa hiçbir şey yapmaz). Bugün ile en son sayılan gün
+ * arasında tam bir gün fark varsa seri +1 artar; daha fazla gün atlanmışsa
+ * (kullanıcı bir günü kaçırmışsa) seri 1'e sıfırlanır.
+ */
+export async function touchDailyActivity(
+  uid: string,
+  current: { activityStreak: number; lastActiveDateKey: string | null; badges: Badge[] },
+): Promise<void> {
+  const todayKey = toDateKey(new Date());
+  if (current.lastActiveDateKey === todayKey) return; // Bugün zaten sayıldı
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = toDateKey(yesterday);
+
+  const newStreak = current.lastActiveDateKey === yesterdayKey ? current.activityStreak + 1 : 1;
+
+  const badges = [...current.badges];
+  for (const milestone of ACTIVITY_STREAK_MILESTONES) {
+    const alreadyHas = current.badges.some((b) => b.type === 'activityStreak' && b.value === milestone);
+    if (!alreadyHas && newStreak >= milestone) {
+      badges.push({ type: 'activityStreak', value: milestone, achievedAt: new Date().toISOString() });
+    }
+  }
+
+  await updateDoc(doc(db, 'users', uid), {
+    activityStreak: newStreak,
+    lastActiveDateKey: todayKey,
+    badges,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
  * Verilen maç ID'lerinin sıralama için gereken bilgilerini (kickoffAt ve
  * homeTeam) toplu olarak getirir. matchService.ts'deki benzer fonksiyonun
  * küçük bir kopyasıdır; matchService zaten bu dosyadaki recalculateUserStreak'i
@@ -198,7 +257,7 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
 
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
-  const existingBadges: Badge[] = (userSnap.data()?.badges as Badge[]) ?? [];
+  const existingBadges: Badge[] = normalizeBadges(userSnap.data()?.badges);
 
   // Kullanıcının serisi tam olarak hedefe (15) ulaştığı anda yeni bir rozet eklenir.
   // Bu fonksiyon her çağrıldığında currentStreak, tüm sonuçlanmış tahminlerden yeniden
@@ -207,7 +266,16 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
   // tahminde 16'ya çıkar, yanlışta 0'a döner. Bu yüzden ek bir tekrar kontrolüne gerek yoktur.
   const badges = [...existingBadges];
   if (currentStreak === STREAK_TARGET) {
-    badges.push({ streakLength: STREAK_TARGET, achievedAt: new Date().toISOString() });
+    badges.push({ type: 'matchStreak', value: STREAK_TARGET, achievedAt: new Date().toISOString() });
+  }
+
+  // Toplam doğru tahmin eşikleri: her eşik en fazla bir kez verilir (daha önce
+  // verilmişse tekrar eklenmez), eşik aşıldıkça otomatik olarak kazanılır.
+  for (const milestone of CORRECT_TOTAL_MILESTONES) {
+    const alreadyHas = existingBadges.some((b) => b.type === 'correctTotal' && b.value === milestone);
+    if (!alreadyHas && correctPredictions >= milestone) {
+      badges.push({ type: 'correctTotal', value: milestone, achievedAt: new Date().toISOString() });
+    }
   }
 
   await updateDoc(userRef, {
