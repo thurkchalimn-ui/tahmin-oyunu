@@ -15,6 +15,7 @@ import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistoryList';
 import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { Avatar } from '@/components/common/Avatar';
+import { FollowLists } from '@/components/common/FollowLists';
 import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
 import { useAvatarOptions } from '@/hooks/useAvatarOptions';
 import { Button } from '@/components/common/Button';
@@ -149,6 +150,8 @@ export function ProfilePage() {
           {profile.displayName}
         </h1>
       </div>
+
+      <FollowLists uid={firebaseUser.uid} />
 
       <div>
         <PeriodTabs value={tab} onChange={setTab} />

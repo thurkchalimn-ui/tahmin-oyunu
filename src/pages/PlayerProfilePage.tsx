@@ -8,6 +8,7 @@ import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistor
 import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { Avatar } from '@/components/common/Avatar';
 import { FollowButton } from '@/components/common/FollowButton';
+import { FollowLists } from '@/components/common/FollowLists';
 import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
@@ -56,6 +57,8 @@ export function PlayerProfilePage() {
       </div>
 
       {uid && <FollowButton currentUid={firebaseUser?.uid} targetUid={uid} />}
+
+      {uid && <FollowLists uid={uid} />}
 
       <div>
         <PeriodTabs value={tab} onChange={setTab} />

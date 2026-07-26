@@ -44,6 +44,12 @@ export async function getFollowingUids(uid: string): Promise<string[]> {
   return snap.docs.map((d) => d.data().followedUid as string);
 }
 
+/** Bir kullanıcıyı takip eden herkesin ID listesini döner. */
+export async function getFollowerUids(uid: string): Promise<string[]> {
+  const snap = await getDocs(query(collection(db, 'follows'), where('followedUid', '==', uid)));
+  return snap.docs.map((d) => d.data().followerUid as string);
+}
+
 /** Takipçi sayısını döner (sadece sayı - kota dostu). */
 export async function getFollowerCount(uid: string): Promise<number> {
   const snap = await getCountFromServer(query(collection(db, 'follows'), where('followedUid', '==', uid)));
