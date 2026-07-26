@@ -67,6 +67,7 @@ export interface UserProfile {
   avatarUrl?: string | null; // Kullanıcının kendi seçtiği profil görseli (futbolcu fotoğrafı, takım logosu vb.)
   notifyOnResult?: boolean; // Maç sonucu bildirimi istiyor mu? (belirtilmemişse true sayılır)
   notifyOnReminder?: boolean; // Maç başlamadan 30 dk kala hatırlatma istiyor mu? (belirtilmemişse true sayılır)
+  lastActiveAt?: string | null; // Uygulamayı en son ne zaman açtığı (admin istatistikleri için - saatte bir güncellenir)
   createdAt: string;
   updatedAt: string;
 }

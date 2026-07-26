@@ -37,6 +37,7 @@ function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
     avatarUrl: (data.avatarUrl as string) || null,
     notifyOnResult: data.notifyOnResult !== false, // belirtilmemişse (eski kullanıcılar) varsayılan true
     notifyOnReminder: data.notifyOnReminder !== false,
+    lastActiveAt: data.lastActiveAt ? toIso(data.lastActiveAt) : null,
     createdAt: toIso(data.createdAt),
     updatedAt: toIso(data.updatedAt),
   };
@@ -120,6 +121,18 @@ export async function updateNotificationPreferences(
   prefs: { notifyOnResult?: boolean; notifyOnReminder?: boolean },
 ): Promise<void> {
   await updateDoc(doc(db, 'users', uid), { ...prefs, updatedAt: Timestamp.now() });
+}
+
+/**
+ * Kullanıcının "gerçekten aktif" olduğunu (uygulamayı açtığını) kaydeder -
+ * admin panelindeki "Aktif Kullanıcı" istatistiği için kullanılır. Gereksiz
+ * yazma trafiğini önlemek için, son kayıttan bu yana en az 1 saat geçmediyse
+ * hiçbir şey yapmaz (çağıran taraf bu kontrolü yapar, bkz. AuthContext.tsx).
+ */
+export async function touchLastActive(uid: string, currentLastActiveAt: string | null): Promise<void> {
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  if (currentLastActiveAt && new Date(currentLastActiveAt).getTime() > oneHourAgo) return;
+  await updateDoc(doc(db, 'users', uid), { lastActiveAt: Timestamp.now() });
 }
 
 /**

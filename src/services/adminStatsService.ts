@@ -24,7 +24,7 @@ export async function getAdminStats(): Promise<AdminStats> {
 
   const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const activeSnap = await getCountFromServer(
-    query(collection(db, 'users'), where('lastSeenProfileAt', '>=', sevenDaysAgoIso)),
+    query(collection(db, 'users'), where('lastActiveAt', '>=', sevenDaysAgoIso)),
   );
 
   // "En çok maçı olan ligler": son 30 gündeki maçlar league alanına göre

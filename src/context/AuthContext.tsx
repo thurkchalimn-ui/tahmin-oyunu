@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
-import { subscribeUserProfile } from '@/services/userService';
+import { subscribeUserProfile, touchLastActive } from '@/services/userService';
 import type { UserProfile } from '@/types';
 
 interface AuthContextValue {
@@ -66,7 +66,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!firebaseUser) return;
     const unsubscribeProfile = subscribeUserProfile(
       firebaseUser.uid,
-      (p) => setProfile(p),
+      (p) => {
+        setProfile(p);
+        // Uygulama açıldığında "gerçekten aktif" olarak işaretle - admin
+        // istatistikleri için. touchLastActive kendi içinde saatte bir
+        // sınırlaması yapar, burada her profil güncellemesinde çağrılması
+        // sorun yaratmaz (gereksiz yazma isteği göndermez).
+        if (p) touchLastActive(firebaseUser.uid, p.lastActiveAt ?? null).catch(() => {});
+      },
       () => setProfile(null),
     );
     return unsubscribeProfile;
