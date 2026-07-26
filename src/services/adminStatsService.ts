@@ -1,4 +1,4 @@
-import { collection, query, where, getCountFromServer, getDocs } from 'firebase/firestore';
+import { collection, query, where, getCountFromServer, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
 export interface AdminStats {
@@ -22,9 +22,13 @@ export async function getAdminStats(): Promise<AdminStats> {
     getCountFromServer(collection(db, 'predictions')),
   ]);
 
-  const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  // ÖNEMLİ: lastActiveAt alanı Firestore'da bir Timestamp olarak saklanır
+  // (bkz. userService.ts - touchLastActive), bu yüzden karşılaştırma da bir
+  // Timestamp ile yapılmalı - düz bir ISO string ile karşılaştırma (farklı
+  // tip) hiçbir zaman eşleşmez ve sonuç her zaman 0 çıkar.
+  const sevenDaysAgo = Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
   const activeSnap = await getCountFromServer(
-    query(collection(db, 'users'), where('lastActiveAt', '>=', sevenDaysAgoIso)),
+    query(collection(db, 'users'), where('lastActiveAt', '>=', sevenDaysAgo)),
   );
 
   // "En çok maçı olan ligler": son 30 gündeki maçlar league alanına göre
