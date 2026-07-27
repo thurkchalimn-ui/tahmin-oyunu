@@ -1,4 +1,4 @@
-import bgUrl from '@/assets/share-card-bg.jpg';
+import bgUrl from '@/assets/share-card-bg-v2.png';
 
 interface ShareCardOptions {
   icon: string; // Küçük bir emoji (ör. 🏆, 🔥, 🎯)
@@ -23,6 +23,7 @@ function wrapText(
   topY: number,
   maxWidth: number,
   lineHeight: number,
+  draw: (line: string, x: number, y: number) => void,
 ): number {
   const words = text.split(' ');
   const lines: string[] = [];
@@ -38,15 +39,15 @@ function wrapText(
   }
   lines.push(line.trim());
 
-  lines.forEach((l, i) => ctx.fillText(l, centerX, topY + i * lineHeight));
+  lines.forEach((l, i) => draw(l, centerX, topY + i * lineHeight));
   return lines.length;
 }
 
 /**
- * Kullanıcının kendi hazırladığı "Tahmin Serisi" logo/marka görselini şablon
- * olarak kullanıp, görselin üst ve alt boşluklarına başarı metnini bindirir.
- * Görsel projenin kendi bundle'ının bir parçası olduğu için (yerel dosya,
- * harici bir URL değil) canvas'ı "kirletme" (CORS) sorunu yaşanmaz.
+ * Kullanıcının kendi hazırladığı "Tahmin Serisi" marka görselini (v2 - telefon
+ * ve sosyal ikonlu tasarım) şablon olarak kullanıp, üst ve alt boşluklara
+ * başarı metnini görselin altın/lacivert renk temasına uygun (kalın, ince
+ * lacivert kontur + altın dolgu) bir stille bindirir.
  */
 export async function generateShareCardBlob(options: ShareCardOptions): Promise<Blob> {
   const bg = await loadImage(bgUrl);
@@ -60,20 +61,26 @@ export async function generateShareCardBlob(options: ShareCardOptions): Promise<
   ctx.textAlign = 'center';
 
   const centerX = canvas.width / 2;
+  const NAVY = '#1B2A4A';
+  const GOLD = '#D4AF37';
 
-  // Üst boşluğa: ikon + başlık (görselin logosu koyu renkte olduğu için
-  // buradaki açık/beyaz zemine koyu yeşil metin kullanılır)
-  ctx.font = '64px "Arial", sans-serif';
-  ctx.fillText(options.icon, centerX, 90);
+  // Üst boşluk (~90px yükseklik): ikon + başlık, görselin "TAHMİN SERİSİ"
+  // yazısındakiyle aynı altın dolgu + lacivert ince kontur stiliyle
+  const headlineText = `${options.icon} ${options.headline.toUpperCase()}`;
+  ctx.font = 'bold 42px "Arial", sans-serif';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = NAVY;
+  ctx.fillStyle = GOLD;
 
-  ctx.fillStyle = '#16302A';
-  ctx.font = 'bold 40px "Arial", sans-serif';
-  wrapText(ctx, options.headline.toUpperCase(), centerX, 150, canvas.width - 140, 46);
+  wrapText(ctx, headlineText, centerX, 60, canvas.width - 100, 48, (line, x, y) => {
+    ctx.strokeText(line, x, y);
+    ctx.fillText(line, x, y);
+  });
 
-  // Alt boşluğa: kullanıcı adı
-  ctx.fillStyle = 'rgba(22,48,42,0.65)';
-  ctx.font = '32px "Arial", sans-serif';
-  ctx.fillText(options.subtext, centerX, canvas.height - 60);
+  // Alt boşluk: kullanıcı adı (lacivert, düz metin)
+  ctx.fillStyle = NAVY;
+  ctx.font = 'bold 30px "Arial", sans-serif';
+  ctx.fillText(options.subtext, centerX, canvas.height - 40);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
