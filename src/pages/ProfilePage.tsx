@@ -17,6 +17,7 @@ import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { Avatar } from '@/components/common/Avatar';
 import { FollowLists } from '@/components/common/FollowLists';
 import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
+import { ShareButton } from '@/components/common/ShareButton';
 import { useAvatarOptions } from '@/hooks/useAvatarOptions';
 import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -158,9 +159,18 @@ export function ProfilePage() {
       </div>
 
       <section className="rounded-xl border border-pitch-700/15 bg-white p-5 dark:border-pitch-700 dark:bg-pitch-800">
-        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
-          Güncel Serin
-        </p>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
+            Güncel Serin
+          </p>
+          {profile.currentStreak > 0 && (
+            <ShareButton
+              icon="⚽"
+              headline={`${profile.currentStreak} MAÇLIK SERİ SÜRÜYOR!`}
+              subtext={profile.displayName}
+            />
+          )}
+        </div>
         <StreakBadge currentStreak={profile.currentStreak} />
         {tab === 'all' ? (
           <div className="mt-4 grid grid-cols-3 gap-3 border-t border-pitch-700/10 pt-4 text-center dark:border-pitch-100/10">
@@ -210,14 +220,21 @@ export function ProfilePage() {
           <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
             Rozetler
           </h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             {profile.badges.map((badge, i) => (
-              <span
+              <div
                 key={i}
-                className="rounded-full bg-scoreboard-amber/15 px-3 py-1.5 font-mono text-xs text-scoreboard-amberDark dark:text-scoreboard-amber"
+                className="flex items-center justify-between gap-2 rounded-lg bg-scoreboard-amber/15 px-3 py-2"
               >
-                {BADGE_ICONS[badge.type]} {BADGE_LABELS[badge.type](badge.value)}
-              </span>
+                <span className="font-mono text-xs text-scoreboard-amberDark dark:text-scoreboard-amber">
+                  {BADGE_ICONS[badge.type]} {BADGE_LABELS[badge.type](badge.value)}
+                </span>
+                <ShareButton
+                  icon={BADGE_ICONS[badge.type]}
+                  headline={BADGE_LABELS[badge.type](badge.value).toUpperCase() + '!'}
+                  subtext={profile.displayName}
+                />
+              </div>
             ))}
           </div>
         </section>
