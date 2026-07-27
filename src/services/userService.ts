@@ -259,13 +259,16 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
   const userSnap = await getDoc(userRef);
   const existingBadges: Badge[] = normalizeBadges(userSnap.data()?.badges);
 
-  // Kullanıcının serisi tam olarak hedefe (15) ulaştığı anda yeni bir rozet eklenir.
-  // Bu fonksiyon her çağrıldığında currentStreak, tüm sonuçlanmış tahminlerden yeniden
-  // ve deterministik olarak hesaplandığı için (bkz. calculateCurrentStreak), değer
-  // sadece "15. doğru tahmin az önce çözüldü" anında tam 15 olabilir; bir sonraki doğru
-  // tahminde 16'ya çıkar, yanlışta 0'a döner. Bu yüzden ek bir tekrar kontrolüne gerek yoktur.
+  // Kullanıcının serisi hedefe (15) ulaştığında yeni bir rozet eklenir. Eski
+  // kod "tam olarak 15" anını yakalamaya çalışıyordu (===), ama seri yeniden
+  // hesaplandığında (ör. sıralama mantığı değiştiğinde, ya da birden fazla
+  // maç arka arkaya hızlıca sonuçlandığında) değer 15'i atlayıp doğrudan daha
+  // yükseğe çıkabiliyordu - bu da rozetin hiç verilmemesine yol açıyordu.
+  // Artık ">= 15 VE bu rozet daha önce hiç verilmemiş" kontrolü yapılıyor -
+  // bu, hangi şekilde 15'e ulaşılırsa ulaşılsın rozetin garantili verilmesini sağlar.
   const badges = [...existingBadges];
-  if (currentStreak === STREAK_TARGET) {
+  const alreadyHasMatchStreakBadge = existingBadges.some((b) => b.type === 'matchStreak' && b.value === STREAK_TARGET);
+  if (currentStreak >= STREAK_TARGET && !alreadyHasMatchStreakBadge) {
     badges.push({ type: 'matchStreak', value: STREAK_TARGET, achievedAt: new Date().toISOString() });
   }
 
