@@ -1,7 +1,18 @@
+import bgUrl from '@/assets/share-card-bg.jpg';
+
 interface ShareCardOptions {
-  icon: string; // Büyük gösterilecek emoji (ör. 🏆, 🔥, 🎯)
+  icon: string; // Küçük bir emoji (ör. 🏆, 🔥, 🎯)
   headline: string; // Ana başlık (ör. "15 MAÇLIK SERİ TAMAMLANDI!")
   subtext: string; // Alt metin (ör. kullanıcı adı)
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Arka plan görseli yüklenemedi.'));
+    img.src = src;
+  });
 }
 
 /** Metni verilen genişliğe göre satırlara böler (canvas'ta otomatik satır kaydırma yoktur). */
@@ -9,10 +20,10 @@ function wrapText(
   ctx: CanvasRenderingContext2D,
   text: string,
   centerX: number,
-  centerY: number,
+  topY: number,
   maxWidth: number,
   lineHeight: number,
-) {
+): number {
   const words = text.split(' ');
   const lines: string[] = [];
   let line = '';
@@ -27,66 +38,42 @@ function wrapText(
   }
   lines.push(line.trim());
 
-  const startY = centerY - ((lines.length - 1) * lineHeight) / 2;
-  lines.forEach((l, i) => ctx.fillText(l, centerX, startY + i * lineHeight));
+  lines.forEach((l, i) => ctx.fillText(l, centerX, topY + i * lineHeight));
+  return lines.length;
 }
 
 /**
- * Instagram/WhatsApp'ta paylaşılabilecek, oyunun skorbord temasına uygun
- * kare (1080x1080) bir başarı kartı görseli oluşturur. Kullanıcı avatarı
- * BİLİNÇLİ OLARAK dahil edilmez - harici görsellerin CORS kısıtlamaları
- * canvas'ı "kirletip" görselin dışa aktarılamamasına yol açabilirdi; bunun
- * yerine sade, garanti çalışan bir emoji/metin tasarımı kullanılır.
+ * Kullanıcının kendi hazırladığı "Tahmin Serisi" logo/marka görselini şablon
+ * olarak kullanıp, görselin üst ve alt boşluklarına başarı metnini bindirir.
+ * Görsel projenin kendi bundle'ının bir parçası olduğu için (yerel dosya,
+ * harici bir URL değil) canvas'ı "kirletme" (CORS) sorunu yaşanmaz.
  */
 export async function generateShareCardBlob(options: ShareCardOptions): Promise<Blob> {
+  const bg = await loadImage(bgUrl);
   const canvas = document.createElement('canvas');
-  canvas.width = 1080;
-  canvas.height = 1080;
+  canvas.width = bg.width;
+  canvas.height = bg.height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas desteklenmiyor.');
 
-  // Arka plan: koyu yeşil gradyan (sahayı andıran)
-  const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  bgGradient.addColorStop(0, '#0E1A16');
-  bgGradient.addColorStop(1, '#16302A');
-  ctx.fillStyle = bgGradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Üstte hafif amber parlaklık efekti (skorbord ışığı hissi)
-  const glow = ctx.createRadialGradient(540, 280, 40, 540, 280, 620);
-  glow.addColorStop(0, 'rgba(242,183,5,0.18)');
-  glow.addColorStop(1, 'rgba(242,183,5,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+  ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
   ctx.textAlign = 'center';
 
-  // Üst marka
-  ctx.fillStyle = '#F2B705';
-  ctx.font = 'bold 38px "Arial", sans-serif';
-  ctx.fillText('⚽ TAHMİN SERİSİ', 540, 130);
+  const centerX = canvas.width / 2;
 
-  // Büyük ikon
-  ctx.font = '260px "Arial", sans-serif';
-  ctx.fillText(options.icon, 540, 500);
+  // Üst boşluğa: ikon + başlık (görselin logosu koyu renkte olduğu için
+  // buradaki açık/beyaz zemine koyu yeşil metin kullanılır)
+  ctx.font = '64px "Arial", sans-serif';
+  ctx.fillText(options.icon, centerX, 90);
 
-  // Ana başlık (uzunsa otomatik satır kaydırma)
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 68px "Arial", sans-serif';
-  wrapText(ctx, options.headline, 540, 660, 920, 82);
+  ctx.fillStyle = '#16302A';
+  ctx.font = 'bold 40px "Arial", sans-serif';
+  wrapText(ctx, options.headline.toUpperCase(), centerX, 150, canvas.width - 140, 46);
 
-  // Alt metin (kullanıcı adı vb.)
-  ctx.fillStyle = 'rgba(255,255,255,0.65)';
-  ctx.font = '34px "Arial", sans-serif';
-  ctx.fillText(options.subtext, 540, 940);
-
-  // Alt çizgi/köşe süsü
-  ctx.strokeStyle = 'rgba(242,183,5,0.4)';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(390, 980);
-  ctx.lineTo(690, 980);
-  ctx.stroke();
+  // Alt boşluğa: kullanıcı adı
+  ctx.fillStyle = 'rgba(22,48,42,0.65)';
+  ctx.font = '32px "Arial", sans-serif';
+  ctx.fillText(options.subtext, centerX, canvas.height - 60);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
