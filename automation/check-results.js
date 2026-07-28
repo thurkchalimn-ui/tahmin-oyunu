@@ -156,7 +156,13 @@ async function sendPushToUsers(userIds, title, body, type) {
 
       const response = await messaging.sendEachForMulticast({
         tokens: info.tokens,
-        notification: { title, body },
+        // ÖNEMLİ: `notification` alanı YERİNE bilinçli olarak `data` kullanılıyor.
+        // `notification` alanı gönderilirse, tarayıcı bunu OTOMATİK olarak
+        // gösteriyor - service worker'ımızdaki (onBackgroundMessage) elle
+        // gösterim koduyla birleşince, AYNI mesaj için 2 bildirim çıkıyordu.
+        // `data` kullanınca gösterim TAMAMEN service worker'ın kontrolünde
+        // olur, otomatik/elle çakışması ortadan kalkar.
+        data: { title, body },
       });
 
       const invalidTokens = response.responses
