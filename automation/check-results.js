@@ -29,6 +29,10 @@ import { getFirestore, FieldPath } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
 const REMINDER_WINDOW_MS = 30 * 60 * 1000; // Maç başlamadan 30 dakika önce hatırlatma gönder
+// API-Football'un ücretsiz günlük 100 isteklik kotasını korumak için, canlı
+// skor için gerçek bir API çağrısı en fazla bu sıklıkla yapılır.
+const LIVE_SCORE_FETCH_INTERVAL_MS = 15 * 60 * 1000;
+let lastLiveScoreFetchAt = 0;
 // Kilit, döngünün her turunda (5 dakikada bir) tazelenir; TTL'i döngü
 // aralığından biraz büyük tutuyoruz ki küçük gecikmeler kilidi düşürmesin.
 const LOCK_TTL_MS = 7 * 60 * 1000;
@@ -51,6 +55,14 @@ const messaging = getMessaging();
  * dokümanını bir transaction içinde okuyup-yazarak, hâlâ "taze" (LOCK_TTL_MS'den
  * yeni) bir kilit varsa bu çalışmayı hemen sonlandırır.
  */
+// Bu çalıştırmaya özel benzersiz bir kimlik - kilidin GERÇEKTEN bu süreç
+// tarafından tutulduğunu doğrulamak için kullanılır. Bu olmadan, kilit
+// süresi (TTL) bir şekilde dolup başka bir süreç kilidi devraldığında, eski
+// süreç bunu fark etmeden kilidi "tazeleyerek" üzerine yazabiliyordu - bu da
+// iki sürecin aynı anda çalışıp AYNI bildirimi iki kez göndermesine yol açan
+// olası bir yarış durumuydu.
+const INSTANCE_ID = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 async function acquireLockOrExit() {
   const lockRef = db.collection('automationState').doc('lock');
   const acquired = await db.runTransaction(async (tx) => {
@@ -60,7 +72,7 @@ async function acquireLockOrExit() {
     if (snap.exists && now - lockedAt < LOCK_TTL_MS) {
       return false; // Başka bir çalışma hâlâ devam ediyor (ya da az önce bitti)
     }
-    tx.set(lockRef, { lockedAt: now });
+    tx.set(lockRef, { lockedAt: now, lockedBy: INSTANCE_ID });
     return true;
   });
 
@@ -71,12 +83,27 @@ async function acquireLockOrExit() {
 }
 
 /**
- * Kilidi koşulsuz olarak tazeler (acquireLockOrExit'in aksine, "başkası mı
- * tutuyor" kontrolü yapmaz - çünkü kilidi zaten BİZ tutuyoruz, sadece süresini
- * uzatıyoruz). Döngünün her turunda çağrılır.
+ * Kilidi tazeler - ama SADECE hâlâ bu sürecin (INSTANCE_ID) sahip olduğunu
+ * doğruladıktan sonra. Eğer kilit bir şekilde başka bir sürece geçmişse
+ * (ör. bu süreç normalden uzun süren bir tur yüzünden TTL'i aştıysa), bu
+ * süreç artık gerçek sahibi olmadığını fark edip kendini düzgünce sonlandırır
+ * - böylece iki sürecin aynı anda çalışıp çift bildirim göndermesi önlenir.
  */
 async function refreshLock() {
-  await db.collection('automationState').doc('lock').set({ lockedAt: Date.now() });
+  const lockRef = db.collection('automationState').doc('lock');
+  const stillOwner = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(lockRef);
+    if (snap.exists && snap.data().lockedBy && snap.data().lockedBy !== INSTANCE_ID) {
+      return false; // Kilit artık bize ait değil - başka bir süreç devralmış
+    }
+    tx.set(lockRef, { lockedAt: Date.now(), lockedBy: INSTANCE_ID });
+    return true;
+  });
+
+  if (!stillOwner) {
+    console.log('[check-results] Kilit başka bir çalışmaya geçmiş, bu çalışma güvenlik için kendini sonlandırıyor.');
+    process.exit(0);
+  }
 }
 
 // API_FOOTBALL_KEY opsiyonel: tanımlı değilse canlı skor adımı sessizce atlanır,
@@ -192,6 +219,17 @@ async function fetchFixturesForDate(date) {
   });
   if (!res.ok) throw new Error(`API-Football isteği başarısız: ${res.status} ${res.statusText}`);
   const json = await res.json();
+
+  // ÖNEMLİ: API-Football, kota aşımı gibi durumlarda HTTP 200 (başarılı)
+  // döner ama `errors` alanında bir mesaj bulunur ve `response` boş kalır.
+  // Bunu kontrol etmezsek, "hiç maç yok" ile "kota doldu" birbirinden
+  // ayırt edilemez ve sessizce yanlış yorumlanır.
+  const errors = json.errors;
+  const hasErrors = errors && (Array.isArray(errors) ? errors.length > 0 : Object.keys(errors).length > 0);
+  if (hasErrors) {
+    throw new Error(`API-Football hata döndürdü: ${JSON.stringify(errors)}`);
+  }
+
   return json.response ?? [];
 }
 
@@ -358,26 +396,60 @@ async function runOnce() {
     return msUntilKickoff > 0 && msUntilKickoff <= REMINDER_WINDOW_MS;
   });
 
+  // Tahmin yapmamış kullanıcılara da hatırlatma gönderebilmek için, bu turda
+  // en az bir maç hatırlatma penceresindeyse TÜM kullanıcı ID'lerini bir kez
+  // çekiyoruz (her maç için ayrı ayrı değil - kota dostu olması için).
+  let allUserIds = null;
+  if (upcomingMatches.length > 0) {
+    const allUsersSnap = await db.collection('users').get();
+    allUserIds = allUsersSnap.docs.map((d) => d.id);
+  }
+
   for (const match of upcomingMatches) {
     const predSnap = await db.collection('predictions').where('matchId', '==', match.id).get();
-    const userIds = [...new Set(predSnap.docs.map((d) => d.data().userId))];
+    const predictedUserIds = new Set(predSnap.docs.map((d) => d.data().userId));
 
-    if (userIds.length > 0) {
+    if (predictedUserIds.size > 0) {
       await sendPushToUsers(
-        userIds,
+        [...predictedUserIds],
         '⏰ Maç Yakında Başlıyor',
         `${match.homeTeam} vs ${match.awayTeam} 30 dakika içinde başlıyor!`,
         'reminder',
       );
-      console.log(`[check-results] Hatırlatma gönderildi: ${match.homeTeam} vs ${match.awayTeam} (${userIds.length} kullanıcı)`);
+      console.log(`[check-results] Hatırlatma gönderildi: ${match.homeTeam} vs ${match.awayTeam} (${predictedUserIds.size} kullanıcı - tahmin etmiş)`);
+    }
+
+    // YENİ: Bu maça HENÜZ tahmin yapmamış diğer tüm kullanıcılara da ayrı bir
+    // hatırlatma gönder - "tahminini unutma" şeklinde.
+    const unpredictedUserIds = (allUserIds ?? []).filter((uid) => !predictedUserIds.has(uid));
+    if (unpredictedUserIds.length > 0) {
+      await sendPushToUsers(
+        unpredictedUserIds,
+        '⏰ Tahminini Unutma!',
+        `${match.homeTeam} vs ${match.awayTeam} 30 dakika içinde başlıyor - henüz tahmin yapmadın!`,
+        'reminder',
+      );
+      console.log(`[check-results] Hatırlatma gönderildi: ${match.homeTeam} vs ${match.awayTeam} (${unpredictedUserIds.length} kullanıcı - tahmin etmemiş)`);
+    }
+
+    // Her iki grup da (varsa) bilgilendirildiği için maçı işaretle. Hiç
+    // kullanıcı yoksa (predictedUserIds VE unpredictedUserIds boşsa - ör.
+    // henüz hiç kayıtlı kullanıcı yoksa) işaretlemeden geç, bir sonraki turda
+    // tekrar denensin.
+    if (predictedUserIds.size > 0 || unpredictedUserIds.length > 0) {
       await db.collection('matches').doc(match.id).update({ reminderSent: true });
     } else {
-      console.log(`[check-results] Henüz tahmin yapan yok, hatırlatma ertelendi: ${match.homeTeam} vs ${match.awayTeam}`);
+      console.log(`[check-results] Bildirilecek kimse yok, hatırlatma ertelendi: ${match.homeTeam} vs ${match.awayTeam}`);
     }
   }
 
   // --- 3) Canlı skor güncelleme (sadece API_FOOTBALL_KEY tanımlıysa) ---
-  if (API_FOOTBALL_KEY) {
+  // ÖNEMLİ: API-Football'un ücretsiz planı günde sadece 100 istek veriyor.
+  // Döngü 5 dakikada bir çalıştığı için, HER turda çağırmak günü çok hızlı
+  // tüketirdi (5 saat 45 dakikalık tek bir çalışmada bile ~69 çağrı yapardı).
+  // Bunun yerine en fazla 15 dakikada bir gerçek bir API çağrısı yapılır.
+  if (API_FOOTBALL_KEY && now - lastLiveScoreFetchAt >= LIVE_SCORE_FETCH_INTERVAL_MS) {
+    lastLiveScoreFetchAt = now;
     await updateLiveScores(allPending, now);
   }
 
