@@ -4,7 +4,7 @@
 //   1) Admin panelinden ELLE girilen sonuçlar için bekleyen bildirimleri gönderir
 //      (notificationQueue koleksiyonu).
 //   2) Maç başlamadan 30 dakika önce hatırlatma bildirimi gönderir.
-//   3) [OPSİYONEL - API_FOOTBALL_KEY tanımlıysa] Başlamış ama sonucu admin tarafından
+//   3) [OPSİYONEL - FOOTBALL_DATA_KEY tanımlıysa] Başlamış ama sonucu admin tarafından
 //      henüz girilmemiş maçlar için ANLIK SKORU (canlı skor) çeker ve Firestore'a
 //      yazar - site bunu gerçek zamanlı okuyup gösterir.
 //   4) Haftalık/aylık liderlik tablosunu hesaplayıp `leaderboardCache` koleksiyonuna
@@ -21,7 +21,7 @@
 //
 // Gerekli ortam değişkenleri (GitHub Actions "Secrets" olarak eklenir):
 //   FIREBASE_SERVICE_ACCOUNT_KEY  -> ZORUNLU. Firebase servis hesabı JSON'ının tamamı (tek satır)
-//   API_FOOTBALL_KEY                  -> OPSİYONEL. Sadece canlı skor istiyorsan gerekir.
+//   FOOTBALL_DATA_KEY                  -> OPSİYONEL. Sadece canlı skor istiyorsan gerekir.
 // ============================================================================
 
 import { initializeApp, cert } from 'firebase-admin/app';
@@ -29,9 +29,10 @@ import { getFirestore, FieldPath } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
 const REMINDER_WINDOW_MS = 30 * 60 * 1000; // Maç başlamadan 30 dakika önce hatırlatma gönder
-// API-Football'un ücretsiz günlük 100 isteklik kotasını korumak için, canlı
-// skor için gerçek bir API çağrısı en fazla bu sıklıkla yapılır.
-const LIVE_SCORE_FETCH_INTERVAL_MS = 15 * 60 * 1000;
+// football-data.org'un ücretsiz planı dakikada 10 istek veriyor (API-Football'un
+// günde 100 istek sınırından çok daha cömert) - bu yüzden her turda (5 dakikada
+// bir) kontrol etmek güvenli.
+const LIVE_SCORE_FETCH_INTERVAL_MS = 5 * 60 * 1000;
 let lastLiveScoreFetchAt = 0;
 // Kilit, döngünün her turunda (5 dakikada bir) tazelenir; TTL'i döngü
 // aralığından biraz büyük tutuyoruz ki küçük gecikmeler kilidi düşürmesin.
@@ -106,13 +107,15 @@ async function refreshLock() {
   }
 }
 
-// API_FOOTBALL_KEY opsiyonel: tanımlı değilse canlı skor adımı sessizce atlanır,
+// FOOTBALL_DATA_KEY opsiyonel: tanımlı değilse canlı skor adımı sessizce atlanır,
 // bildirim/hatırlatma işlevleri bundan tamamen bağımsız çalışmaya devam eder.
-// Bu anahtar RapidAPI'den DEĞİL, doğrudan api-football.com'dan (api-sports.io
-// altyapısı) alınır - ücretsiz, kredi kartsız, günde 100 istek.
-const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
-if (!API_FOOTBALL_KEY) {
-  console.warn('[check-results] UYARI: API_FOOTBALL_KEY tanımlı değil - canlı skor adımı atlanacak.');
+// Bu anahtar football-data.org'dan alınır (dashboard.football-data.org/register)
+// - ücretsiz, kredi kartsız, dakikada 10 istek. NOT: Ücretsiz plan sadece
+// Premier Lig, Şampiyonlar Ligi, La Liga, Bundesliga, Serie A, Ligue 1 gibi
+// büyük ligleri kapsar - küçük/alt ligler için canlı skor gelmez.
+const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY;
+if (!FOOTBALL_DATA_KEY) {
+  console.warn('[check-results] UYARI: FOOTBALL_DATA_KEY tanımlı değil - canlı skor adımı atlanacak.');
 }
 
 /**
@@ -205,7 +208,7 @@ async function processNotificationQueue() {
   console.log(`[check-results] Kuyruktaki ${sentCount} bildirim işlendi.`);
 }
 
-// --- Canlı skor yardımcı fonksiyonları (sadece API_FOOTBALL_KEY varsa kullanılır) ---
+// --- Canlı skor yardımcı fonksiyonları (sadece FOOTBALL_DATA_KEY varsa kullanılır) ---
 
 /** Takım adlarını karşılaştırılabilir hale getirir (küçük harf, boşluk/aksan temizliği). */
 function normalizeTeamName(name) {
@@ -216,27 +219,16 @@ function normalizeTeamName(name) {
     .replace(/[^a-z0-9]/g, '');
 }
 
-/** API-Football'dan (doğrudan api-sports.io altyapısı, RapidAPI'siz) verilen tarihe ait maçları çeker. */
+/** football-data.org'dan verilen tarihe ait maçları çeker. */
 async function fetchFixturesForDate(date) {
-  const res = await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}`, {
+  const res = await fetch(`https://api.football-data.org/v4/matches?dateFrom=${date}&dateTo=${date}`, {
     headers: {
-      'x-apisports-key': API_FOOTBALL_KEY,
+      'X-Auth-Token': FOOTBALL_DATA_KEY,
     },
   });
-  if (!res.ok) throw new Error(`API-Football isteği başarısız: ${res.status} ${res.statusText}`);
+  if (!res.ok) throw new Error(`football-data.org isteği başarısız: ${res.status} ${res.statusText}`);
   const json = await res.json();
-
-  // ÖNEMLİ: API-Football, kota aşımı gibi durumlarda HTTP 200 (başarılı)
-  // döner ama `errors` alanında bir mesaj bulunur ve `response` boş kalır.
-  // Bunu kontrol etmezsek, "hiç maç yok" ile "kota doldu" birbirinden
-  // ayırt edilemez ve sessizce yanlış yorumlanır.
-  const errors = json.errors;
-  const hasErrors = errors && (Array.isArray(errors) ? errors.length > 0 : Object.keys(errors).length > 0);
-  if (hasErrors) {
-    throw new Error(`API-Football hata döndürdü: ${JSON.stringify(errors)}`);
-  }
-
-  return json.response ?? [];
+  return json.matches ?? [];
 }
 
 /** Bizim kayıtlı maçımızı, API'den gelen fikstür listesinden takım adına göre bulur. */
@@ -253,15 +245,15 @@ function findMatchingFixture(match, fixtures) {
   const away = normalizeTeamName(match.awayTeam);
 
   const exact = fixtures.find((f) => {
-    const fHome = normalizeTeamName(f.teams?.home?.name ?? '');
-    const fAway = normalizeTeamName(f.teams?.away?.name ?? '');
+    const fHome = normalizeTeamName(f.homeTeam?.name ?? '');
+    const fAway = normalizeTeamName(f.awayTeam?.name ?? '');
     return fHome === home && fAway === away;
   });
   if (exact) return exact;
 
   return fixtures.find((f) => {
-    const fHome = normalizeTeamName(f.teams?.home?.name ?? '');
-    const fAway = normalizeTeamName(f.teams?.away?.name ?? '');
+    const fHome = normalizeTeamName(f.homeTeam?.name ?? '');
+    const fAway = normalizeTeamName(f.awayTeam?.name ?? '');
     const homeMatches = fHome.length > 2 && home.length > 2 && (fHome.includes(home) || home.includes(fHome));
     const awayMatches = fAway.length > 2 && away.length > 2 && (fAway.includes(away) || away.includes(fAway));
     return homeMatches && awayMatches;
@@ -279,28 +271,32 @@ function suggestCandidateNames(teamName, fixtures) {
   if (key.length < 3) return [];
   const names = new Set();
   fixtures.forEach((f) => {
-    const h = f.teams?.home?.name ?? '';
-    const a = f.teams?.away?.name ?? '';
+    const h = f.homeTeam?.name ?? '';
+    const a = f.awayTeam?.name ?? '';
     if (normalizeTeamName(h).startsWith(key)) names.add(h);
     if (normalizeTeamName(a).startsWith(key)) names.add(a);
   });
   return [...names];
 }
 
-/** API'den gelen fikstürden anlık skor bilgisini çıkarır. Maç henüz başlamamışsa (NS) null döner. */
+/**
+ * football-data.org'dan gelen maçtan anlık skor bilgisini çıkarır. Maç henüz
+ * başlamamışsa (SCHEDULED/TIMED) null döner. NOT: football-data.org, dakika
+ * bilgisini (kaçıncı dakikada olunduğunu) API-Football kadar güvenilir
+ * vermiyor - bu yüzden sadece durum (status) gösterilir, dakika genelde boş kalır.
+ */
 function extractLiveScore(fixture) {
-  const status = fixture.fixture?.status?.short;
-  if (!status || status === 'NS') return null;
+  const status = fixture.status;
+  if (!status || status === 'SCHEDULED' || status === 'TIMED') return null;
 
-  const homeGoals = fixture.goals?.home ?? 0;
-  const awayGoals = fixture.goals?.away ?? 0;
-  const elapsed = fixture.fixture?.status?.elapsed;
+  const homeGoals = fixture.score?.fullTime?.home ?? fixture.score?.halfTime?.home ?? 0;
+  const awayGoals = fixture.score?.fullTime?.away ?? fixture.score?.halfTime?.away ?? 0;
 
   return {
-    homeGoals,
-    awayGoals,
+    homeGoals: homeGoals ?? 0,
+    awayGoals: awayGoals ?? 0,
     status,
-    minute: elapsed != null ? String(elapsed) : null,
+    minute: null,
   };
 }
 
@@ -449,12 +445,12 @@ async function runOnce() {
     }
   }
 
-  // --- 3) Canlı skor güncelleme (sadece API_FOOTBALL_KEY tanımlıysa) ---
+  // --- 3) Canlı skor güncelleme (sadece FOOTBALL_DATA_KEY tanımlıysa) ---
   // ÖNEMLİ: API-Football'un ücretsiz planı günde sadece 100 istek veriyor.
   // Döngü 5 dakikada bir çalıştığı için, HER turda çağırmak günü çok hızlı
   // tüketirdi (5 saat 45 dakikalık tek bir çalışmada bile ~69 çağrı yapardı).
   // Bunun yerine en fazla 15 dakikada bir gerçek bir API çağrısı yapılır.
-  if (API_FOOTBALL_KEY && now - lastLiveScoreFetchAt >= LIVE_SCORE_FETCH_INTERVAL_MS) {
+  if (FOOTBALL_DATA_KEY && now - lastLiveScoreFetchAt >= LIVE_SCORE_FETCH_INTERVAL_MS) {
     lastLiveScoreFetchAt = now;
     await updateLiveScores(allPending, now);
   }

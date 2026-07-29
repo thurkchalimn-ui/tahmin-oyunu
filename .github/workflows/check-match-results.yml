@@ -31,5 +31,5 @@ jobs:
       - name: Bildirim/hatırlatma/canlı skor scriptini çalıştır (sürekli döngü)
         env:
           FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
-          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
         run: npm run check-results
