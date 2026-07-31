@@ -245,10 +245,15 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
   const resolved = predictions.filter((p) => p.isCorrect !== null);
   const orderingInfo = await getMatchOrderingInfoByIds(resolved.map((p) => p.matchId));
 
-  const ordered = resolved.map((p) => ({
-    ...p,
-    ...(orderingInfo.get(p.matchId) ?? { kickoffAt: '', homeTeam: '' }),
-  }));
+  // ÖNEMLİ: Eğer bir tahminin bağlı olduğu maç dokümanı artık bulunamıyorsa
+  // (ör. admin panelinden silinmiş/yeniden oluşturulmuşsa), o tahmin seri
+  // hesaplamasına DAHİL EDİLMEZ. Eskiden böyle bir durumda boş bir kickoffAt
+  // ('') değerine düşülüyordu - bu da new Date('') = Geçersiz Tarih (NaN)
+  // ürettiği için sıralamayı bozup güncel serinin yanlış (genelde 0)
+  // çıkmasına yol açabiliyordu.
+  const ordered = resolved
+    .filter((p) => orderingInfo.has(p.matchId))
+    .map((p) => ({ ...p, ...orderingInfo.get(p.matchId)! }));
 
   const currentStreak = calculateCurrentStreak(ordered);
   const bestStreak = calculateBestStreak(ordered);
