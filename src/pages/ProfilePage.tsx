@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Camera, BadgeCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,8 +12,6 @@ import { deleteAccount } from '@/services/authService';
 import { markProfileSeen } from '@/services/readStatusService';
 import { enablePushNotifications, type PushPermissionResult } from '@/services/notificationService';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
-import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistoryList';
-import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { Avatar } from '@/components/common/Avatar';
 import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
 import { ShareButton } from '@/components/common/ShareButton';
@@ -27,16 +25,12 @@ import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { isNonEmpty } from '@/utils/validators';
-import { getPeriodRange, type StatsPeriod } from '@/utils/periodUtils';
 
 /** Kullanıcının kendi istatistiklerini ve rozetlerini gördüğü profil sayfası. */
 export function ProfilePage() {
   const navigate = useNavigate();
   const { firebaseUser, profile, emailVerified } = useAuth();
-  const { data: history, loading: historyLoading, error: historyError } = usePredictionHistory(
-    firebaseUser?.uid,
-  );
-  const [tab, setTab] = useState<StatsPeriod>('all');
+  const { data: history } = usePredictionHistory(firebaseUser?.uid);
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -56,25 +50,6 @@ export function ProfilePage() {
   useEffect(() => {
     if (firebaseUser) markProfileSeen(firebaseUser.uid).catch(() => {});
   }, [firebaseUser]);
-
-  // Seçilen döneme (hafta/ay/genel) göre tahmin geçmişini filtrele. 'all' için
-  // filtre uygulanmaz. Filtreleme, zaten çekilmiş olan `history` listesi
-  // üzerinde istemci tarafında yapılır - ekstra bir Firestore sorgusu gerekmez.
-  const filteredHistory = useMemo(() => {
-    if (!history) return null;
-    const range = getPeriodRange(tab);
-    if (!range) return history;
-    return history.filter((item) => item.match.date >= range.start && item.match.date < range.end);
-  }, [history, tab]);
-
-  const periodStats = useMemo(() => {
-    if (!filteredHistory) return { total: 0, correct: 0 };
-    const resolved = filteredHistory.filter((item) => item.prediction.isCorrect !== null);
-    return {
-      total: resolved.length,
-      correct: resolved.filter((item) => item.prediction.isCorrect === true).length,
-    };
-  }, [filteredHistory]);
 
   if (!firebaseUser || !profile) return <LoadingSpinner fullScreen label="Profil yükleniyor..." />;
 
@@ -241,25 +216,6 @@ export function ProfilePage() {
 
         <RecentPredictionCards items={history ?? []} />
 
-        <div>
-          <PeriodTabs value={tab} onChange={setTab} />
-        </div>
-
-        {/* Genel sekmesinde "Doğru/Toplam" artık yukarıdaki ProfileStatGrid'de
-            gösterildiği için burada tekrar edilmiyor - sadece En İyi Seri
-            kalıyor. Haftalık/Aylık sekmelerde ise o döneme özel Doğru/Toplam
-            hâlâ burada gösteriliyor (ProfileStatGrid her zaman tüm-zamanlar). */}
-        {tab === 'all' ? (
-          <div className="w-32">
-            <StatTile icon="🔥" value={profile.bestStreak} label="En İyi Seri" highlight />
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <StatTile icon="✅" value={periodStats.correct} label={`Doğru (${tab === 'week' ? 'Bu Hafta' : 'Bu Ay'})`} />
-            <StatTile icon="📊" value={periodStats.total} label={`Toplam (${tab === 'week' ? 'Bu Hafta' : 'Bu Ay'})`} />
-          </div>
-        )}
-
         {profile.badges.length > 0 && (
           <section>
             <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
@@ -376,19 +332,6 @@ export function ProfilePage() {
           </div>
         </section>
 
-        <section>
-          <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
-            Tahmin Geçmişim {tab !== 'all' && `(${tab === 'week' ? 'Bu Hafta' : 'Bu Ay'})`}
-          </h2>
-          {historyLoading ? (
-            <LoadingSpinner label="Tahminler yükleniyor..." />
-          ) : historyError ? (
-            <ErrorMessage message={historyError} />
-          ) : (
-            <PredictionHistoryList items={filteredHistory ?? []} />
-          )}
-        </section>
-
         <p className="text-center font-mono text-xs">
           <Link to="/gizlilik" className="text-pitch-700/50 hover:underline dark:text-pitch-100/40">
             Gizlilik Politikası ve Kullanım Şartları
@@ -438,35 +381,6 @@ export function ProfilePage() {
           )}
         </section>
       </div>
-    </div>
-  );
-}
-
-/** Mockup'taki "SERİ / EN İYİ SERİ / DOĞRULUK" gibi tekil istatistik kartlarını üreten yardımcı bileşen. */
-function StatTile({
-  icon,
-  value,
-  label,
-  highlight = false,
-}: {
-  icon: string;
-  value: number;
-  label: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={`flex flex-col items-center gap-1 rounded-xl border p-3 text-center shadow-stadium ${
-        highlight
-          ? 'border-scoreboard-amber/40 bg-gradient-to-b from-scoreboard-amber/15 to-transparent'
-          : 'border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900'
-      }`}
-    >
-      <span className="text-xl">{icon}</span>
-      <p className="font-mono text-lg font-bold text-pitch-900 dark:text-pitch-100">{value}</p>
-      <p className="font-mono text-[10px] uppercase leading-tight text-pitch-700/60 dark:text-pitch-100/50">
-        {label}
-      </p>
     </div>
   );
 }

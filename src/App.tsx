@@ -12,6 +12,7 @@ import { LeaderboardPage } from '@/pages/LeaderboardPage';
 import { ChatPage } from '@/pages/ChatPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { PlayerProfilePage } from '@/pages/PlayerProfilePage';
+import { AllPredictionsPage } from '@/pages/AllPredictionsPage';
 import { LeaguesPage } from '@/pages/LeaguesPage';
 import { LeaguePage } from '@/pages/LeaguePage';
 import { AdminPage } from '@/pages/AdminPage';
@@ -57,6 +58,14 @@ export default function App() {
                   element={
                     <ProtectedRoute>
                       <ProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/tahminlerim"
+                  element={
+                    <ProtectedRoute>
+                      <AllPredictionsPage />
                     </ProtectedRoute>
                   }
                 />
