@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Camera, BadgeCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePredictionHistory } from '@/hooks/usePredictionHistory';
 import {
@@ -31,7 +32,7 @@ import { getPeriodRange, type StatsPeriod } from '@/utils/periodUtils';
 /** Kullanıcının kendi istatistiklerini ve rozetlerini gördüğü profil sayfası. */
 export function ProfilePage() {
   const navigate = useNavigate();
-  const { firebaseUser, profile } = useAuth();
+  const { firebaseUser, profile, emailVerified } = useAuth();
   const { data: history, loading: historyLoading, error: historyError } = usePredictionHistory(
     firebaseUser?.uid,
   );
@@ -167,13 +168,28 @@ export function ProfilePage() {
       />
 
       <div className="relative mx-auto flex max-w-xl flex-col gap-6 px-4 py-6">
-        <div className="flex items-center gap-3">
-          <div className="rounded-full shadow-glow">
-            <Avatar avatarUrl={profile.avatarUrl} size="lg" />
+        <div className="flex items-center gap-4">
+          <div className="relative shrink-0 rounded-full shadow-glow">
+            <Avatar avatarUrl={profile.avatarUrl} size="xl" />
+            <a
+              href="#profil-gorseli-secici"
+              title="Profil görselini değiştir"
+              className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full
+                border-2 border-white bg-pitch-950 text-scoreboard-amber shadow-glow dark:border-pitch-900"
+            >
+              <Camera size={14} />
+            </a>
           </div>
-          <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
-            {profile.displayName}
-          </h1>
+          <div>
+            <h1 className="flex items-center gap-1.5 font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
+              {profile.displayName}
+              {emailVerified && (
+                <span title="E-posta doğrulandı" className="text-scoreboard-amber">
+                  <BadgeCheck size={18} />
+                </span>
+              )}
+            </h1>
+          </div>
         </div>
 
         <ProfileStatGrid
@@ -338,7 +354,7 @@ export function ProfilePage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
+        <section id="profil-gorseli-secici" className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
           <h2 className="mb-1 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
             Profil Görseli
           </h2>
