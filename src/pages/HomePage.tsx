@@ -14,6 +14,18 @@ import { AdBanner } from '@/components/common/AdBanner';
 import { todayKey, formatDateHeading } from '@/utils/dateUtils';
 import type { Match, PredictionChoice } from '@/types';
 
+// ÖNEMLİ: Bu gradyan bilinçli olarak Tailwind config'deki özel bir class
+// (`bg-stadium-glow`) yerine DOĞRUDAN inline style olarak tanımlanıyor.
+// Tailwind'in JIT derleyicisi bazı ortamlarda config'e eklenen özel
+// backgroundImage değerlerini beklendiği gibi üretmeyebiliyor - inline style
+// hiçbir derleme/eşleşme adımına bağlı olmadığı için garanti çalışır.
+// Renkler yine projenin kendi paletinden: scoreboard.amber (#F2B705).
+const STADIUM_GLOW_STYLE = {
+  backgroundImage:
+    'radial-gradient(ellipse 70% 45% at 20% -15%, rgba(242, 183, 5, 0.18), transparent 60%), ' +
+    'radial-gradient(ellipse 60% 40% at 85% -10%, rgba(242, 183, 5, 0.12), transparent 65%)',
+};
+
 /** Ana sayfa: seçilen günün maçlarını gösterir ve kullanıcının tahmin yapmasını sağlar. */
 export function HomePage() {
   const { firebaseUser, profile, emailVerified } = useAuth();
@@ -69,14 +81,17 @@ export function HomePage() {
   }
 
   return (
-    // ÖNEMLİ: `relative` + `overflow-hidden` burada kasıtlı - içindeki stadyum
-    // ışığı katmanı `absolute` konumlandırılıyor ve sayfa dışına taşmaması
-    // gerekiyor. Işık katmanı `pointer-events-none` olduğu için hiçbir tıklama/
-    // dokunma etkileşimini engellemez, sadece görsel bir arka plan efektidir.
-    <div className="relative overflow-hidden bg-pitch-100 dark:bg-pitch-950">
+    // `relative` + `overflow-hidden`: içindeki ışık katmanı `absolute`
+    // konumlandırılıyor, sayfa dışına taşmasın diye kırpılıyor. Katman
+    // `pointer-events-none` olduğu için hiçbir tıklama/dokunmayı engellemez.
+    // NOT: Kendi arka plan rengini burada YENİDEN tanımlamıyoruz - App.tsx'in
+    // kök sarmalayıcısındaki bg-pitch-100 / dark:bg-pitch-900 zaten geçerli;
+    // burada sadece üzerine ışık efekti bindiriliyor.
+    <div className="relative overflow-hidden">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-stadium-glow"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px]"
+        style={STADIUM_GLOW_STYLE}
       />
 
       <div className="relative mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6">

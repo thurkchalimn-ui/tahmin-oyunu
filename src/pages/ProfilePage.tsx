@@ -144,13 +144,20 @@ export function ProfilePage() {
   }
 
   return (
-    // ÖNEMLİ: Renk paleti DEĞİŞMEDİ - hâlâ pitch/scoreboard tonları. Sadece
-    // genel his daha koyu/premium (mockup'taki gibi) - HomePage'deki stadyum
-    // ışığı katmanı burada da tekrarlanıyor, tutarlılık için.
-    <div className="relative overflow-hidden bg-pitch-100 dark:bg-pitch-950">
+    // ÖNEMLİ: Renk paleti DEĞİŞMEDİ - hâlâ pitch/scoreboard tonları. Kendi
+    // arka plan rengimizi burada yeniden tanımlamıyoruz (App.tsx'in kök
+    // sarmalayıcısındaki bg-pitch-100/dark:bg-pitch-900 zaten geçerli) -
+    // sadece üzerine ışık efekti bindiriliyor. Gradyan, Tailwind'in özel
+    // class'ı yerine garanti çalışan inline style ile uygulanıyor.
+    <div className="relative overflow-hidden">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[360px] bg-stadium-glow"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[360px]"
+        style={{
+          backgroundImage:
+            'radial-gradient(ellipse 70% 45% at 20% -15%, rgba(242, 183, 5, 0.18), transparent 60%), ' +
+            'radial-gradient(ellipse 60% 40% at 85% -10%, rgba(242, 183, 5, 0.12), transparent 65%)',
+        }}
       />
 
       <div className="relative mx-auto flex max-w-xl flex-col gap-6 px-4 py-6">
