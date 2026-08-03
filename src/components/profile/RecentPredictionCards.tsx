@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { History, CheckCircle2, XCircle } from 'lucide-react';
+import { History, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { IconBadge } from '@/components/common/IconBadge';
 import { TeamLogo } from '@/components/common/TeamLogo';
 import type { Match, Prediction, PredictionChoice } from '@/types';
@@ -21,13 +21,18 @@ function formatCardDate(dateKey: string): string {
 }
 
 /**
- * Profil sayfasındaki "Son Tahminlerin" kart şeridi - mockup'takiyle aynı
- * kart formatı, ama gerçek verilerimizle: kesin skor yerine bizim 1/X/2
- * tahmin formatımız, XP yerine sadece doğru/yanlış göstergesi.
+ * Profil sayfasındaki "Son Tahminlerin" kart şeridi. ÖNEMLİ: Artık sadece
+ * sonuçlanmış tahminler değil, HENÜZ SONUÇLANMAMIŞ (bekleyen) tahminler de
+ * gösteriliyor - ve bekleyenler listenin EN BAŞINDA yer alıyor (kullanıcının
+ * "şu an ne bekliyorum" sorusuna hemen cevap versin diye). Sonuçlanmış
+ * tahminler bekleyenlerden sonra, en yeniden eskiye doğru sıralanır.
  */
 export function RecentPredictionCards({ items }: RecentPredictionCardsProps) {
-  const resolved = items.filter((i) => i.prediction.isCorrect !== null).slice(0, 5);
-  if (resolved.length === 0) return null;
+  const pending = items.filter((i) => i.prediction.isCorrect === null);
+  const resolved = items.filter((i) => i.prediction.isCorrect !== null);
+  const combined = [...pending, ...resolved].slice(0, 6);
+
+  if (combined.length === 0) return null;
 
   return (
     <section className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
@@ -42,12 +47,18 @@ export function RecentPredictionCards({ items }: RecentPredictionCardsProps) {
       </div>
 
       <div className="flex gap-3 overflow-x-auto pb-1">
-        {resolved.map(({ match, prediction }) => {
-          const isCorrect = prediction.isCorrect === true;
+        {combined.map(({ match, prediction }) => {
+          const status: 'pending' | 'correct' | 'wrong' =
+            prediction.isCorrect === null ? 'pending' : prediction.isCorrect ? 'correct' : 'wrong';
+
           return (
             <div
               key={match.id}
-              className="flex w-40 shrink-0 flex-col gap-2 rounded-lg border border-pitch-700/15 bg-white p-3 dark:border-pitch-700 dark:bg-pitch-800"
+              className={`flex w-40 shrink-0 flex-col gap-2 rounded-lg border p-3 ${
+                status === 'pending'
+                  ? 'border-scoreboard-amber/40 bg-scoreboard-amber/5 dark:bg-scoreboard-amber/10'
+                  : 'border-pitch-700/15 bg-white dark:border-pitch-700 dark:bg-pitch-800'
+              }`}
             >
               <p className="font-mono text-[10px] text-pitch-700/50 dark:text-pitch-100/40">
                 {formatCardDate(match.date)}
@@ -67,17 +78,19 @@ export function RecentPredictionCards({ items }: RecentPredictionCardsProps) {
               </p>
 
               <div className="flex items-center gap-1">
-                {isCorrect ? (
-                  <CheckCircle2 size={14} className="text-pick-correct" />
-                ) : (
-                  <XCircle size={14} className="text-pick-wrong" />
-                )}
+                {status === 'pending' && <Clock size={14} className="text-scoreboard-amber" />}
+                {status === 'correct' && <CheckCircle2 size={14} className="text-pick-correct" />}
+                {status === 'wrong' && <XCircle size={14} className="text-pick-wrong" />}
                 <span
                   className={`font-mono text-[11px] font-semibold ${
-                    isCorrect ? 'text-pick-correct' : 'text-pick-wrong'
+                    status === 'pending'
+                      ? 'text-scoreboard-amberDark dark:text-scoreboard-amber'
+                      : status === 'correct'
+                        ? 'text-pick-correct'
+                        : 'text-pick-wrong'
                   }`}
                 >
-                  {isCorrect ? 'Doğru Tahmin' : 'Yanlış Tahmin'}
+                  {status === 'pending' ? 'Sonuç Bekleniyor' : status === 'correct' ? 'Doğru Tahmin' : 'Yanlış Tahmin'}
                 </span>
               </div>
             </div>
