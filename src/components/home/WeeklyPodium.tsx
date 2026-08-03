@@ -10,9 +10,9 @@ interface WeeklyPodiumProps {
 }
 
 const RANK_STYLES = [
-  { order: 'order-2', ring: 'ring-scoreboard-amber', size: 'h-16 w-16', badgeColor: 'bg-scoreboard-amber text-pitch-950' },
-  { order: 'order-1', ring: 'ring-pitch-100/40', size: 'h-12 w-12', badgeColor: 'bg-pitch-100 text-pitch-900' },
-  { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-12 w-12', badgeColor: 'bg-scoreboard-amberDark text-white' },
+  { order: 'order-2', ring: 'ring-scoreboard-amber', size: 'h-14 w-14', badgeColor: 'bg-scoreboard-amber text-pitch-950' },
+  { order: 'order-1', ring: 'ring-pitch-100/40', size: 'h-8 w-8', badgeColor: 'bg-pitch-100 text-pitch-900' },
+  { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-8 w-8', badgeColor: 'bg-scoreboard-amberDark text-white' },
 ];
 
 /**

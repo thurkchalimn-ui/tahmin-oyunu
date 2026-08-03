@@ -9,7 +9,7 @@ interface HomeStatStripProps {
 }
 
 /**
- * "Günlük Seri / Doğru Tahmin / Sıralama" üç kutucuklu istatistik şeridi.
+ * "Giriş Serisi / Doğru Tahmin / Sıralama" üç kutucuklu istatistik şeridi.
  * Reklam görselindeki stat şeridine benziyor ama XP/Ödül gibi elimizde
  * olmayan verileri içermiyor - sadece gerçek, mevcut verilerimiz. İkonlar
  * emoji DEĞİL, lucide-react'tan gerçek ikon bileşenleri.
@@ -17,7 +17,7 @@ interface HomeStatStripProps {
 export function HomeStatStrip({ dailyStreak, correctPredictions, rank }: HomeStatStripProps) {
   return (
     <div className="grid grid-cols-3 gap-3">
-      <Tile icon={<Flame size={18} />} value={dailyStreak} label="Günlük Seri" />
+      <Tile icon={<Flame size={18} />} value={dailyStreak} label="Giriş Serisi" />
       <Tile icon={<CheckCircle2 size={18} />} value={correctPredictions} label="Doğru Tahmin" />
       <Tile icon={<BarChart3 size={18} />} value={rank ?? '—'} label="Sıralama" prefix={rank ? '#' : ''} />
     </div>
