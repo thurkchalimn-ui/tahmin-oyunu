@@ -19,7 +19,6 @@ const TIERS = [5, 10, 15, 25, 50, 100, 250];
 export function StreakBadge({ currentStreak, size = 'lg' }: StreakBadgeProps) {
   const nextTier = TIERS.find((t) => t > currentStreak);
   const prevTier = [...TIERS].reverse().find((t) => t <= currentStreak) ?? 0;
-  const target = nextTier ?? currentStreak;
   const progress =
     nextTier && nextTier > prevTier
       ? Math.min(100, Math.round(((currentStreak - prevTier) / (nextTier - prevTier)) * 100))
@@ -38,7 +37,7 @@ export function StreakBadge({ currentStreak, size = 'lg' }: StreakBadgeProps) {
             {currentStreak}
           </span>
           <span className="font-mono text-xs text-pitch-700/60 dark:text-pitch-100/50">
-            / {target} seri
+            maçlık seri
           </span>
         </div>
       </div>

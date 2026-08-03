@@ -2,13 +2,15 @@ import { useState } from 'react';
 
 interface AvatarProps {
   avatarUrl?: string | null;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 }
 
 const SIZE_CLASSES: Record<NonNullable<AvatarProps['size']>, string> = {
   sm: 'h-5 w-5 text-xs',
   md: 'h-8 w-8 text-base',
   lg: 'h-14 w-14 text-2xl',
+  xl: 'h-24 w-24 text-3xl', // md'nin tam 3 katı (32px -> 96px) - podyum 2./3. sıra için
+  '2xl': 'h-44 w-44 text-5xl', // lg'nin ~3 katından fazla (56px -> 176px) - podyum 1. sıra için
 };
 
 /**

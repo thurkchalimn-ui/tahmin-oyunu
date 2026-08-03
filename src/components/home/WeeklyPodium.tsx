@@ -10,9 +10,9 @@ interface WeeklyPodiumProps {
 }
 
 const RANK_STYLES = [
-  { order: 'order-2', ring: 'ring-scoreboard-amber', size: 'h-14 w-14', badgeColor: 'bg-scoreboard-amber text-pitch-950' },
-  { order: 'order-1', ring: 'ring-pitch-100/40', size: 'h-8 w-8', badgeColor: 'bg-pitch-100 text-pitch-900' },
-  { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-8 w-8', badgeColor: 'bg-scoreboard-amberDark text-white' },
+  { order: 'order-2', ring: 'ring-scoreboard-amber', size: 'h-44 w-44', avatarSize: '2xl' as const, badgeColor: 'bg-scoreboard-amber text-pitch-950' },
+  { order: 'order-1', ring: 'ring-pitch-100/40', size: 'h-24 w-24', avatarSize: 'xl' as const, badgeColor: 'bg-pitch-100 text-pitch-900' },
+  { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-24 w-24', avatarSize: 'xl' as const, badgeColor: 'bg-scoreboard-amberDark text-white' },
 ];
 
 /**
@@ -45,12 +45,12 @@ export function WeeklyPodium({ topThree, source }: WeeklyPodiumProps) {
               className={`flex flex-col items-center gap-1.5 ${style.order}`}
             >
               <div className={`relative rounded-full ring-2 ${style.ring} ${style.size}`}>
-                <Avatar avatarUrl={user.avatarUrl} size={i === 0 ? 'lg' : 'md'} />
+                <Avatar avatarUrl={user.avatarUrl} size={style.avatarSize} />
                 <span
-                  className={`absolute -bottom-1 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center
-                    justify-center rounded-full font-mono text-[10px] font-bold ${style.badgeColor}`}
+                  className={`absolute -bottom-1 left-1/2 flex h-8 w-8 -translate-x-1/2 items-center
+                    justify-center rounded-full font-mono text-sm font-bold ${style.badgeColor}`}
                 >
-                  {i === 0 ? <Crown size={11} /> : i + 1}
+                  {i === 0 ? <Crown size={16} /> : i + 1}
                 </span>
               </div>
               <p className="mt-1 max-w-[80px] truncate text-center font-body text-xs font-medium text-pitch-900 dark:text-pitch-100">
