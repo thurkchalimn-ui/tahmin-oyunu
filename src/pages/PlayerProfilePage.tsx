@@ -1,4 +1,3 @@
-import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,17 +6,15 @@ import { usePredictionHistory } from '@/hooks/usePredictionHistory';
 import { useFollowCounts } from '@/hooks/useFollowCounts';
 import { useUserRank } from '@/hooks/useUserRank';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
-import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistoryList';
-import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { Avatar } from '@/components/common/Avatar';
 import { FollowButton } from '@/components/common/FollowButton';
 import { FollowLists } from '@/components/common/FollowLists';
 import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
 import { ProfileStatGrid } from '@/components/profile/ProfileStatGrid';
 import { PerformanceSummary } from '@/components/profile/PerformanceSummary';
+import { RecentPredictionCards } from '@/components/profile/RecentPredictionCards';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
-import { getPeriodRange, type StatsPeriod } from '@/utils/periodUtils';
 
 const STADIUM_GLOW_STYLE = {
   backgroundImage:
@@ -27,30 +24,21 @@ const STADIUM_GLOW_STYLE = {
 
 /**
  * Liderlik tablosunda bir oyuncunun adına tıklandığında açılan, herkese açık
- * salt-okunur profil. ÖNEMLİ: kendi profilinle (ProfilePage.tsx) aynı görsel
- * dili kullanır (stadyum ışığı, büyük avatar, stat ızgarası, performans
- * özeti, rozet kartları) - ama düzenleme/ayar özellikleri (avatar seçici,
- * bildirim tercihleri, hesap silme) burada yok, çünkü bu başka bir
- * kullanıcının profilidir.
+ * salt-okunur profil. ÖNEMLİ: kendi profilinle (ProfilePage.tsx) BİREBİR
+ * AYNI görsel dili ve bileşenleri kullanır (stadyum ışığı, büyük avatar,
+ * stat ızgarası, performans özeti, rozet kartları, "Son Tahminleri" kart
+ * şeridi - bekleyen tahminler dahil) - tek fark: düzenleme/ayar özellikleri
+ * (avatar seçici, bildirim tercihleri, hesap silme, "Tümü" linki) burada
+ * yok, çünkü bu başka bir kullanıcının salt-okunur profili.
  */
 export function PlayerProfilePage() {
   const { uid } = useParams<{ uid: string }>();
   const { firebaseUser } = useAuth();
   const { data: profile, loading: profileLoading, error: profileError } = usePlayerProfile(uid);
-  const { data: history, loading: historyLoading, error: historyError } = usePredictionHistory(uid);
-  const [tab, setTab] = useState<StatsPeriod>('all');
+  const { data: history } = usePredictionHistory(uid);
 
   const { followerCount, followingCount } = useFollowCounts(uid);
   const rank = useUserRank(profile?.correctPredictions);
-
-  // Seçilen döneme (hafta/ay/genel) göre tahmin geçmişini filtrele - ekstra
-  // Firestore sorgusu gerekmeden, zaten çekilmiş listeden istemci tarafında.
-  const filteredHistory = useMemo(() => {
-    if (!history) return null;
-    const range = getPeriodRange(tab);
-    if (!range) return history;
-    return history.filter((item) => item.match.date >= range.start && item.match.date < range.end);
-  }, [history, tab]);
 
   if (profileLoading) return <LoadingSpinner fullScreen label="Oyuncu yükleniyor..." />;
   if (profileError || !profile) return <ErrorMessage message={profileError ?? 'Oyuncu bulunamadı.'} />;
@@ -105,6 +93,8 @@ export function PlayerProfilePage() {
           <StreakBadge currentStreak={profile.currentStreak} />
         </section>
 
+        <RecentPredictionCards items={history ?? []} title="Son Tahminleri" />
+
         {profile.badges.length > 0 && (
           <section>
             <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
@@ -128,24 +118,6 @@ export function PlayerProfilePage() {
         )}
 
         {uid && <FollowLists uid={uid} />}
-
-        <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
-              Tahmin Geçmişi {tab !== 'all' && `(${tab === 'week' ? 'Bu Hafta' : 'Bu Ay'})`}
-            </h2>
-          </div>
-          <div className="mb-3">
-            <PeriodTabs value={tab} onChange={setTab} />
-          </div>
-          {historyLoading ? (
-            <LoadingSpinner label="Tahminler yükleniyor..." />
-          ) : historyError ? (
-            <ErrorMessage message={historyError} />
-          ) : (
-            <PredictionHistoryList items={filteredHistory ?? []} />
-          )}
-        </section>
       </div>
     </div>
   );

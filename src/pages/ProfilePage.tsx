@@ -214,7 +214,7 @@ export function ProfilePage() {
           <StreakBadge currentStreak={profile.currentStreak} />
         </section>
 
-        <RecentPredictionCards items={history ?? []} />
+        <RecentPredictionCards items={history ?? []} viewAllHref="/tahminlerim" />
 
         {profile.badges.length > 0 && (
           <section>

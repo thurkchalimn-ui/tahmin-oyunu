@@ -6,6 +6,12 @@ import type { Match, Prediction, PredictionChoice } from '@/types';
 
 interface RecentPredictionCardsProps {
   items: { match: Match; prediction: Prediction }[];
+  /** Sağdaki "Tümü →" linkinin gideceği adres. Verilmezse link hiç gösterilmez
+      (ör. başka bir oyuncunun profilinde - onun tüm tahminlerine ait ayrı bir
+      sayfamız yok). */
+  viewAllHref?: string;
+  /** Başlık metni - kendi profilinde "Son Tahminlerin", başkasınınkinde "Son Tahminleri" gibi. */
+  title?: string;
 }
 
 const CHOICE_LABELS: Record<PredictionChoice, string> = {
@@ -27,7 +33,7 @@ function formatCardDate(dateKey: string): string {
  * "şu an ne bekliyorum" sorusuna hemen cevap versin diye). Sonuçlanmış
  * tahminler bekleyenlerden sonra, en yeniden eskiye doğru sıralanır.
  */
-export function RecentPredictionCards({ items }: RecentPredictionCardsProps) {
+export function RecentPredictionCards({ items, viewAllHref, title = 'Son Tahminlerin' }: RecentPredictionCardsProps) {
   const pending = items.filter((i) => i.prediction.isCorrect === null);
   const resolved = items.filter((i) => i.prediction.isCorrect !== null);
   const combined = [...pending, ...resolved].slice(0, 6);
@@ -39,11 +45,13 @@ export function RecentPredictionCards({ items }: RecentPredictionCardsProps) {
       <div className="mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
           <IconBadge icon={<History size={16} />} size="sm" />
-          Son Tahminlerin
+          {title}
         </h2>
-        <Link to="/tahminlerim" className="font-mono text-xs text-scoreboard-amber hover:underline">
-          Tümü →
-        </Link>
+        {viewAllHref && (
+          <Link to={viewAllHref} className="font-mono text-xs text-scoreboard-amber hover:underline">
+            Tümü →
+          </Link>
+        )}
       </div>
 
       <div className="flex gap-3 overflow-x-auto pb-1">
