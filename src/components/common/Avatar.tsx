@@ -15,6 +15,12 @@ const SIZE_CLASSES: Record<NonNullable<AvatarProps['size']>, string> = {
  * Kullanıcının profil görselini gösterir (kendi seçtiği bir futbolcu fotoğrafı,
  * takım logosu ya da başka bir görsel linki). Görsel yoksa veya yüklenemezse
  * (bozuk link vb.) otomatik olarak ⚽ ikonuna düşer - sayfa asla bozuk görünmez.
+ *
+ * ÖNEMLİ: `object-cover` yerine `object-contain` kullanılıyor. Avatarlar çoğu
+ * zaman kare olmayan, şeffaf arka planlı takım logoları oluyor - `object-cover`
+ * dairesel çerçeveyi doldurmak için görseli KIRPIYORDU (logonun kenarları
+ * taşıyor/kesiliyordu). `object-contain` + hafif bir iç boşluk (padding),
+ * logonun tamamının kırpılmadan, ortalanmış şekilde sığmasını sağlar.
  */
 export function Avatar({ avatarUrl, size = 'md' }: AvatarProps) {
   const [failed, setFailed] = useState(false);
@@ -22,12 +28,17 @@ export function Avatar({ avatarUrl, size = 'md' }: AvatarProps) {
 
   if (avatarUrl && !failed) {
     return (
-      <img
-        src={avatarUrl}
-        alt="Profil görseli"
-        onError={() => setFailed(true)}
-        className={`${dimension} shrink-0 rounded-full bg-white object-cover ring-1 ring-pitch-700/10 dark:ring-pitch-700`}
-      />
+      <span
+        className={`${dimension} flex shrink-0 items-center justify-center rounded-full bg-white p-0.5
+          ring-1 ring-pitch-700/10 dark:ring-pitch-700`}
+      >
+        <img
+          src={avatarUrl}
+          alt="Profil görseli"
+          onError={() => setFailed(true)}
+          className="h-full w-full rounded-full object-contain"
+        />
+      </span>
     );
   }
 
