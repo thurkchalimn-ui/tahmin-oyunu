@@ -19,6 +19,9 @@ import { FollowLists } from '@/components/common/FollowLists';
 import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
 import { ShareButton } from '@/components/common/ShareButton';
 import { useAvatarOptions } from '@/hooks/useAvatarOptions';
+import { useFollowCounts } from '@/hooks/useFollowCounts';
+import { useUserRank } from '@/hooks/useUserRank';
+import { ProfileStatGrid } from '@/components/profile/ProfileStatGrid';
 import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
@@ -48,6 +51,9 @@ export function ProfilePage() {
   const [deletePassword, setDeletePassword] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const { followerCount, followingCount } = useFollowCounts(firebaseUser?.uid);
+  const rank = useUserRank(profile?.correctPredictions);
 
   // Sayfa açılınca profili "görüldü" olarak işaretle - BottomNav'daki kırmızı nokta kaybolur.
   useEffect(() => {
@@ -170,6 +176,14 @@ export function ProfilePage() {
           </h1>
         </div>
 
+        <ProfileStatGrid
+          followerCount={followerCount}
+          followingCount={followingCount}
+          totalPredictions={profile.totalPredictions}
+          correctPredictions={profile.correctPredictions}
+          rank={rank}
+        />
+
         <FollowLists uid={firebaseUser.uid} />
 
         <div>
@@ -193,13 +207,13 @@ export function ProfilePage() {
           <StreakBadge currentStreak={profile.currentStreak} />
         </section>
 
-        {/* İstatistik kartları - mockup'taki "SERİ / EN İYİ SERİ / DOĞRULUK / TOPLAM" ızgarasına
-            benzer ayrı ayrı kart tasarımı, kendi renk paletimizle */}
+        {/* Genel sekmesinde "Doğru/Toplam" artık yukarıdaki ProfileStatGrid'de
+            gösterildiği için burada tekrar edilmiyor - sadece En İyi Seri
+            kalıyor. Haftalık/Aylık sekmelerde ise o döneme özel Doğru/Toplam
+            hâlâ burada gösteriliyor (ProfileStatGrid her zaman tüm-zamanlar). */}
         {tab === 'all' ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="w-32">
             <StatTile icon="🔥" value={profile.bestStreak} label="En İyi Seri" highlight />
-            <StatTile icon="✅" value={profile.correctPredictions} label="Doğru" />
-            <StatTile icon="📊" value={profile.totalPredictions} label="Toplam" />
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
