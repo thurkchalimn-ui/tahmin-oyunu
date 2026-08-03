@@ -44,6 +44,7 @@ export function ProfilePage() {
 
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   const [pushStatus, setPushStatus] = useState<PushPermissionResult | 'idle' | 'requesting'>('idle');
   const { data: avatarOptions, loading: avatarOptionsLoading, error: avatarOptionsError } = useAvatarOptions();
@@ -106,6 +107,7 @@ export function ProfilePage() {
     setIsSavingAvatar(true);
     try {
       await updateAvatarUrl(firebaseUser!.uid, logoUrl);
+      setShowAvatarPicker(false);
     } catch (err) {
       setAvatarError(err instanceof Error ? err.message : 'Görsel kaydedilemedi.');
     } finally {
@@ -171,14 +173,16 @@ export function ProfilePage() {
         <div className="flex items-center gap-4">
           <div className="relative shrink-0 rounded-full shadow-glow">
             <Avatar avatarUrl={profile.avatarUrl} size="xl" />
-            <a
-              href="#profil-gorseli-secici"
+            <button
+              type="button"
+              onClick={() => setShowAvatarPicker((v) => !v)}
               title="Profil görselini değiştir"
+              aria-expanded={showAvatarPicker}
               className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full
                 border-2 border-white bg-pitch-950 text-scoreboard-amber shadow-glow dark:border-pitch-900"
             >
               <Camera size={14} />
-            </a>
+            </button>
           </div>
           <div>
             <h1 className="flex items-center gap-1.5 font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
@@ -191,6 +195,47 @@ export function ProfilePage() {
             </h1>
           </div>
         </div>
+
+        {/* Kamera ikonuna tıklanınca açılan/kapanan avatar seçim paneli -
+            artık sayfanın altında sabit bir bölüm değil, avatarın hemen
+            altında beliren bir "bar". */}
+        {showAvatarPicker && (
+          <div className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
+            <p className="mb-3 font-body text-xs text-pitch-700/60 dark:text-pitch-100/50">
+              Aşağıdaki listeden bir logo seç.
+            </p>
+            {avatarOptionsLoading ? (
+              <LoadingSpinner label="Seçenekler yükleniyor..." />
+            ) : avatarOptionsError ? (
+              <ErrorMessage message={avatarOptionsError} />
+            ) : !avatarOptions || avatarOptions.length === 0 ? (
+              <p className="font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
+                Henüz seçilebilecek bir avatar eklenmedi.
+              </p>
+            ) : (
+              <div className="grid grid-cols-6 gap-2 sm:grid-cols-8">
+                {avatarOptions.map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => handlePickAvatar(opt.logoUrl)}
+                    disabled={isSavingAvatar}
+                    title={opt.label}
+                    aria-label={`${opt.label} logosunu seç`}
+                    className={`rounded-full transition disabled:opacity-50 ${
+                      profile.avatarUrl === opt.logoUrl
+                        ? 'shadow-glow ring-2 ring-scoreboard-amber ring-offset-2 ring-offset-white dark:ring-offset-pitch-800'
+                        : 'hover:opacity-80'
+                    }`}
+                  >
+                    <Avatar avatarUrl={opt.logoUrl} size="md" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {avatarError && <p className="text-sm text-pick-wrong">{avatarError}</p>}
 
         <ProfileStatGrid
           followerCount={followerCount}
@@ -352,46 +397,6 @@ export function ProfilePage() {
               />
             </label>
           </div>
-        </section>
-
-        <section id="profil-gorseli-secici" className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
-          <h2 className="mb-1 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
-            Profil Görseli
-          </h2>
-          <p className="mb-3 font-body text-xs text-pitch-700/60 dark:text-pitch-100/50">
-            Aşağıdaki listeden bir logo seç.
-          </p>
-
-          {avatarOptionsLoading ? (
-            <LoadingSpinner label="Seçenekler yükleniyor..." />
-          ) : avatarOptionsError ? (
-            <ErrorMessage message={avatarOptionsError} />
-          ) : !avatarOptions || avatarOptions.length === 0 ? (
-            <p className="font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
-              Henüz seçilebilecek bir avatar eklenmedi.
-            </p>
-          ) : (
-            <div className="grid grid-cols-6 gap-2 sm:grid-cols-8">
-              {avatarOptions.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => handlePickAvatar(opt.logoUrl)}
-                  disabled={isSavingAvatar}
-                  title={opt.label}
-                  aria-label={`${opt.label} logosunu seç`}
-                  className={`rounded-full transition disabled:opacity-50 ${
-                    profile.avatarUrl === opt.logoUrl
-                      ? 'shadow-glow ring-2 ring-scoreboard-amber ring-offset-2 ring-offset-white dark:ring-offset-pitch-800'
-                      : 'hover:opacity-80'
-                  }`}
-                >
-                  <Avatar avatarUrl={opt.logoUrl} size="md" />
-                </button>
-              ))}
-            </div>
-          )}
-          {avatarError && <p className="mt-2 text-sm text-pick-wrong">{avatarError}</p>}
         </section>
 
         <form onSubmit={handleSave} className="flex flex-col gap-3">
