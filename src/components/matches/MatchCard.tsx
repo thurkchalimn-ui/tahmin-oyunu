@@ -44,10 +44,22 @@ export function MatchCard({ match, prediction, onPredict, isSubmitting = false }
   }
 
   return (
+    // ÖNEMLİ: Renk paleti DEĞİŞMEDİ (hâlâ pitch/scoreboard tonları) - sadece
+    // düz zemin yerine hafif bir gradyan + üstte ince bir "flood ışığı"
+    // vurgu çizgisi ve daha belirgin bir gölge (shadow-stadium) eklendi.
+    // Bu, reklam görselindeki telefon mockup'larındaki kart hissini
+    // markanın kendi renkleriyle yeniden üretir.
     <div
-      className="rounded-xl border border-pitch-700/15 bg-white p-4 shadow-sm
-        dark:border-pitch-700 dark:bg-pitch-800"
+      className="relative overflow-hidden rounded-xl border border-pitch-700/15
+        bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium transition-shadow
+        dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900"
     >
+      {/* Üstteki ince amber vurgu çizgisi - skorbord/stadyum ışığı hissi */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-scoreboard-amber/70 to-transparent"
+      />
+
       <div className="mb-3 flex items-center justify-between text-xs font-mono text-pitch-700/60 dark:text-pitch-100/50">
         <span>{match.league || 'Maç'}</span>
         <span>{formatMatchTime(match.kickoffAt)}</span>
@@ -73,6 +85,9 @@ export function MatchCard({ match, prediction, onPredict, isSubmitting = false }
           const isPendingChoice = !alreadyPredicted && pendingChoice === choice;
           const isResultChoice = hasResult && match.result === choice;
           const isWrongPick = hasResult && isSavedChoice && match.result !== choice;
+          // Amber ile vurgulanan (seçili/onaylı) butonlar artık hafif bir
+          // "ışık parlaması" da alıyor - reklam görselindeki altın vurgulara benzer.
+          const hasAmberGlow = isSavedChoice && !hasResult;
 
           return (
             <button
@@ -91,7 +106,7 @@ export function MatchCard({ match, prediction, onPredict, isSubmitting = false }
                         : isPendingChoice
                           ? 'bg-scoreboard-amber/25 text-pitch-900 ring-2 ring-scoreboard-amber dark:text-pitch-100'
                           : 'bg-pitch-100 text-pitch-900 hover:bg-scoreboard-amber/20 dark:bg-pitch-700 dark:text-pitch-100'
-                } ${locked && !isSavedChoice ? 'opacity-40' : ''}`}
+                } ${locked && !isSavedChoice ? 'opacity-40' : ''} ${hasAmberGlow ? 'shadow-glow' : ''}`}
             >
               {CHOICE_LABELS[choice]}
             </button>

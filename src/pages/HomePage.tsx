@@ -69,42 +69,53 @@ export function HomePage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6">
-      <section className="rounded-xl border border-pitch-700/15 bg-white p-5 dark:border-pitch-700 dark:bg-pitch-800">
-        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
-          Güncel Serin
-        </p>
-        <StreakBadge currentStreak={profile?.currentStreak ?? 0} />
-      </section>
+    // ÖNEMLİ: `relative` + `overflow-hidden` burada kasıtlı - içindeki stadyum
+    // ışığı katmanı `absolute` konumlandırılıyor ve sayfa dışına taşmaması
+    // gerekiyor. Işık katmanı `pointer-events-none` olduğu için hiçbir tıklama/
+    // dokunma etkileşimini engellemez, sadece görsel bir arka plan efektidir.
+    <div className="relative overflow-hidden bg-pitch-100 dark:bg-pitch-950">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-stadium-glow"
+      />
 
-      {firebaseUser && !dailyLimit.loading && <DailyLimitPanel limit={dailyLimit} />}
+      <div className="relative mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6">
+        <section className="rounded-xl border border-pitch-700/15 bg-white p-5 shadow-stadium dark:border-pitch-700 dark:bg-pitch-800">
+          <p className="mb-2 font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
+            Güncel Serin
+          </p>
+          <StreakBadge currentStreak={profile?.currentStreak ?? 0} />
+        </section>
 
-      {submitError && <ErrorMessage message={submitError} />}
-      {dailyLimit.error && <ErrorMessage message={dailyLimit.error} />}
+        {firebaseUser && !dailyLimit.loading && <DailyLimitPanel limit={dailyLimit} />}
 
-      <section>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
-            {selectedDate === today ? 'Bugünün Maçları' : `${formatDateHeading(selectedDate)} Maçları`}
-          </h1>
-          <DateNavigator date={selectedDate} onChange={setSelectedDate} />
-        </div>
+        {submitError && <ErrorMessage message={submitError} />}
+        {dailyLimit.error && <ErrorMessage message={dailyLimit.error} />}
 
-        {matchesLoading || predictionsLoading ? (
-          <LoadingSpinner label="Maçlar yükleniyor..." />
-        ) : matchesError ? (
-          <ErrorMessage message={matchesError} />
-        ) : (
-          <MatchList
-            matches={orderedMatches}
-            predictions={predictions ?? []}
-            onPredict={handlePredict}
-            submittingMatchId={submittingMatchId}
-          />
-        )}
-      </section>
+        <section>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
+              {selectedDate === today ? 'Bugünün Maçları' : `${formatDateHeading(selectedDate)} Maçları`}
+            </h1>
+            <DateNavigator date={selectedDate} onChange={setSelectedDate} />
+          </div>
 
-      <AdBanner slot="bottom" />
+          {matchesLoading || predictionsLoading ? (
+            <LoadingSpinner label="Maçlar yükleniyor..." />
+          ) : matchesError ? (
+            <ErrorMessage message={matchesError} />
+          ) : (
+            <MatchList
+              matches={orderedMatches}
+              predictions={predictions ?? []}
+              onPredict={handlePredict}
+              submittingMatchId={submittingMatchId}
+            />
+          )}
+        </section>
+
+        <AdBanner slot="bottom" />
+      </div>
     </div>
   );
 }
