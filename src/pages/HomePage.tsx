@@ -149,7 +149,7 @@ export function HomePage() {
         {(weeklyTopThree.length > 0 || recentResults.length > 0) && (
           <div className="grid gap-4 sm:grid-cols-2">
             <WeeklyPodium topThree={weeklyTopThree} source={weeklySource} />
-            <RecentResultsPreview matches={recentResults} predictions={predictions ?? []} />
+            <RecentResultsPreview matches={recentResults} />
           </div>
         )}
 

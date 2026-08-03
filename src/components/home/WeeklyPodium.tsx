@@ -10,19 +10,15 @@ interface WeeklyPodiumProps {
 }
 
 const RANK_STYLES = [
-  { order: 'order-2', ring: 'ring-scoreboard-amber', size: 'h-[102px] w-[102px]', avatarSize: 'xl' as const, badgeColor: 'bg-scoreboard-amber text-pitch-950' },
-  { order: 'order-1', ring: 'ring-pitch-100/40', size: 'h-14 w-14', avatarSize: 'lg' as const, badgeColor: 'bg-pitch-100 text-pitch-900' },
-  { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-14 w-14', avatarSize: 'lg' as const, badgeColor: 'bg-scoreboard-amberDark text-white' },
+  { order: 'order-2', ring: 'ring-scoreboard-amber', size: 'h-44 w-44', avatarSize: '2xl' as const, badgeColor: 'bg-scoreboard-amber text-pitch-950' },
+  { order: 'order-1', ring: 'ring-pitch-100/40', size: 'h-24 w-24', avatarSize: 'xl' as const, badgeColor: 'bg-pitch-100 text-pitch-900' },
+  { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-24 w-24', avatarSize: 'xl' as const, badgeColor: 'bg-scoreboard-amberDark text-white' },
 ];
 
 /**
  * Ana sayfadaki liderlik önizlemesi - ilk 3 kullanıcıyı podyum düzeninde
  * gösterir. `source` haftalık mı yoksa (hafta yeni başlayıp veri azken)
  * tüm-zamanlar mı gösterildiğini belirtir - başlık buna göre değişir.
- * Kullanıcı adının altında EN İYİ SERİ (bestStreak) gösterilir - bu bilgi
- * hook seviyesinde (useWeeklyTopThree) ayrıca `users` koleksiyonundan
- * tamamlanıyor, çünkü hem haftalık önbellek hem basit tüm-zamanlar sorgusu
- * bu alanı içermiyordu.
  */
 export function WeeklyPodium({ topThree, source }: WeeklyPodiumProps) {
   if (topThree.length === 0) return null;
@@ -57,11 +53,11 @@ export function WeeklyPodium({ topThree, source }: WeeklyPodiumProps) {
                   {i === 0 ? <Crown size={16} /> : i + 1}
                 </span>
               </div>
-              <p className="mt-1 max-w-[90px] truncate text-center font-body text-xs font-medium text-pitch-900 dark:text-pitch-100">
+              <p className="mt-1 max-w-[80px] truncate text-center font-body text-xs font-medium text-pitch-900 dark:text-pitch-100">
                 {user.displayName}
               </p>
               <p className="font-mono text-[10px] text-pitch-700/50 dark:text-pitch-100/40">
-                {user.bestStreak} en iyi seri
+                {user.correctPredictions} doğru
               </p>
             </Link>
           );
