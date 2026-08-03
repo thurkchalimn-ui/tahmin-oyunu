@@ -15,7 +15,6 @@ import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistoryList';
 import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { Avatar } from '@/components/common/Avatar';
-import { FollowLists } from '@/components/common/FollowLists';
 import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
 import { ShareButton } from '@/components/common/ShareButton';
 import { useAvatarOptions } from '@/hooks/useAvatarOptions';
@@ -223,14 +222,6 @@ export function ProfilePage() {
           memberSince={profile.createdAt}
         />
 
-        <RecentPredictionCards items={history ?? []} />
-
-        <FollowLists uid={firebaseUser.uid} />
-
-        <div>
-          <PeriodTabs value={tab} onChange={setTab} />
-        </div>
-
         {/* Güncel seri - büyük, vurgulu bir "hero" kartı olarak */}
         <section className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-5 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
           <div className="mb-2 flex items-center justify-between">
@@ -247,6 +238,12 @@ export function ProfilePage() {
           </div>
           <StreakBadge currentStreak={profile.currentStreak} />
         </section>
+
+        <RecentPredictionCards items={history ?? []} />
+
+        <div>
+          <PeriodTabs value={tab} onChange={setTab} />
+        </div>
 
         {/* Genel sekmesinde "Doğru/Toplam" artık yukarıdaki ProfileStatGrid'de
             gösterildiği için burada tekrar edilmiyor - sadece En İyi Seri
