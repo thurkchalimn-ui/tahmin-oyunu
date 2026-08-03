@@ -64,9 +64,9 @@ export function AdminPage() {
         ) : (
           <AdminMatchList
             matches={matches ?? []}
-            onSetResult={async (matchId, result) => {
+            onSetResult={async (matchId, homeGoals, awayGoals) => {
               try {
-                await setMatchResult(matchId, result);
+                await setMatchResult(matchId, homeGoals, awayGoals);
               } catch {
                 setActionError('Sonuç kaydedilemedi.');
               }
