@@ -5,12 +5,14 @@ import { usePredictions } from '@/hooks/usePredictions';
 import { useDailyPredictionLimit } from '@/hooks/useDailyPredictionLimit';
 import { useWeeklyTopThree } from '@/hooks/useWeeklyTopThree';
 import { useRecentResults } from '@/hooks/useRecentResults';
+import { useUserRank } from '@/hooks/useUserRank';
 import { submitPrediction } from '@/services/predictionService';
 import { MatchList } from '@/components/matches/MatchList';
 import { DailyLimitPanel } from '@/components/matches/DailyLimitPanel';
 import { DateNavigator } from '@/components/matches/DateNavigator';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { HomeMatchBanner } from '@/components/home/HomeMatchBanner';
+import { HomeStatStrip } from '@/components/home/HomeStatStrip';
 import { WeeklyPodium } from '@/components/home/WeeklyPodium';
 import { RecentResultsPreview } from '@/components/home/RecentResultsPreview';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -44,6 +46,7 @@ export function HomePage() {
   // Yeni ana sayfa bölümleri için veri (XP içermeyen, gerçek verilerle)
   const { data: weeklyTopThree } = useWeeklyTopThree();
   const { data: recentResults } = useRecentResults(4);
+  const rank = useUserRank(profile?.correctPredictions);
 
   // Sonucu henüz belirlenmemiş maçlar üstte (en erken başlayacak olan en üstte),
   // sonuçlanmış maçlar listenin en altında ama kendi içinde: önce en son güne
@@ -120,6 +123,14 @@ export function HomePage() {
             predictedCount={todayBannerData.predictedCount}
             totalCount={todayBannerData.totalCount}
             onCtaClick={scrollToMatches}
+          />
+        )}
+
+        {profile && (
+          <HomeStatStrip
+            dailyStreak={profile.activityStreak ?? 0}
+            correctPredictions={profile.correctPredictions}
+            rank={rank}
           />
         )}
 

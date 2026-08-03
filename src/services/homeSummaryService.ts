@@ -1,4 +1,4 @@
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, getCountFromServer, where } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { Match } from '@/types';
 
@@ -18,4 +18,17 @@ export async function getRecentResults(count: number): Promise<Match[]> {
   const snap = await getDocs(q);
   const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Match);
   return all.filter((m) => m.result !== null).slice(0, count);
+}
+
+/**
+ * Kullanıcının tüm-zamanlar doğru tahmin sayısına göre yaklaşık genel
+ * sıralamasını hesaplar (kendinden daha çok doğru tahmini olan kullanıcı
+ * sayısı + 1). Liderlik tablosunun tamamını çekmek yerine sadece bir SAYIM
+ * sorgusu (getCountFromServer) kullanır - kota dostu.
+ */
+export async function getUserRank(correctPredictions: number): Promise<number> {
+  const snap = await getCountFromServer(
+    query(collection(db, 'users'), where('correctPredictions', '>', correctPredictions)),
+  );
+  return snap.data().count + 1;
 }
