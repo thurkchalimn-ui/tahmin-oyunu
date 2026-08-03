@@ -200,25 +200,37 @@ export function subscribeMatchesByDate(
   );
 }
 
+/** Skordan (ör. 2-1) otomatik olarak 1/X/2 sonucunu hesaplar. */
+function computeResultFromScore(homeGoals: number, awayGoals: number): PredictionChoice {
+  if (homeGoals > awayGoals) return 'HOME';
+  if (homeGoals < awayGoals) return 'AWAY';
+  return 'DRAW';
+}
+
 /**
- * Admin: bir maçın sonucunu girer. Bu maça ait tüm tahminlerin doğruluğunu
- * günceller, etkilenen her kullanıcının serisini yeniden hesaplatır ve her
- * kullanıcı için bir bildirim kuyruğu kaydı oluşturur.
+ * Admin: bir maçın KESİN SKORUNU girer (ör. 2-1). Sistem bundan otomatik
+ * olarak 1/X/2 sonucunu hesaplar - tahminler bu hesaplanan sonuca göre
+ * değerlendirilir. Gerçek skor, maçın `liveScore` alanına da yazılır (status:
+ * 'FINISHED') - böylece "Son Maç Sonuçları" gibi skoru gösteren yerler bunu
+ * otomatik olarak kullanır, ayrı bir alan/geçiş gerekmez.
  *
  * ÖNEMLİ: İstemci (tarayıcı) başka bir kullanıcıya doğrudan push bildirimi
  * gönderemez - bu yüzden burada sadece `notificationQueue` koleksiyonuna bir
  * "gönderilmesi gereken bildirim" kaydı bırakılır. Gerçek gönderim, Admin SDK'ya
  * sahip olan GitHub Actions otomasyon script'i (automation/check-results.js)
- * tarafından, her çalıştığında bu kuyruğu okuyup temizleyerek yapılır. Böylece
- * admin sonucu ELLE girse de (otomasyon henüz o maçı bulmamış olsa bile)
- * bildirim garantili şekilde gönderilir.
+ * tarafından, her çalıştığında bu kuyruğu okuyup temizleyerek yapılır.
  */
-export async function setMatchResult(matchId: string, result: PredictionChoice): Promise<void> {
+export async function setMatchResult(matchId: string, homeGoals: number, awayGoals: number): Promise<void> {
+  const result = computeResultFromScore(homeGoals, awayGoals);
+
   const matchSnap = await getDoc(doc(db, 'matches', matchId));
   const matchData = matchSnap.data();
   const matchLabel = matchData ? `${matchData.homeTeam} vs ${matchData.awayTeam}` : 'Maç';
 
-  await updateDoc(doc(db, 'matches', matchId), { result });
+  await updateDoc(doc(db, 'matches', matchId), {
+    result,
+    liveScore: { homeGoals, awayGoals, status: 'FINISHED', minute: null },
+  });
 
   const predSnap = await getDocs(query(collection(db, 'predictions'), where('matchId', '==', matchId)));
 
@@ -232,7 +244,7 @@ export async function setMatchResult(matchId: string, result: PredictionChoice):
       await addDoc(collection(db, 'notificationQueue'), {
         userId: data.userId,
         title: isCorrect ? '✅ Doğru Tahmin!' : '❌ Yanlış Tahmin',
-        body: `${matchLabel} maçı sonuçlandı.`,
+        body: `${matchLabel} maçı ${homeGoals}-${awayGoals} bitti.`,
         type: 'result', // Otomasyon script'i, kullanıcının bu türü kapatıp kapatmadığını kontrol eder
         createdAt: Timestamp.now(),
       });
@@ -247,12 +259,12 @@ export async function setMatchResult(matchId: string, result: PredictionChoice):
 
 /**
  * Admin: yanlışlıkla girilmiş bir maç sonucunu geri alır. Maçı yeniden
- * "sonuçlanmamış" durumuna döndürür, bu maça ait tüm tahminlerin doğru/yanlış
- * damgasını temizler ve etkilenen kullanıcıların serilerini bu değişikliği
- * yansıtacak şekilde yeniden hesaplar.
+ * "sonuçlanmamış" durumuna döndürür (skor dahil), bu maça ait tüm tahminlerin
+ * doğru/yanlış damgasını temizler ve etkilenen kullanıcıların serilerini bu
+ * değişikliği yansıtacak şekilde yeniden hesaplar.
  */
 export async function undoMatchResult(matchId: string): Promise<void> {
-  await updateDoc(doc(db, 'matches', matchId), { result: null });
+  await updateDoc(doc(db, 'matches', matchId), { result: null, liveScore: null });
 
   const predSnap = await getDocs(query(collection(db, 'predictions'), where('matchId', '==', matchId)));
 
