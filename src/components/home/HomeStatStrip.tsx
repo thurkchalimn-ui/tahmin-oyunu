@@ -1,3 +1,5 @@
+import { IconBadge } from '@/components/common/IconBadge';
+
 interface HomeStatStripProps {
   dailyStreak: number;
   correctPredictions: number;
@@ -32,10 +34,10 @@ function Tile({
 }) {
   return (
     <div
-      className="flex flex-col items-center gap-1 rounded-xl border border-pitch-700/15 bg-gradient-to-b
+      className="flex flex-col items-center gap-2 rounded-xl border border-pitch-700/15 bg-gradient-to-b
         from-white to-pitch-100 p-3 text-center shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900"
     >
-      <span className="text-xl">{icon}</span>
+      <IconBadge icon={icon} size="sm" />
       <p className="font-mono text-lg font-bold text-pitch-900 dark:text-pitch-100">
         {prefix}
         {value}

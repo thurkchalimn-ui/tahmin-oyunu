@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Avatar } from '@/components/common/Avatar';
+import { IconBadge } from '@/components/common/IconBadge';
 import type { UserProfile } from '@/types';
 
 interface WeeklyPodiumProps {
@@ -19,8 +20,9 @@ export function WeeklyPodium({ topThree }: WeeklyPodiumProps) {
   return (
     <section className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
-          🏆 Haftalık Liderlik
+        <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
+          <IconBadge icon="🏆" size="sm" />
+          Haftalık Liderlik
         </h2>
         <Link to="/liderlik" className="font-mono text-xs text-scoreboard-amber hover:underline">
           Tümünü Gör →

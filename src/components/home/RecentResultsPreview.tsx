@@ -1,5 +1,6 @@
 import type { Match } from '@/types';
 import { TeamLogo } from '@/components/common/TeamLogo';
+import { IconBadge } from '@/components/common/IconBadge';
 
 interface RecentResultsPreviewProps {
   matches: Match[];
@@ -22,8 +23,9 @@ export function RecentResultsPreview({ matches }: RecentResultsPreviewProps) {
 
   return (
     <section className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
-      <h2 className="mb-3 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
-        📋 Son Maç Sonuçları
+      <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
+        <IconBadge icon="📋" size="sm" />
+        Son Maç Sonuçları
       </h2>
       <div className="flex flex-col divide-y divide-pitch-700/10 dark:divide-pitch-100/10">
         {matches.map((match) => (
