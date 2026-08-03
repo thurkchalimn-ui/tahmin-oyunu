@@ -10,9 +10,9 @@ interface WeeklyPodiumProps {
 }
 
 const RANK_STYLES = [
-  { order: 'order-2', ring: 'ring-scoreboard-amber', size: 'h-[102px] w-[102px]', avatarSize: 'xl' as const, badgeColor: 'bg-scoreboard-amber text-pitch-950' },
-  { order: 'order-1', ring: 'ring-pitch-100/40', size: 'h-14 w-14', avatarSize: 'lg' as const, badgeColor: 'bg-pitch-100 text-pitch-900' },
-  { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-14 w-14', avatarSize: 'lg' as const, badgeColor: 'bg-scoreboard-amberDark text-white' },
+  { order: 'order-2', ring: 'ring-scoreboard-amber', size: 'h-[102px] w-[102px]', avatarSize: 'xl' as const },
+  { order: 'order-1', ring: 'ring-pitch-100/40', size: 'h-14 w-14', avatarSize: 'lg' as const },
+  { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-14 w-14', avatarSize: 'lg' as const },
 ];
 
 /**
@@ -48,14 +48,20 @@ export function WeeklyPodium({ topThree, source }: WeeklyPodiumProps) {
               to={`/oyuncu/${user.uid}`}
               className={`flex flex-col items-center gap-1.5 ${style.order}`}
             >
+              {/* Sıra numarası artık avatarın ÜZERİNE binmiyor - ayrı, kendi
+                  satırında, avatarın hemen üstünde duran bir etiket */}
+              <span
+                className={`flex items-center gap-1 font-mono text-sm font-bold ${
+                  i === 0
+                    ? 'text-scoreboard-amber'
+                    : 'text-pitch-700/70 dark:text-pitch-100/60'
+                }`}
+              >
+                {i === 0 && <Crown size={14} />}
+                {i + 1}.
+              </span>
               <div className={`relative rounded-full ring-2 ${style.ring} ${style.size}`}>
                 <Avatar avatarUrl={user.avatarUrl} size={style.avatarSize} />
-                <span
-                  className={`absolute -bottom-1 left-1/2 flex h-8 w-8 -translate-x-1/2 items-center
-                    justify-center rounded-full font-mono text-sm font-bold ${style.badgeColor}`}
-                >
-                  {i === 0 ? <Crown size={16} /> : i + 1}
-                </span>
               </div>
               <p className="mt-1 max-w-[90px] truncate text-center font-body text-xs font-medium text-pitch-900 dark:text-pitch-100">
                 {user.displayName}
