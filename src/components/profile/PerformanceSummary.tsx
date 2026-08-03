@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
-import { TrendingUp, CheckCircle2, Percent, Target, ListChecks, Calendar } from 'lucide-react';
+import { TrendingUp, CheckCircle2, Percent, Target, ListChecks, Calendar, Flame } from 'lucide-react';
 import { IconBadge } from '@/components/common/IconBadge';
 
 interface PerformanceSummaryProps {
   correctPredictions: number;
   totalPredictions: number;
   bestStreak: number;
+  activityStreak: number;
   memberSince: string; // ISO tarih
 }
 
@@ -28,6 +29,7 @@ export function PerformanceSummary({
   correctPredictions,
   totalPredictions,
   bestStreak,
+  activityStreak,
   memberSince,
 }: PerformanceSummaryProps) {
   const accuracy = totalPredictions > 0 ? Math.round((correctPredictions / totalPredictions) * 100) : 0;
@@ -44,6 +46,7 @@ export function PerformanceSummary({
         <Stat icon={<Percent size={15} />} value={`%${accuracy}`} label="Başarı Oranı" accent="text-pick-correct" />
         <Stat icon={<Target size={15} />} value={bestStreak} label="En İyi Seri (maç)" accent="text-scoreboard-amber" />
         <Stat icon={<ListChecks size={15} />} value={totalPredictions} label="Toplam Tahmin" />
+        <Stat icon={<Flame size={15} />} value={activityStreak} label="Günlük Giriş Serisi" accent="text-scoreboard-amber" />
         <Stat icon={<Calendar size={15} />} value={formatMemberSince(memberSince)} label="Üyelik Tarihi" small />
       </div>
     </section>
