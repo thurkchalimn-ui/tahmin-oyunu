@@ -3,11 +3,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMatches } from '@/hooks/useMatches';
 import { usePredictions } from '@/hooks/usePredictions';
 import { useDailyPredictionLimit } from '@/hooks/useDailyPredictionLimit';
+import { useWeeklyTopThree } from '@/hooks/useWeeklyTopThree';
+import { useRecentResults } from '@/hooks/useRecentResults';
 import { submitPrediction } from '@/services/predictionService';
 import { MatchList } from '@/components/matches/MatchList';
 import { DailyLimitPanel } from '@/components/matches/DailyLimitPanel';
 import { DateNavigator } from '@/components/matches/DateNavigator';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
+import { HomeMatchBanner } from '@/components/home/HomeMatchBanner';
+import { WeeklyPodium } from '@/components/home/WeeklyPodium';
+import { RecentResultsPreview } from '@/components/home/RecentResultsPreview';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { AdBanner } from '@/components/common/AdBanner';
@@ -15,11 +20,9 @@ import { todayKey, formatDateHeading } from '@/utils/dateUtils';
 import type { Match, PredictionChoice } from '@/types';
 
 // ÖNEMLİ: Bu gradyan bilinçli olarak Tailwind config'deki özel bir class
-// (`bg-stadium-glow`) yerine DOĞRUDAN inline style olarak tanımlanıyor.
-// Tailwind'in JIT derleyicisi bazı ortamlarda config'e eklenen özel
-// backgroundImage değerlerini beklendiği gibi üretmeyebiliyor - inline style
-// hiçbir derleme/eşleşme adımına bağlı olmadığı için garanti çalışır.
-// Renkler yine projenin kendi paletinden: scoreboard.amber (#F2B705).
+// yerine DOĞRUDAN inline style olarak tanımlanıyor - derleme/eşleşme adımına
+// bağlı olmadığı için garanti çalışır. Renk yine projenin kendi paletinden:
+// scoreboard.amber (#F2B705).
 const STADIUM_GLOW_STYLE = {
   backgroundImage:
     'radial-gradient(ellipse 70% 45% at 20% -15%, rgba(242, 183, 5, 0.18), transparent 60%), ' +
@@ -38,6 +41,10 @@ export function HomePage() {
   const [submittingMatchId, setSubmittingMatchId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Yeni ana sayfa bölümleri için veri (XP içermeyen, gerçek verilerle)
+  const { data: weeklyTopThree } = useWeeklyTopThree();
+  const { data: recentResults } = useRecentResults(4);
+
   // Sonucu henüz belirlenmemiş maçlar üstte (en erken başlayacak olan en üstte),
   // sonuçlanmış maçlar listenin en altında ama kendi içinde: önce en son güne
   // ait maçlar, aynı gün içinde de dayOrder'a göre 20'den geriye doğru sıralanır
@@ -53,6 +60,20 @@ export function HomePage() {
     });
     return [...pending, ...resolved];
   }, [matches]);
+
+  // "Bugünün Maçları X/Y" bannerı SADECE bugünü görüntülerken hesaplanır -
+  // başka bir güne gidildiğinde (selectedDate !== today) gösterilmez, çünkü
+  // o an elimizde sadece seçilen günün maç verisi var, bugünün değil.
+  const todayBannerData = useMemo(() => {
+    if (selectedDate !== today || !matches) return null;
+    const predictedIds = new Set((predictions ?? []).map((p) => p.matchId));
+    const predictedCount = matches.filter((m) => predictedIds.has(m.id)).length;
+    return { predictedCount, totalCount: matches.length };
+  }, [selectedDate, today, matches, predictions]);
+
+  function scrollToMatches() {
+    document.getElementById('mac-listesi')?.scrollIntoView({ behavior: 'smooth' });
+  }
 
   async function handlePredict(match: Match, choice: PredictionChoice) {
     if (!firebaseUser) {
@@ -84,9 +105,8 @@ export function HomePage() {
     // `relative` + `overflow-hidden`: içindeki ışık katmanı `absolute`
     // konumlandırılıyor, sayfa dışına taşmasın diye kırpılıyor. Katman
     // `pointer-events-none` olduğu için hiçbir tıklama/dokunmayı engellemez.
-    // NOT: Kendi arka plan rengini burada YENİDEN tanımlamıyoruz - App.tsx'in
-    // kök sarmalayıcısındaki bg-pitch-100 / dark:bg-pitch-900 zaten geçerli;
-    // burada sadece üzerine ışık efekti bindiriliyor.
+    // Kendi arka plan rengini burada yeniden tanımlamıyoruz - App.tsx'in kök
+    // sarmalayıcısındaki bg-pitch-100/dark:bg-pitch-900 zaten geçerli.
     <div className="relative overflow-hidden">
       <div
         aria-hidden="true"
@@ -95,6 +115,14 @@ export function HomePage() {
       />
 
       <div className="relative mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6">
+        {todayBannerData && (
+          <HomeMatchBanner
+            predictedCount={todayBannerData.predictedCount}
+            totalCount={todayBannerData.totalCount}
+            onCtaClick={scrollToMatches}
+          />
+        )}
+
         <section className="rounded-xl border border-pitch-700/15 bg-white p-5 shadow-stadium dark:border-pitch-700 dark:bg-pitch-800">
           <p className="mb-2 font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
             Güncel Serin
@@ -107,7 +135,14 @@ export function HomePage() {
         {submitError && <ErrorMessage message={submitError} />}
         {dailyLimit.error && <ErrorMessage message={dailyLimit.error} />}
 
-        <section>
+        {(weeklyTopThree.length > 0 || recentResults.length > 0) && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <WeeklyPodium topThree={weeklyTopThree} />
+            <RecentResultsPreview matches={recentResults} />
+          </div>
+        )}
+
+        <section id="mac-listesi">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
               {selectedDate === today ? 'Bugünün Maçları' : `${formatDateHeading(selectedDate)} Maçları`}
