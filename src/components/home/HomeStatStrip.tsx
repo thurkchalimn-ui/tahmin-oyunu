@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import { Flame, CheckCircle2, BarChart3 } from 'lucide-react';
 import { IconBadge } from '@/components/common/IconBadge';
 
 interface HomeStatStripProps {
@@ -9,14 +11,15 @@ interface HomeStatStripProps {
 /**
  * "Günlük Seri / Doğru Tahmin / Sıralama" üç kutucuklu istatistik şeridi.
  * Reklam görselindeki stat şeridine benziyor ama XP/Ödül gibi elimizde
- * olmayan verileri içermiyor - sadece gerçek, mevcut verilerimiz.
+ * olmayan verileri içermiyor - sadece gerçek, mevcut verilerimiz. İkonlar
+ * emoji DEĞİL, lucide-react'tan gerçek ikon bileşenleri.
  */
 export function HomeStatStrip({ dailyStreak, correctPredictions, rank }: HomeStatStripProps) {
   return (
     <div className="grid grid-cols-3 gap-3">
-      <Tile icon="🔥" value={dailyStreak} label="Günlük Seri" />
-      <Tile icon="✅" value={correctPredictions} label="Doğru Tahmin" />
-      <Tile icon="📊" value={rank ?? '—'} label="Sıralama" prefix={rank ? '#' : ''} />
+      <Tile icon={<Flame size={18} />} value={dailyStreak} label="Günlük Seri" />
+      <Tile icon={<CheckCircle2 size={18} />} value={correctPredictions} label="Doğru Tahmin" />
+      <Tile icon={<BarChart3 size={18} />} value={rank ?? '—'} label="Sıralama" prefix={rank ? '#' : ''} />
     </div>
   );
 }
@@ -27,7 +30,7 @@ function Tile({
   label,
   prefix = '',
 }: {
-  icon: string;
+  icon: ReactNode;
   value: number | string;
   label: string;
   prefix?: string;

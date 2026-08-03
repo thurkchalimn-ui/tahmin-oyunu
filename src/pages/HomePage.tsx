@@ -44,7 +44,7 @@ export function HomePage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Yeni ana sayfa bölümleri için veri (XP içermeyen, gerçek verilerle)
-  const { data: weeklyTopThree } = useWeeklyTopThree();
+  const { data: weeklyTopThree, source: weeklySource } = useWeeklyTopThree();
   const { data: recentResults } = useRecentResults(4);
   const rank = useUserRank(profile?.correctPredictions);
 
@@ -148,7 +148,7 @@ export function HomePage() {
 
         {(weeklyTopThree.length > 0 || recentResults.length > 0) && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <WeeklyPodium topThree={weeklyTopThree} />
+            <WeeklyPodium topThree={weeklyTopThree} source={weeklySource} />
             <RecentResultsPreview matches={recentResults} />
           </div>
         )}

@@ -32,3 +32,26 @@ export async function getUserRank(correctPredictions: number): Promise<number> {
   );
   return snap.data().count + 1;
 }
+
+/**
+ * Ana sayfa podyum önizlemesi için tüm-zamanlar en iyi 3 kullanıcıyı getirir.
+ * Haftalık liderlik verisi henüz yeterli olmadığında (ör. hafta yeni
+ * başladığında) yedek olarak kullanılır. Minimal bir alan seti döner - bu
+ * önizleme sadece uid/avatarUrl/displayName/correctPredictions kullanıyor.
+ */
+export async function getAllTimeTopThree(): Promise<
+  { uid: string; displayName: string; avatarUrl: string | null; correctPredictions: number }[]
+> {
+  const snap = await getDocs(
+    query(collection(db, 'users'), orderBy('bestStreak', 'desc'), limit(3)),
+  );
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      uid: d.id,
+      displayName: (data.displayName as string) ?? 'İsimsiz Oyuncu',
+      avatarUrl: (data.avatarUrl as string) ?? null,
+      correctPredictions: (data.correctPredictions as number) ?? 0,
+    };
+  });
+}
