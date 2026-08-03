@@ -4,7 +4,6 @@ import { Camera, BadgeCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePredictionHistory } from '@/hooks/usePredictionHistory';
 import {
-  updateDisplayName,
   updateAvatarUrl,
   updateNotificationPreferences,
   ACTIVITY_STREAK_MILESTONES,
@@ -23,6 +22,8 @@ import { useAvatarOptions } from '@/hooks/useAvatarOptions';
 import { useFollowCounts } from '@/hooks/useFollowCounts';
 import { useUserRank } from '@/hooks/useUserRank';
 import { ProfileStatGrid } from '@/components/profile/ProfileStatGrid';
+import { PerformanceSummary } from '@/components/profile/PerformanceSummary';
+import { RecentPredictionCards } from '@/components/profile/RecentPredictionCards';
 import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
@@ -37,11 +38,6 @@ export function ProfilePage() {
     firebaseUser?.uid,
   );
   const [tab, setTab] = useState<StatsPeriod>('all');
-  const [displayName, setDisplayName] = useState(profile?.displayName ?? '');
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -82,25 +78,6 @@ export function ProfilePage() {
   }, [filteredHistory]);
 
   if (!firebaseUser || !profile) return <LoadingSpinner fullScreen label="Profil yükleniyor..." />;
-
-  async function handleSave(e: FormEvent) {
-    e.preventDefault();
-    setSaveError(null);
-    setSaved(false);
-    if (!isNonEmpty(displayName)) {
-      setSaveError('Kullanıcı adı boş olamaz.');
-      return;
-    }
-    setIsSaving(true);
-    try {
-      await updateDisplayName(firebaseUser!.uid, displayName);
-      setSaved(true);
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Güncelleme başarısız oldu.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
 
   async function handlePickAvatar(logoUrl: string) {
     setAvatarError(null);
@@ -237,13 +214,16 @@ export function ProfilePage() {
         )}
         {avatarError && <p className="text-sm text-pick-wrong">{avatarError}</p>}
 
-        <ProfileStatGrid
-          followerCount={followerCount}
-          followingCount={followingCount}
-          totalPredictions={profile.totalPredictions}
+        <ProfileStatGrid followerCount={followerCount} followingCount={followingCount} rank={rank} />
+
+        <PerformanceSummary
           correctPredictions={profile.correctPredictions}
-          rank={rank}
+          totalPredictions={profile.totalPredictions}
+          bestStreak={profile.bestStreak}
+          memberSince={profile.createdAt}
         />
+
+        <RecentPredictionCards items={history ?? []} />
 
         <FollowLists uid={firebaseUser.uid} />
 
@@ -398,22 +378,6 @@ export function ProfilePage() {
             </label>
           </div>
         </section>
-
-        <form onSubmit={handleSave} className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-sm text-pitch-900 dark:text-pitch-100">
-            Kullanıcı Adı
-            <input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="rounded-md border border-pitch-700/20 bg-transparent px-3 py-2 dark:border-pitch-700"
-            />
-          </label>
-          {saveError && <p className="text-sm text-pick-wrong">{saveError}</p>}
-          {saved && <p className="text-sm text-pick-correct">Kaydedildi.</p>}
-          <Button type="submit" isLoading={isSaving} className="self-start">
-            Kaydet
-          </Button>
-        </form>
 
         <section>
           <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
