@@ -65,7 +65,7 @@ export function MatchCard({ match, prediction, onPredict, isSubmitting = false }
         <span>{formatMatchTime(match.kickoffAt)}</span>
       </div>
 
-      <div className="mb-4 flex items-center justify-between font-display text-base font-medium text-pitch-900 dark:text-pitch-100">
+      <div className="mb-1 flex items-center justify-between font-display text-base font-medium text-pitch-900 dark:text-pitch-100">
         <span className="flex flex-1 items-center justify-end gap-2 text-right">
           {match.homeTeam}
           <TeamLogo name={match.homeTeam} logoUrl={match.homeTeamLogo} />
@@ -77,9 +77,21 @@ export function MatchCard({ match, prediction, onPredict, isSubmitting = false }
         </span>
       </div>
 
+      {/* ÖNEMLİ: Maç sonuçlandıysa (hasResult) VE gerçek bir skor girildiyse
+          (admin artık 1/X/2 yerine skor giriyor - bkz. matchService.ts),
+          o kesin skoru burada büyük ve net şekilde gösteriyoruz. LiveScoreBar
+          sadece maç DEVAM EDERKEN (henüz sonuçlanmamışken) gösterilir - o
+          "canlı" hissi verecek şekilde tasarlandığı için bitmiş bir maçta
+          kullanılmıyor, onun yerine bu sade skor satırı kullanılıyor. */}
+      {hasResult && match.liveScore && (
+        <p className="mb-3 text-center font-mono text-2xl font-bold text-pitch-900 dark:text-pitch-100">
+          {match.liveScore.homeGoals} - {match.liveScore.awayGoals}
+        </p>
+      )}
+
       {!hasResult && match.liveScore && <LiveScoreBar liveScore={match.liveScore} />}
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-2">
         {(Object.keys(CHOICE_LABELS) as PredictionChoice[]).map((choice) => {
           const isSavedChoice = prediction?.choice === choice;
           const isPendingChoice = !alreadyPredicted && pendingChoice === choice;

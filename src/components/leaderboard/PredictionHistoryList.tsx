@@ -16,6 +16,9 @@ const PAGE_SIZE = 15;
  * Bir oyuncunun geçmiş tahminlerini, maç bilgisi ve doğru/yanlış durumuyla listeler.
  * Liste 15'erlik sayfalara bölünür (uzun geçmişlerde tek seferde onlarca satır
  * yüklenmesin diye); `items` zaten kronolojik sırayla (en eski maç en üstte) gelir.
+ * ÖNEMLİ: Maçın gerçek skoru varsa (admin artık 1/X/2 yerine skor giriyor),
+ * o skor takım isimlerinin arasında da gösterilir - sadece 1/X/2 harfiyle
+ * yetinilmez.
  */
 export function PredictionHistoryList({ items }: PredictionHistoryListProps) {
   const [page, setPage] = useState(1);
@@ -50,6 +53,11 @@ export function PredictionHistoryList({ items }: PredictionHistoryListProps) {
                 <TeamLogo name={match.homeTeam} logoUrl={match.homeTeamLogo} size="sm" />
                 {match.homeTeam} vs {match.awayTeam}
                 <TeamLogo name={match.awayTeam} logoUrl={match.awayTeamLogo} size="sm" />
+                {match.liveScore && (
+                  <span className="ml-1 font-mono text-xs font-bold text-pitch-700/70 dark:text-pitch-100/60">
+                    ({match.liveScore.homeGoals}-{match.liveScore.awayGoals})
+                  </span>
+                )}
               </p>
               <p className="font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
                 {formatMatchTime(match.kickoffAt)}
