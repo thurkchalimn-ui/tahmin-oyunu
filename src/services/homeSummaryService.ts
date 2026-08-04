@@ -12,23 +12,21 @@ import type { Match } from '@/types';
  * yerine, sadece TEK alanlı (otomatik index'li) bir sorguyla en yeni maçları
  * çekip sonuçlanmış olanları İSTEMCİ TARAFINDA filtreliyoruz.
  *
- * SIRALAMA/ADAY HAVUZU: Önceden aday havuzu `kickoffAt`'a göre çekiliyordu -
- * ama gerçek hedef sıralama (`date` + `dayOrder`, "Tüm Tahminlerim" ile
- * aynı) `kickoffAt` ile tam örtüşmeyebiliyordu (ör. aynı gün için maçlar
- * kickoff saatinden farklı bir sırayla eklenmiş olabilir) - bu da bazen
- * gerçek "ilk N" içindeki bir maçın 30'luk kickoffAt havuzunun dışında
- * kalıp hiç görünmemesine yol açıyordu. Artık aday havuzu doğrudan `date`
- * alanına göre (hedef sıralamanın BİRİNCİL alanı) çekiliyor - bu, doğru
- * adayları çok daha güvenilir şekilde yakalar.
+ * SIRALAMA: Önce başlama saatine (kickoffAt) göre en yeniden en eskiye;
+ * TAM OLARAK AYNI kickoffAt'a sahip birden fazla maç varsa (ör. aynı gün
+ * aynı saatte başlayan maçlar), takım adı alfabetik olarak BÜYÜKTEN KÜÇÜĞE
+ * (ör. "Z..." "A..."dan önce) sıralanır - "Tüm Tahminlerim" listesiyle
+ * birebir aynı mantık.
  */
 export async function getRecentResults(count: number): Promise<Match[]> {
-  const q = query(collection(db, 'matches'), orderBy('date', 'desc'), limit(40));
+  const q = query(collection(db, 'matches'), orderBy('kickoffAt', 'desc'), limit(40));
   const snap = await getDocs(q);
   const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Match);
   const resolved = all.filter((m) => m.result !== null);
   resolved.sort((a, b) => {
-    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-    return b.dayOrder - a.dayOrder;
+    const timeDiff = new Date(b.kickoffAt).getTime() - new Date(a.kickoffAt).getTime();
+    if (timeDiff !== 0) return timeDiff;
+    return b.homeTeam.localeCompare(a.homeTeam, 'tr');
   });
   return resolved.slice(0, count);
 }
