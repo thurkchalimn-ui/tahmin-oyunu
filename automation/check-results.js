@@ -168,6 +168,21 @@ async function sendPushToUsers(userIds, title, body, type) {
         data: { title, body },
       });
 
+      // TEŞHİS AMAÇLI: FCM'in HER token için gerçekte ne döndürdüğünü (başarı
+      // ya da tam hata kodu/mesajı) açıkça logla - "Kuyruktaki X bildirim
+      // işlendi" mesajı sadece "kuyruk kaydı işlendi" anlamına geliyordu,
+      // FCM'in mesajı gerçekten cihaza ulaştırıp ulaştırmadığını GÖSTERMİYORDU.
+      response.responses.forEach((r, i) => {
+        if (r.success) {
+          console.log(`[check-results]   ✓ FCM başarılı - uid=${uid}, token=...${info.tokens[i].slice(-12)}`);
+        } else {
+          console.error(
+            `[check-results]   ✗ FCM HATASI - uid=${uid}, token=...${info.tokens[i].slice(-12)}: ` +
+              `${r.error?.code ?? 'bilinmeyen kod'} - ${r.error?.message ?? 'mesaj yok'}`,
+          );
+        }
+      });
+
       const invalidTokens = response.responses
         .map((r, i) => (!r.success ? info.tokens[i] : null))
         .filter(Boolean);
