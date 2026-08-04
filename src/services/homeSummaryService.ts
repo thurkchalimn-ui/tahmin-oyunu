@@ -7,19 +7,22 @@ import type { Match } from '@/types';
  * Maç Sonuçları" önizlemesi için kullanılır.
  *
  * ÖNEMLİ: Bilinçli olarak `where('result', ...)` ile filtrelemiyoruz - bu,
- * `orderBy('kickoffAt')` ile birleşince YENİ bir Firestore composite index
- * gerektirirdi (daha önce bu yüzden haftalarca süren bir üretim sorunu
- * yaşadık). Onun yerine, sadece TEK alanlı (otomatik index'li) bir sorguyla
- * en yeni maçları çekip sonuçlanmış olanları İSTEMCİ TARAFINDA filtreliyoruz.
- * `limit(30)` günlük maç sayısına göre fazlasıyla yeterli bir tampon.
+ * `orderBy` ile birleşince YENİ bir Firestore composite index gerektirirdi
+ * (daha önce bu yüzden haftalarca süren bir üretim sorunu yaşadık). Onun
+ * yerine, sadece TEK alanlı (otomatik index'li) bir sorguyla en yeni maçları
+ * çekip sonuçlanmış olanları İSTEMCİ TARAFINDA filtreliyoruz.
  *
- * SIRALAMA: "Tüm Tahminlerim" ve profildeki "Son Tahminlerin" ile AYNI
- * mantık kullanılır (kickoffAt yerine): önce en son güne ait maçlar, aynı
- * gün içinde de dayOrder'a göre en yüksekten (en son eklenen) en düşüğe -
- * bkz. usePredictionHistory.ts / HomePage.tsx'teki resolved sıralaması.
+ * SIRALAMA/ADAY HAVUZU: Önceden aday havuzu `kickoffAt`'a göre çekiliyordu -
+ * ama gerçek hedef sıralama (`date` + `dayOrder`, "Tüm Tahminlerim" ile
+ * aynı) `kickoffAt` ile tam örtüşmeyebiliyordu (ör. aynı gün için maçlar
+ * kickoff saatinden farklı bir sırayla eklenmiş olabilir) - bu da bazen
+ * gerçek "ilk N" içindeki bir maçın 30'luk kickoffAt havuzunun dışında
+ * kalıp hiç görünmemesine yol açıyordu. Artık aday havuzu doğrudan `date`
+ * alanına göre (hedef sıralamanın BİRİNCİL alanı) çekiliyor - bu, doğru
+ * adayları çok daha güvenilir şekilde yakalar.
  */
 export async function getRecentResults(count: number): Promise<Match[]> {
-  const q = query(collection(db, 'matches'), orderBy('kickoffAt', 'desc'), limit(30));
+  const q = query(collection(db, 'matches'), orderBy('date', 'desc'), limit(40));
   const snap = await getDocs(q);
   const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Match);
   const resolved = all.filter((m) => m.result !== null);
