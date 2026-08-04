@@ -5,23 +5,21 @@
 //
 // ÖNEMLİ: Vite, bu dosyayı derleme sırasında İŞLEMEZ (public/ klasöründeki
 // dosyalar olduğu gibi kopyalanır), bu yüzden .env'deki VITE_FIREBASE_...
-// değişkenlerini burada OKUYAMAZ. Aşağıdaki firebaseConfig değerlerini kendi
-// .env dosyandaki değerlerle ELLE doldurman gerekiyor. Bu değerler gizli
-// değildir (Firebase web config'i tasarım gereği herkese açık olabilir).
+// değişkenlerini burada OKUYAMAZ. Bu yüzden aşağıdaki değerler ELLE
+// dolduruldu (src/config/firebase.ts ile birebir aynı proje). Bu değerler
+// gizli değildir (Firebase web config'i tasarım gereği herkese açık olabilir,
+// gerçek güvenlik firestore.rules ile sağlanır).
 importScripts('https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js');
-
 firebase.initializeApp({
-  apiKey: 'BURAYA_.ENV_DOSYANDAKI_VITE_FIREBASE_API_KEY_DEĞERİNİ_YAPIŞTIR',
-  authDomain: 'BURAYA_.ENV_DOSYANDAKI_VITE_FIREBASE_AUTH_DOMAIN_DEĞERİNİ_YAPIŞTIR',
-  projectId: 'BURAYA_.ENV_DOSYANDAKI_VITE_FIREBASE_PROJECT_ID_DEĞERİNİ_YAPIŞTIR',
-  storageBucket: 'BURAYA_.ENV_DOSYANDAKI_VITE_FIREBASE_STORAGE_BUCKET_DEĞERİNİ_YAPIŞTIR',
-  messagingSenderId: 'BURAYA_.ENV_DOSYANDAKI_VITE_FIREBASE_MESSAGING_SENDER_ID_DEĞERİNİ_YAPIŞTIR',
-  appId: 'BURAYA_.ENV_DOSYANDAKI_VITE_FIREBASE_APP_ID_DEĞERİNİ_YAPIŞTIR',
+  apiKey: 'AIzaSyAZIvgH9IEooqj1dB7uJ1S1gBklT_gnlOM',
+  authDomain: 'tahmin-oyunu-1ca3e.firebaseapp.com',
+  projectId: 'tahmin-oyunu-1ca3e',
+  storageBucket: 'tahmin-oyunu-1ca3e.firebasestorage.app',
+  messagingSenderId: '633128450556',
+  appId: '1:633128450556:web:235c0c6bc282b5d77a9a79',
 });
-
 const messaging = firebase.messaging();
-
 messaging.onBackgroundMessage((payload) => {
   // ÖNEMLİ: `payload.notification` DEĞİL `payload.data` okunuyor. Sunucu
   // tarafı bilinçli olarak `notification` alanını KULLANMIYOR (bkz.
