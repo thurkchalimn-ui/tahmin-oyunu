@@ -6,6 +6,7 @@ import { BottomNav } from '@/components/common/BottomNav';
 import { EmailVerificationBanner } from '@/components/common/EmailVerificationBanner';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
 import { HomePage } from '@/pages/HomePage';
+import { MatchesPage } from '@/pages/MatchesPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { LeaderboardPage } from '@/pages/LeaderboardPage';
@@ -31,6 +32,7 @@ export default function App() {
             <main className="pb-16">
               <Routes>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/maclar" element={<MatchesPage />} />
                 <Route path="/giris" element={<LoginPage />} />
                 <Route path="/kayit" element={<RegisterPage />} />
                 <Route path="/liderlik" element={<LeaderboardPage />} />

@@ -1,15 +1,17 @@
+import { Link } from 'react-router-dom';
+
 interface HomeMatchBannerProps {
   predictedCount: number;
   totalCount: number;
-  onCtaClick?: () => void;
 }
 
 /**
  * Ana sayfanın en üstündeki büyük, vurgulu banner - bugün kaç maça tahmin
- * yapıldığını gösterir ve maç listesine kaydırmayı teşvik eder. Kendi
- * pitch/scoreboard renk paletimizi kullanır, yeni bir renk eklemez.
+ * yapıldığını gösterir ve "Tahmin Yap" butonuyla maçların listelendiği ayrı
+ * sayfaya (/maclar) yönlendirir. Kendi pitch/scoreboard renk paletimizi
+ * kullanır, yeni bir renk eklemez.
  */
-export function HomeMatchBanner({ predictedCount, totalCount, onCtaClick }: HomeMatchBannerProps) {
+export function HomeMatchBanner({ predictedCount, totalCount }: HomeMatchBannerProps) {
   if (totalCount === 0) return null;
 
   return (
@@ -35,15 +37,13 @@ export function HomeMatchBanner({ predictedCount, totalCount, onCtaClick }: Home
           : 'Tahminlerini yap, serini büyüt!'}
       </p>
 
-      {predictedCount < totalCount && onCtaClick && (
-        <button
-          onClick={onCtaClick}
-          className="relative mt-4 rounded-lg bg-scoreboard-amber px-5 py-2 font-display text-sm
-            font-semibold text-pitch-950 shadow-glow transition hover:brightness-105"
-        >
-          Tahmin Yap →
-        </button>
-      )}
+      <Link
+        to="/maclar"
+        className="relative mt-4 inline-block rounded-lg bg-scoreboard-amber px-5 py-2 font-display text-sm
+          font-semibold text-pitch-950 shadow-glow transition hover:brightness-105"
+      >
+        Tahmin Yap →
+      </Link>
     </section>
   );
 }
