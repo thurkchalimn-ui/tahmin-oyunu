@@ -12,12 +12,22 @@ import type { Match } from '@/types';
  * yaşadık). Onun yerine, sadece TEK alanlı (otomatik index'li) bir sorguyla
  * en yeni maçları çekip sonuçlanmış olanları İSTEMCİ TARAFINDA filtreliyoruz.
  * `limit(30)` günlük maç sayısına göre fazlasıyla yeterli bir tampon.
+ *
+ * SIRALAMA: "Tüm Tahminlerim" ve profildeki "Son Tahminlerin" ile AYNI
+ * mantık kullanılır (kickoffAt yerine): önce en son güne ait maçlar, aynı
+ * gün içinde de dayOrder'a göre en yüksekten (en son eklenen) en düşüğe -
+ * bkz. usePredictionHistory.ts / HomePage.tsx'teki resolved sıralaması.
  */
 export async function getRecentResults(count: number): Promise<Match[]> {
   const q = query(collection(db, 'matches'), orderBy('kickoffAt', 'desc'), limit(30));
   const snap = await getDocs(q);
   const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Match);
-  return all.filter((m) => m.result !== null).slice(0, count);
+  const resolved = all.filter((m) => m.result !== null);
+  resolved.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return b.dayOrder - a.dayOrder;
+  });
+  return resolved.slice(0, count);
 }
 
 /**
