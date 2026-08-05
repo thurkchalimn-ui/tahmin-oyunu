@@ -8,9 +8,9 @@ interface LeaderboardPodiumProps {
 }
 
 const RANK_STYLES = [
-  { order: 'order-2', ring: 'ring-scoreboard-amber', size: 'h-24 w-24', avatarSize: 'xl' as const },
-  { order: 'order-1', ring: 'ring-pitch-100/40', size: 'h-16 w-16', avatarSize: 'lg' as const },
-  { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-16 w-16', avatarSize: 'lg' as const },
+  { order: 'order-2', ring: 'ring-scoreboard-amber', size: 'h-[102px] w-[102px]', avatarSize: 'xl' as const },
+  { order: 'order-1', ring: 'ring-pitch-100/40', size: 'h-14 w-14', avatarSize: 'lg' as const },
+  { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-14 w-14', avatarSize: 'lg' as const },
 ];
 
 /** Liderlik tablosu sayfasının en üstündeki büyük podyum - ilk 3 kullanıcı. */
