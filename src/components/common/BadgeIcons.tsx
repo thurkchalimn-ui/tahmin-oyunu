@@ -9,12 +9,14 @@ export const BADGE_ICONS: Record<Badge['type'], string> = {
   matchStreak: '🏆',
   correctTotal: '🎯',
   activityStreak: '🔥',
+  followerCount: '👥',
 };
 
 export const BADGE_LABELS: Record<Badge['type'], (value: number) => string> = {
   matchStreak: (v) => `${v} maçlık seri`,
   correctTotal: (v) => `${v} doğru tahmin`,
   activityStreak: (v) => `${v} gün üst üste giriş`,
+  followerCount: (v) => `${v} takipçi`,
 };
 
 const ICONS = BADGE_ICONS;
@@ -22,9 +24,10 @@ const LABELS = BADGE_LABELS;
 
 /**
  * Kullanıcının rozetlerini küçük ikonlar olarak gösterir. Her rozet türünden
- * (matchStreak/correctTotal/activityStreak) sadece en yüksek değerli olan
- * gösterilir - aksi halde bir kullanıcı 5 farklı eşiği geçmişse 5 ayrı ikon
- * kalabalık yaratırdı. Liderlik tablosu, profil ve sohbette ortak kullanılır.
+ * (matchStreak/correctTotal/activityStreak/followerCount) sadece en yüksek
+ * değerli olan gösterilir - aksi halde bir kullanıcı 5 farklı eşiği geçmişse
+ * 5 ayrı ikon kalabalık yaratırdı. Liderlik tablosu, profil ve sohbette
+ * ortak kullanılır.
  */
 export function BadgeIcons({ badges, size = 'sm' }: BadgeIconsProps) {
   if (badges.length === 0) return null;

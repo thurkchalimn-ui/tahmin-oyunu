@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Crown, Target, Rocket, Flame, Star, Medal } from 'lucide-react';
+import { Crown, Target, Rocket, Flame, Star, Medal, Users } from 'lucide-react';
 import type { UserProfile } from '@/types';
 
 export interface BadgeCatalogItem {
@@ -35,10 +35,13 @@ export function getBadgeCategories(): BadgeCategory[] {
     profile.badges.some((b) => b.type === 'activityStreak' && b.value === value);
   const hasCorrectTotal = (profile: UserProfile, value: number) =>
     profile.badges.some((b) => b.type === 'correctTotal' && b.value === value);
+  const hasFollowerCount = (profile: UserProfile, value: number) =>
+    profile.badges.some((b) => b.type === 'followerCount' && b.value === value);
 
   const seriValues = [3, 5, 10, 15, 20, 30, 50];
   const devamlilikValues = [3, 7, 15, 30, 60, 100, 365];
   const tahminValues = [50, 100, 250, 500, 1000, 2500, 5000];
+  const takipciValues = [5, 10, 25, 50, 100, 250, 500];
 
   const categories: BadgeCategory[] = [
     {
@@ -85,6 +88,19 @@ export function getBadgeCategories(): BadgeCategory[] {
         topIcon: <Star size={11} />,
         subLabel: `${v} Doğru`,
         isUnlocked: (p: UserProfile) => hasCorrectTotal(p, v),
+      })),
+    },
+    {
+      key: 'takipci',
+      title: 'Takipçi Rozetleri',
+      shape: 'shield',
+      description: 'Daha fazla oyuncuyu etkile, takipçi kazan.',
+      items: takipciValues.map((v) => ({
+        id: `followerCount-${v}`,
+        numberLabel: String(v),
+        topIcon: <Users size={11} />,
+        subLabel: `${v} Takipçi`,
+        isUnlocked: (p: UserProfile) => hasFollowerCount(p, v),
       })),
     },
     {
@@ -136,7 +152,7 @@ export function getBadgeCategories(): BadgeCategory[] {
           // Seri + Devamlılık + Tahmin kategorilerindeki tüm rozetleri
           // kazanmış olmak (bu kendi kategorisindeki diğer öğeler hariç)
           isUnlocked: (p: UserProfile) =>
-            p.badges.length >= seriValues.length + devamlilikValues.length + tahminValues.length,
+            p.badges.length >= seriValues.length + devamlilikValues.length + tahminValues.length + takipciValues.length,
         },
       ],
     },

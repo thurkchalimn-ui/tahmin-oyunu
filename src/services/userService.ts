@@ -87,6 +87,9 @@ const CORRECT_TOTAL_MILESTONES = [50, 100, 250, 500, 1000, 2500, 5000];
 /** Art arda kaç gün uygulamayı açtığına göre kazanılan rozet eşikleri. */
 export const ACTIVITY_STREAK_MILESTONES = [3, 7, 15, 30, 60, 100, 365];
 
+/** Takipçi sayısına göre kazanılan rozet eşikleri. */
+const FOLLOWER_COUNT_MILESTONES = [5, 10, 25, 50, 100, 250, 500];
+
 /**
  * Ham rozet verisini güncel Badge şekline çevirir. Eski kayıtlarda (bu özellik
  * genişletilmeden önce) sadece `{ streakLength, achievedAt }` vardı, `type`
@@ -272,6 +275,18 @@ export async function touchDailyActivity(
 
   const followerCount = await getFollowerCountInline(uid);
   const inviteCount = await getInviteCountInline(uid);
+
+  // Takipçi rozetleri - takipçi sayısı zaten yukarıda okunduğu için (XP
+  // hesabı için) ekstra bir sorguya gerek kalmadan burada da kontrol edilir.
+  for (const milestone of FOLLOWER_COUNT_MILESTONES) {
+    const alreadyHas = badges.some((b) => b.type === 'followerCount' && b.value === milestone);
+    if (!alreadyHas && followerCount >= milestone) {
+      const badge: Badge = { type: 'followerCount', value: milestone, achievedAt: new Date().toISOString() };
+      badges.push(badge);
+      newlyEarnedBadges.push(badge);
+    }
+  }
+
   const xp = calculateXP({
     correctPredictions: current.correctPredictions,
     totalPredictions: current.totalPredictions,
@@ -396,6 +411,17 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
   const oldXp = (userSnap.data()?.xp as number) ?? 0;
   const followerCount = await getFollowerCountInline(uid);
   const inviteCount = await getInviteCountInline(uid);
+
+  // Takipçi rozetleri
+  for (const milestone of FOLLOWER_COUNT_MILESTONES) {
+    const alreadyHas = badges.some((b) => b.type === 'followerCount' && b.value === milestone);
+    if (!alreadyHas && followerCount >= milestone) {
+      const badge: Badge = { type: 'followerCount', value: milestone, achievedAt: new Date().toISOString() };
+      badges.push(badge);
+      newlyEarnedBadges.push(badge);
+    }
+  }
+
   const xp = calculateXP({
     correctPredictions,
     totalPredictions,

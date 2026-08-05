@@ -44,10 +44,10 @@ export interface Prediction {
 }
 
 // Kullanıcı profili ve seri istatistikleri
-export type BadgeType = 'matchStreak' | 'correctTotal' | 'activityStreak';
+export type BadgeType = 'matchStreak' | 'correctTotal' | 'activityStreak' | 'followerCount';
 
 export interface Badge {
-  type: BadgeType; // 'matchStreak': art arda doğru tahmin serisi, 'correctTotal': toplam doğru tahmin eşiği, 'activityStreak': art arda giriş yapılan gün sayısı
+  type: BadgeType; // 'matchStreak': art arda doğru tahmin serisi, 'correctTotal': toplam doğru tahmin eşiği, 'activityStreak': art arda giriş yapılan gün sayısı, 'followerCount': takipçi sayısı eşiği
   value: number; // Ulaşılan eşik (ör. matchStreak=15, correctTotal=100, activityStreak=30)
   achievedAt: string;
 }

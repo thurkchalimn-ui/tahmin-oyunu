@@ -512,6 +512,7 @@ function endOfMonthKey() {
 const MATCH_STREAK_MILESTONES = [3, 5, 10, 15, 20, 30, 50, 100];
 const ACTIVITY_STREAK_MILESTONES = [3, 7, 15, 30, 60, 100, 365];
 const CORRECT_TOTAL_MILESTONES = [50, 100, 250, 500, 1000, 2500, 5000];
+const FOLLOWER_COUNT_MILESTONES = [5, 10, 25, 50, 100, 250, 500];
 
 function calculateXP({ correctPredictions, totalPredictions, badgeCount, activityStreak, followerCount, inviteCount }) {
   const wrongPredictions = Math.max(0, totalPredictions - correctPredictions);
@@ -568,6 +569,12 @@ async function recalculateAllUsersXP() {
 
     const followerCountSnap = await db.collection('follows').where('followedUid', '==', userDoc.id).count().get();
     const followerCount = followerCountSnap.data().count;
+
+    for (const milestone of FOLLOWER_COUNT_MILESTONES) {
+      if (!badges.some((b) => b.type === 'followerCount' && b.value === milestone) && followerCount >= milestone) {
+        badges.push({ type: 'followerCount', value: milestone, achievedAt: nowIso });
+      }
+    }
 
     const inviteCountSnap = await db.collection('users').where('invitedByUid', '==', userDoc.id).count().get();
     const inviteCount = inviteCountSnap.data().count;
