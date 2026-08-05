@@ -1,24 +1,27 @@
 import { Link } from 'react-router-dom';
+import { Star, Flame, ChevronRight } from 'lucide-react';
 import type { UserProfile } from '@/types';
 import { Avatar } from '@/components/common/Avatar';
 import { BadgeIcons } from '@/components/common/BadgeIcons';
-import { LevelBadge } from '@/components/common/LevelBadge';
 
 interface LeaderboardTableProps {
   users: UserProfile[];
   currentUserId?: string;
-  /** 'all': tüm-zamanlar serisi sütunları da gösterilir. 'period': sadece o döneme ait tahmin istatistikleri gösterilir. */
+  /** 'all': XP + en iyi seri gösterilir. 'period': o döneme ait doğru/toplam gösterilir. */
   mode?: 'all' | 'period';
+  /** Kendi sıranı, ana listede görünmese bile en altta sabit gösterir. */
+  ownRow?: { rank: number; user: UserProfile } | null;
+  /** Sıra numaralarına eklenecek ofset (ör. podyumdan sonra gelen liste 4'ten başlasın diye 3). */
+  rankOffset?: number;
 }
 
-const MEDALS = ['🥇', '🥈', '🥉'];
-
 /**
- * Sıralanmış kullanıcıları gösteren tablo (tüm-zamanlar ya da dönemsel görünüm).
- * Mobilde yatay kaydırma gerekmeden sığması için başlıklar kısaltılmış,
- * boşluklar sadeleştirilmiştir; geniş ekranlarda (sm: ve üzeri) daha ferah görünür.
+ * Liderlik tablosu - artık klasik bir <table> DEĞİL, mockup'takine benzer
+ * satır listesi: sıra numarası, oyuncu (avatar+isim), XP (yıldız ikonuyla),
+ * en iyi seri (alev ikonuyla). 'period' modunda XP yerine o döneme ait
+ * doğru/toplam tahmin gösterilir (dönemsel önbellek gerçek XP içermiyor).
  */
-export function LeaderboardTable({ users, currentUserId, mode = 'all' }: LeaderboardTableProps) {
+export function LeaderboardTable({ users, currentUserId, mode = 'all', ownRow, rankOffset = 0 }: LeaderboardTableProps) {
   if (users.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-pitch-700/20 p-8 text-center dark:border-pitch-700">
@@ -30,94 +33,100 @@ export function LeaderboardTable({ users, currentUserId, mode = 'all' }: Leaderb
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-pitch-700/15 dark:border-pitch-700">
-      <table className="w-full text-left">
-        <thead className="bg-pitch-700/5 dark:bg-pitch-800">
-          <tr className="font-mono text-[9px] uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50 sm:text-xs">
-            <th className="px-1.5 py-2 sm:px-4 sm:py-3">#</th>
-            <th className="px-1.5 py-2 sm:px-4 sm:py-3">Oyuncu</th>
-            {mode === 'all' && (
-              <>
-                <th className="px-1 py-2 text-right sm:px-4 sm:py-3">XP</th>
-                <th className="px-1 py-2 text-right sm:px-4 sm:py-3">
-                  <span className="sm:hidden">En İyi</span>
-                  <span className="hidden sm:inline">En İyi Seri</span>
-                </th>
-                <th className="px-1 py-2 text-right sm:px-4 sm:py-3">
-                  <span className="sm:hidden">Güncel</span>
-                  <span className="hidden sm:inline">Güncel Seri</span>
-                </th>
-              </>
-            )}
-            <th className="px-1 py-2 text-right sm:px-4 sm:py-3">
-              <span className="sm:hidden">Top.</span>
-              <span className="hidden sm:inline">Toplam Tahmin</span>
-            </th>
-            <th className="px-1 py-2 text-right sm:px-4 sm:py-3">
-              <span className="sm:hidden">Doğru</span>
-              <span className="hidden sm:inline">Doğru Tahmin</span>
-            </th>
-            <th className="px-1.5 py-2 text-right sm:px-4 sm:py-3">%</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user, i) => {
-            const accuracy =
-              user.totalPredictions > 0
-                ? Math.round((user.correctPredictions / user.totalPredictions) * 100)
-                : null;
-            return (
-              <tr
-                key={user.uid}
-                className={`border-t border-pitch-700/10 font-body text-xs dark:border-pitch-700/50 sm:text-sm ${
-                  user.uid === currentUserId ? 'bg-scoreboard-amber/10' : ''
-                }`}
-              >
-                <td className="px-1.5 py-2 font-mono text-pitch-700/70 dark:text-pitch-100/60 sm:px-4 sm:py-3">
-                  {MEDALS[i] ?? i + 1}
-                </td>
-                <td className="max-w-[90px] truncate px-1.5 py-2 font-medium text-pitch-900 dark:text-pitch-100 sm:max-w-none sm:px-4 sm:py-3">
-                  <Link
-                    to={`/oyuncu/${user.uid}`}
-                    className="inline-flex items-center gap-1 hover:text-scoreboard-amber hover:underline sm:gap-1.5"
-                  >
-                    <Avatar avatarUrl={user.avatarUrl} size="sm" />
-                    <span className="truncate">{user.displayName}</span>
-                    {mode === 'all' && <LevelBadge xp={user.xp} size="sm" />}
-                  </Link>
-                  {user.badges.length > 0 && (
-                    <span className="ml-1">
-                      <BadgeIcons badges={user.badges} />
-                    </span>
-                  )}
-                </td>
-                {mode === 'all' && (
-                  <>
-                    <td className="px-1 py-2 text-right font-mono font-bold text-scoreboard-amber sm:px-4 sm:py-3">
-                      {user.xp}
-                    </td>
-                    <td className="px-1 py-2 text-right font-mono text-scoreboard-amber sm:px-4 sm:py-3">
-                      {user.bestStreak}
-                    </td>
-                    <td className="px-1 py-2 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60 sm:px-4 sm:py-3">
-                      {user.currentStreak}
-                    </td>
-                  </>
-                )}
-                <td className="px-1 py-2 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60 sm:px-4 sm:py-3">
-                  {user.totalPredictions}
-                </td>
-                <td className="px-1 py-2 text-right font-mono text-pick-correct sm:px-4 sm:py-3">
-                  {user.correctPredictions}
-                </td>
-                <td className="px-1.5 py-2 text-right font-mono text-pitch-700/70 dark:text-pitch-100/60 sm:px-4 sm:py-3">
-                  {accuracy === null ? '—' : `${accuracy}%`}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="flex flex-col gap-2">
+      <div className="overflow-hidden rounded-xl border border-pitch-700/15 dark:border-pitch-700">
+        {mode === 'all' && (
+          <div className="flex items-center gap-3 bg-pitch-700/5 px-4 py-2 font-mono text-[10px] uppercase tracking-wide text-pitch-700/60 dark:bg-pitch-800 dark:text-pitch-100/50">
+            <span className="w-8">Sıra</span>
+            <span className="flex-1">Oyuncu</span>
+            <span className="w-20 text-right">XP</span>
+            <span className="w-20 text-right">En İyi Seri</span>
+            <span className="w-4" />
+          </div>
+        )}
+        <div className="divide-y divide-pitch-700/10 dark:divide-pitch-700/50">
+          {users.map((user, i) => (
+            <Row key={user.uid} user={user} rank={i + 1 + rankOffset} mode={mode} highlighted={user.uid === currentUserId} />
+          ))}
+        </div>
+      </div>
+
+      {/* Kendi sıra - listede görünmüyorsa (ör. ilk 50 dışında kaldıysa) en altta sabit gösterilir */}
+      {ownRow && !users.some((u) => u.uid === currentUserId) && (
+        <div className="overflow-hidden rounded-xl border-2 border-scoreboard-amber shadow-glow">
+          <Row user={ownRow.user} rank={ownRow.rank} mode={mode} highlighted isPinned />
+        </div>
+      )}
     </div>
+  );
+}
+
+function Row({
+  user,
+  rank,
+  mode,
+  highlighted,
+  isPinned = false,
+}: {
+  user: UserProfile;
+  rank: number;
+  mode: 'all' | 'period';
+  highlighted: boolean;
+  isPinned?: boolean;
+}) {
+  const accuracy =
+    user.totalPredictions > 0 ? Math.round((user.correctPredictions / user.totalPredictions) * 100) : null;
+
+  return (
+    <Link
+      to={`/oyuncu/${user.uid}`}
+      className={`flex items-center gap-3 px-4 py-3 transition ${
+        highlighted
+          ? 'bg-scoreboard-amber/10'
+          : 'bg-white hover:bg-pitch-700/5 dark:bg-pitch-800 dark:hover:bg-pitch-700/30'
+      }`}
+    >
+      <span
+        className={`w-8 shrink-0 font-mono text-sm font-bold ${
+          highlighted ? 'text-scoreboard-amber' : 'text-pitch-700/70 dark:text-pitch-100/60'
+        }`}
+      >
+        {rank}
+      </span>
+
+      <div className="flex flex-1 items-center gap-2 overflow-hidden">
+        <Avatar avatarUrl={user.avatarUrl} size="sm" />
+        <span
+          className={`truncate font-body text-sm font-medium ${
+            highlighted ? 'text-scoreboard-amberDark dark:text-scoreboard-amber' : 'text-pitch-900 dark:text-pitch-100'
+          }`}
+        >
+          {isPinned ? `Sen (${user.displayName})` : user.displayName}
+        </span>
+        {user.badges.length > 0 && <BadgeIcons badges={user.badges} />}
+      </div>
+
+      {mode === 'all' ? (
+        <>
+          <span className="flex w-20 shrink-0 items-center justify-end gap-1 font-mono text-sm font-bold text-scoreboard-amber">
+            <Star size={12} />
+            {user.xp}
+          </span>
+          <span className="flex w-20 shrink-0 items-center justify-end gap-1 font-mono text-xs text-pitch-700/70 dark:text-pitch-100/60">
+            <Flame size={11} className="text-scoreboard-amber" />
+            {user.bestStreak}
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="shrink-0 font-mono text-xs text-pick-correct">{user.correctPredictions} doğru</span>
+          <span className="shrink-0 font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
+            {accuracy === null ? '—' : `%${accuracy}`}
+          </span>
+        </>
+      )}
+
+      <ChevronRight size={16} className="shrink-0 text-pitch-700/30 dark:text-pitch-100/20" />
+    </Link>
   );
 }
