@@ -88,3 +88,24 @@ export async function markAllNotificationsRead(notificationIds: string[]): Promi
   }
   await batch.commit();
 }
+
+/**
+ * Verilen bildirimlerin hepsini kalıcı olarak siler ("Tümünü Sil" butonu).
+ * `writeBatch` en fazla 500 işlem kabul ettiği için (zil listesi zaten en
+ * fazla 50 bildirim gösterdiğinden bu limite ulaşılmaz, ama yine de güvenlik
+ * için 500'erlik parçalara bölünür).
+ */
+export async function deleteAllNotifications(notificationIds: string[]): Promise<void> {
+  if (notificationIds.length === 0) return;
+  const chunks: string[][] = [];
+  for (let i = 0; i < notificationIds.length; i += 500) {
+    chunks.push(notificationIds.slice(i, i + 500));
+  }
+  for (const chunk of chunks) {
+    const batch = writeBatch(db);
+    for (const id of chunk) {
+      batch.delete(doc(db, 'notifications', id));
+    }
+    await batch.commit();
+  }
+}

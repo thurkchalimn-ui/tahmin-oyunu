@@ -3,7 +3,11 @@ import { Link } from 'react-router-dom';
 import { Bell, CheckCircle2, XCircle, Award, UserPlus, Clock, Crown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
-import { markNotificationRead, markAllNotificationsRead } from '@/services/notificationCenterService';
+import {
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteAllNotifications,
+} from '@/services/notificationCenterService';
 import type { AppNotification, NotificationType } from '@/types';
 
 const TYPE_ICONS: Record<NotificationType, ReactNode> = {
@@ -66,6 +70,13 @@ export function NotificationBell() {
     await markAllNotificationsRead(unreadIds).catch(() => {});
   }
 
+  async function handleDeleteAll() {
+    if (notifications.length === 0) return;
+    const confirmed = window.confirm('Tüm bildirimlerini silmek istediğine emin misin? Bu işlem geri alınamaz.');
+    if (!confirmed) return;
+    await deleteAllNotifications(notifications.map((n) => n.id)).catch(() => {});
+  }
+
   if (!firebaseUser) return null;
 
   return (
@@ -88,15 +99,26 @@ export function NotificationBell() {
         <div className="fixed inset-x-3 top-16 z-50 mx-auto max-w-sm overflow-hidden rounded-xl border border-pitch-700/15 bg-white shadow-stadium dark:border-pitch-700 dark:bg-pitch-800 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80">
           <div className="flex items-center justify-between border-b border-pitch-700/10 px-4 py-2.5 dark:border-pitch-700/50">
             <h3 className="font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">Bildirimler</h3>
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={handleMarkAllRead}
-                className="font-mono text-[11px] text-scoreboard-amber hover:underline"
-              >
-                Tümünü okundu işaretle
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAllRead}
+                  className="font-mono text-[11px] text-scoreboard-amber hover:underline"
+                >
+                  Tümünü okundu işaretle
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleDeleteAll}
+                  className="font-mono text-[11px] text-pick-wrong hover:underline"
+                >
+                  Tümünü sil
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="max-h-96 overflow-y-auto">
