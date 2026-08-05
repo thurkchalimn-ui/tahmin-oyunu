@@ -73,6 +73,7 @@ export interface UserProfile {
   lastActiveAt?: string | null; // Uygulamayı en son ne zaman açtığı (admin istatistikleri için - saatte bir güncellenir)
   activityStreak?: number; // Art arda kaç gündür uygulamayı açtığı (bir gün atlarsa sıfırlanır)
   lastActiveDateKey?: string | null; // activityStreak'in son sayıldığı gün ('YYYY-MM-DD')
+  invitedByUid?: string | null; // Bu kullanıcıyı davet eden kişinin uid'si (davet linkiyle kayıt olduysa)
   xp: number; // Deneyim puanı - doğru/yanlış tahmin, rozet ve giriş serisinden hesaplanır (bkz. utils/xpUtils.ts)
   level: number; // xp'den TÜRETİLİR (Firestore'da ayrıca saklanmaz) - bkz. getLevelInfo()
   createdAt: string;

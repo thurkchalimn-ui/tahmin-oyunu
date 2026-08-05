@@ -513,10 +513,15 @@ const MATCH_STREAK_MILESTONES = [3, 5, 10, 15, 20, 30, 50, 100];
 const ACTIVITY_STREAK_MILESTONES = [3, 7, 15, 30, 60, 100, 365];
 const CORRECT_TOTAL_MILESTONES = [50, 100, 250, 500, 1000, 2500, 5000];
 
-function calculateXP({ correctPredictions, totalPredictions, badgeCount, activityStreak, followerCount }) {
+function calculateXP({ correctPredictions, totalPredictions, badgeCount, activityStreak, followerCount, inviteCount }) {
   const wrongPredictions = Math.max(0, totalPredictions - correctPredictions);
   return (
-    correctPredictions * 10 + wrongPredictions * 2 + badgeCount * 50 + activityStreak * 5 + followerCount * 5
+    correctPredictions * 10 +
+    wrongPredictions * 2 +
+    badgeCount * 50 +
+    activityStreak * 5 +
+    followerCount * 5 +
+    inviteCount * 25
   );
 }
 
@@ -564,7 +569,10 @@ async function recalculateAllUsersXP() {
     const followerCountSnap = await db.collection('follows').where('followedUid', '==', userDoc.id).count().get();
     const followerCount = followerCountSnap.data().count;
 
-    const xp = calculateXP({ correctPredictions, totalPredictions, badgeCount: badges.length, activityStreak, followerCount });
+    const inviteCountSnap = await db.collection('users').where('invitedByUid', '==', userDoc.id).count().get();
+    const inviteCount = inviteCountSnap.data().count;
+
+    const xp = calculateXP({ correctPredictions, totalPredictions, badgeCount: badges.length, activityStreak, followerCount, inviteCount });
 
     if (xp !== (data.xp ?? 0) || badges.length !== (Array.isArray(data.badges) ? data.badges.length : 0)) {
       await userDoc.ref.update({ xp, badges });

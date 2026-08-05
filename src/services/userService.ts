@@ -32,6 +32,16 @@ async function getFollowerCountInline(uid: string): Promise<number> {
   return snap.data().count;
 }
 
+/**
+ * Bu kullanıcının davet linkiyle ("?ref=uid") kayıt olmuş kullanıcı sayısını
+ * okur (sadece sayım - kota dostu). bkz. RegisterPage.tsx - yeni kullanıcı
+ * kayıt olurken `invitedByUid` alanına bu kullanıcının uid'sini yazar.
+ */
+async function getInviteCountInline(uid: string): Promise<number> {
+  const snap = await getCountFromServer(query(collection(db, 'users'), where('invitedByUid', '==', uid)));
+  return snap.data().count;
+}
+
 /** Art arda kaç doğru tahminle kazanılan seri rozet eşikleri. */
 const MATCH_STREAK_MILESTONES = [3, 5, 10, 15, 20, 30, 50, 100]; // 100 = "Efsane Seri"
 
@@ -78,6 +88,7 @@ export function mapUserDoc(id: string, data: Record<string, unknown>): UserProfi
     lastActiveAt: data.lastActiveAt ? toIso(data.lastActiveAt) : null,
     activityStreak: (data.activityStreak as number) ?? 0,
     lastActiveDateKey: (data.lastActiveDateKey as string) || null,
+    invitedByUid: (data.invitedByUid as string) || null,
     xp,
     level: getLevelInfo(xp).level,
     createdAt: toIso(data.createdAt),
@@ -220,12 +231,14 @@ export async function touchDailyActivity(
   }
 
   const followerCount = await getFollowerCountInline(uid);
+  const inviteCount = await getInviteCountInline(uid);
   const xp = calculateXP({
     correctPredictions: current.correctPredictions,
     totalPredictions: current.totalPredictions,
     badgeCount: badges.length,
     activityStreak: newStreak,
     followerCount,
+    inviteCount,
   });
 
   await updateDoc(doc(db, 'users', uid), {
@@ -334,12 +347,14 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
 
   // XP - her zaman GÜNCEL verilerden sıfırdan hesaplanır (bkz. xpUtils.ts).
   const followerCount = await getFollowerCountInline(uid);
+  const inviteCount = await getInviteCountInline(uid);
   const xp = calculateXP({
     correctPredictions,
     totalPredictions,
     badgeCount: badges.length,
     activityStreak: currentActivityStreak,
     followerCount,
+    inviteCount,
   });
 
   await updateDoc(userRef, {

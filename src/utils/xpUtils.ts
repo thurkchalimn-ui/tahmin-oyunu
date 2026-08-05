@@ -5,6 +5,7 @@
  *  - Kazanılan her rozet: +50 XP (tek seferlik)
  *  - Günlük giriş serisinin her günü: +5 XP
  *  - Kazanılan her takipçi: +5 XP
+ *  - Davet ettiğin her arkadaş (kayıt olduysa): +25 XP
  *
  * ÖNEMLİ: XP, tıpkı seri/rozet hesaplaması gibi, artımlı olarak eklenmez -
  * her seferinde GÜNCEL verilerden sıfırdan yeniden hesaplanır (bkz.
@@ -17,6 +18,7 @@ export function calculateXP(input: {
   badgeCount: number;
   activityStreak: number;
   followerCount: number;
+  inviteCount: number;
 }): number {
   const wrongPredictions = Math.max(0, input.totalPredictions - input.correctPredictions);
   return (
@@ -24,7 +26,8 @@ export function calculateXP(input: {
     wrongPredictions * 2 +
     input.badgeCount * 50 +
     input.activityStreak * 5 +
-    input.followerCount * 5
+    input.followerCount * 5 +
+    input.inviteCount * 25
   );
 }
 
