@@ -17,7 +17,17 @@ function followDocId(followerUid: string, followedUid: string): string {
   return `${followerUid}_${followedUid}`;
 }
 
-/** Bir kullanıcıyı takip eder (tek yönlü, Twitter tarzı - karşı taraf onayı gerekmez). */
+/**
+ * Bir kullanıcıyı takip eder (tek yönlü, Twitter tarzı - karşı taraf onayı gerekmez).
+ * NOT: Takip edilen kullanıcının XP'si (her takipçi +5 XP kazandırır, bkz.
+ * xpUtils.ts) BURADAN GÜNCELLENMEZ - çünkü Firestore güvenlik kuralı bir
+ * kullanıcının sadece KENDİ profilini güncelleyebilmesine izin verir, takip
+ * eden kişi takip edilenin profiline yazamaz. Bunun yerine, Admin SDK
+ * yetkisine sahip otomasyon script'i (automation/check-results.js) periyodik
+ * olarak TÜM kullanıcıların XP'sini (takipçi sayıları dahil) yeniden
+ * hesaplar - bu yüzden yeni bir takipçinin XP'ye yansıması anlık değil,
+ * otomasyonun bir sonraki çalışmasını bekler (birkaç dakika).
+ */
 export async function followUser(followerUid: string, followedUid: string): Promise<void> {
   if (followerUid === followedUid) throw new Error('Kendini takip edemezsin.');
   await setDoc(doc(db, 'follows', followDocId(followerUid, followedUid)), {

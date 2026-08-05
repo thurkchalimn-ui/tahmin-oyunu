@@ -4,6 +4,7 @@
  *  - Yanlış tahmin: +2 XP (katılım için küçük bir puan)
  *  - Kazanılan her rozet: +50 XP (tek seferlik)
  *  - Günlük giriş serisinin her günü: +5 XP
+ *  - Kazanılan her takipçi: +5 XP
  *
  * ÖNEMLİ: XP, tıpkı seri/rozet hesaplaması gibi, artımlı olarak eklenmez -
  * her seferinde GÜNCEL verilerden sıfırdan yeniden hesaplanır (bkz.
@@ -15,13 +16,15 @@ export function calculateXP(input: {
   totalPredictions: number; // sadece SONUÇLANMIŞ tahminler (doğru + yanlış)
   badgeCount: number;
   activityStreak: number;
+  followerCount: number;
 }): number {
   const wrongPredictions = Math.max(0, input.totalPredictions - input.correctPredictions);
   return (
     input.correctPredictions * 10 +
     wrongPredictions * 2 +
     input.badgeCount * 50 +
-    input.activityStreak * 5
+    input.activityStreak * 5 +
+    input.followerCount * 5
   );
 }
 

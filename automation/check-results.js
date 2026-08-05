@@ -508,6 +508,73 @@ function endOfMonthKey() {
   return nextMonth.toISOString().slice(0, 10);
 }
 
+/** userService.ts / xpUtils.ts ile BİREBİR AYNI eşikler ve formül. */
+const MATCH_STREAK_MILESTONES = [3, 5, 10, 15, 20, 30, 50, 100];
+const ACTIVITY_STREAK_MILESTONES = [3, 7, 15, 30, 60, 100, 365];
+const CORRECT_TOTAL_MILESTONES = [50, 100, 250, 500, 1000, 2500, 5000];
+
+function calculateXP({ correctPredictions, totalPredictions, badgeCount, activityStreak, followerCount }) {
+  const wrongPredictions = Math.max(0, totalPredictions - correctPredictions);
+  return (
+    correctPredictions * 10 + wrongPredictions * 2 + badgeCount * 50 + activityStreak * 5 + followerCount * 5
+  );
+}
+
+/**
+ * TÜM kullanıcıların XP'sini yeniden hesaplayıp yazar - özellikle TAKİPÇİ
+ * SAYISINDAKİ değişiklikleri yansıtmak için gereklidir. İstemci (tarayıcı),
+ * güvenlik kuralı gereği başkasının profiline yazamadığı için (bir kullanıcı
+ * birini takip ettiğinde, takip edilenin XP'si ANINDA güncellenemiyor) - bu
+ * güncelleme Admin SDK yetkisine sahip bu script tarafından, kurallara
+ * takılmadan, periyodik olarak yapılır. Ayrıca eksik kalan rozetleri de
+ * (eşikler genişletildiğinde geriye dönük olarak) otomatik tamamlar - bkz.
+ * backfill-badges.js ile aynı mantık, ama artık her ~6 saatte bir otomatik
+ * çalışır, elle çalıştırmaya gerek kalmaz.
+ */
+async function recalculateAllUsersXP() {
+  const usersSnap = await db.collection('users').get();
+  let updated = 0;
+
+  for (const userDoc of usersSnap.docs) {
+    const data = userDoc.data();
+    const badges = Array.isArray(data.badges) ? [...data.badges] : [];
+    const bestStreak = data.bestStreak ?? 0;
+    const activityStreak = data.activityStreak ?? 0;
+    const correctPredictions = data.correctPredictions ?? 0;
+    const totalPredictions = data.totalPredictions ?? 0;
+
+    // Eksik kalan rozetleri geriye dönük tamamla (eşik genişletildiğinde)
+    const nowIso = new Date().toISOString();
+    for (const milestone of MATCH_STREAK_MILESTONES) {
+      if (!badges.some((b) => b.type === 'matchStreak' && b.value === milestone) && bestStreak >= milestone) {
+        badges.push({ type: 'matchStreak', value: milestone, achievedAt: nowIso });
+      }
+    }
+    for (const milestone of ACTIVITY_STREAK_MILESTONES) {
+      if (!badges.some((b) => b.type === 'activityStreak' && b.value === milestone) && activityStreak >= milestone) {
+        badges.push({ type: 'activityStreak', value: milestone, achievedAt: nowIso });
+      }
+    }
+    for (const milestone of CORRECT_TOTAL_MILESTONES) {
+      if (!badges.some((b) => b.type === 'correctTotal' && b.value === milestone) && correctPredictions >= milestone) {
+        badges.push({ type: 'correctTotal', value: milestone, achievedAt: nowIso });
+      }
+    }
+
+    const followerCountSnap = await db.collection('follows').where('followedUid', '==', userDoc.id).count().get();
+    const followerCount = followerCountSnap.data().count;
+
+    const xp = calculateXP({ correctPredictions, totalPredictions, badgeCount: badges.length, activityStreak, followerCount });
+
+    if (xp !== (data.xp ?? 0) || badges.length !== (Array.isArray(data.badges) ? data.badges.length : 0)) {
+      await userDoc.ref.update({ xp, badges });
+      updated += 1;
+    }
+  }
+
+  console.log(`[check-results] Kullanıcı XP/rozet güncellemesi: ${updated} kullanıcı güncellendi.`);
+}
+
 /**
  * Verilen dönem (hafta/ay) için liderlik tablosunu hesaplayıp `leaderboardCache/{period}`
  * dokümanına yazar. Site bu ağır hesaplamayı KENDİSİ yapmaz - sadece bu hazır
@@ -612,6 +679,11 @@ async function main() {
     // gereksiz yere pahalı olurdu, liderlik verisinin bu kadar taze olmasına
     // gerek yok.
     if (turNo === 1) {
+      try {
+        await recalculateAllUsersXP();
+      } catch (err) {
+        console.error('[check-results] Kullanıcı XP güncellemesi başarısız:', err);
+      }
       try {
         await cachePeriodLeaderboard('week');
         await cachePeriodLeaderboard('month');

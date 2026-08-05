@@ -9,7 +9,6 @@ import { useUserRank } from '@/hooks/useUserRank';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { Avatar } from '@/components/common/Avatar';
 import { FollowButton } from '@/components/common/FollowButton';
-import { FollowLists } from '@/components/common/FollowLists';
 import { ProfileStatGrid } from '@/components/profile/ProfileStatGrid';
 import { PerformanceSummary } from '@/components/profile/PerformanceSummary';
 import { RecentPredictionCards } from '@/components/profile/RecentPredictionCards';
@@ -102,7 +101,6 @@ export function PlayerProfilePage() {
 
         <RecentBadgesPreview profile={profile} viewAllHref={uid ? `/oyuncu/${uid}/rozetler` : '/rozetler'} />
 
-        {uid && <FollowLists uid={uid} />}
       </div>
     </div>
   );

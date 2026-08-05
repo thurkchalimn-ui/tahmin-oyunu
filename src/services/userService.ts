@@ -10,6 +10,7 @@ import {
   updateDoc,
   where,
   documentId,
+  getCountFromServer,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
@@ -19,6 +20,17 @@ import { isUsernameTaken, claimUsername, releaseUsername } from '@/services/user
 import { containsProfanity } from '@/utils/profanityFilter';
 import { toDateKey } from '@/utils/dateUtils';
 import { calculateXP, getLevelInfo } from '@/utils/xpUtils';
+
+/**
+ * Takipçi sayısını okur (sadece sayım - kota dostu). followService.ts'deki
+ * aynı isimli fonksiyonun küçük bir kopyasıdır - döngüsel import'tan
+ * kaçınmak için burada ayrıca tanımlanmıştır (matchService.ts'deki
+ * getMatchOrderingInfoByIds ile aynı desen).
+ */
+async function getFollowerCountInline(uid: string): Promise<number> {
+  const snap = await getCountFromServer(query(collection(db, 'follows'), where('followedUid', '==', uid)));
+  return snap.data().count;
+}
 
 /** Art arda kaç doğru tahminle kazanılan seri rozet eşikleri. */
 const MATCH_STREAK_MILESTONES = [3, 5, 10, 15, 20, 30, 50, 100]; // 100 = "Efsane Seri"
@@ -207,11 +219,13 @@ export async function touchDailyActivity(
     }
   }
 
+  const followerCount = await getFollowerCountInline(uid);
   const xp = calculateXP({
     correctPredictions: current.correctPredictions,
     totalPredictions: current.totalPredictions,
     badgeCount: badges.length,
     activityStreak: newStreak,
+    followerCount,
   });
 
   await updateDoc(doc(db, 'users', uid), {
@@ -319,11 +333,13 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
   }
 
   // XP - her zaman GÜNCEL verilerden sıfırdan hesaplanır (bkz. xpUtils.ts).
+  const followerCount = await getFollowerCountInline(uid);
   const xp = calculateXP({
     correctPredictions,
     totalPredictions,
     badgeCount: badges.length,
     activityStreak: currentActivityStreak,
+    followerCount,
   });
 
   await updateDoc(userRef, {
