@@ -10,10 +10,10 @@ import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { Avatar } from '@/components/common/Avatar';
 import { FollowButton } from '@/components/common/FollowButton';
 import { FollowLists } from '@/components/common/FollowLists';
-import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
 import { ProfileStatGrid } from '@/components/profile/ProfileStatGrid';
 import { PerformanceSummary } from '@/components/profile/PerformanceSummary';
 import { RecentPredictionCards } from '@/components/profile/RecentPredictionCards';
+import { BadgeCatalogGrid } from '@/components/profile/BadgeCatalogGrid';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 
@@ -100,27 +100,12 @@ export function PlayerProfilePage() {
 
         <RecentPredictionCards items={history ?? []} title="Son Tahminleri" />
 
-        {profile.badges.length > 0 && (
-          <section>
-            <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
-              Rozetler
-            </h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {profile.badges.map((badge, i) => (
-                <div
-                  key={i}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-scoreboard-amber/40
-                    bg-gradient-to-b from-scoreboard-amber/15 to-transparent p-3 text-center shadow-glow"
-                >
-                  <span className="text-3xl">{BADGE_ICONS[badge.type]}</span>
-                  <span className="font-mono text-[11px] font-semibold text-scoreboard-amberDark dark:text-scoreboard-amber">
-                    {BADGE_LABELS[badge.type](badge.value)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        <div>
+          <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
+            Rozetler
+          </h2>
+          <BadgeCatalogGrid profile={profile} />
+        </div>
 
         {uid && <FollowLists uid={uid} />}
       </div>

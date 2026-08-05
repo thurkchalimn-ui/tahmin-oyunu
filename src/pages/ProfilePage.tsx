@@ -13,8 +13,8 @@ import { markProfileSeen } from '@/services/readStatusService';
 import { enablePushNotifications, type PushPermissionResult } from '@/services/notificationService';
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { Avatar } from '@/components/common/Avatar';
-import { BADGE_ICONS, BADGE_LABELS } from '@/components/common/BadgeIcons';
 import { ShareButton } from '@/components/common/ShareButton';
+import { BadgeCatalogGrid } from '@/components/profile/BadgeCatalogGrid';
 import { useAvatarOptions } from '@/hooks/useAvatarOptions';
 import { useFollowCounts } from '@/hooks/useFollowCounts';
 import { useUserRank } from '@/hooks/useUserRank';
@@ -225,35 +225,12 @@ export function ProfilePage() {
 
         <RecentPredictionCards items={history ?? []} viewAllHref="/tahminlerim" />
 
-        {profile.badges.length > 0 && (
-          <section>
-            <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
-              Rozetler
-            </h2>
-            {/* Rozet "kalkan" kartları - mockup'taki ROZETLERİM ızgarasına benzer,
-                amber kenarlık/parlama ile "kazanıldı" hissi veriyor */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {profile.badges.map((badge, i) => (
-                <div
-                  key={i}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-scoreboard-amber/40
-                    bg-gradient-to-b from-scoreboard-amber/15 to-transparent p-3 text-center shadow-glow"
-                >
-                  <span className="text-3xl">{BADGE_ICONS[badge.type]}</span>
-                  <span className="font-mono text-[11px] font-semibold text-scoreboard-amberDark dark:text-scoreboard-amber">
-                    {BADGE_LABELS[badge.type](badge.value)}
-                  </span>
-                  <ShareButton
-                    icon={BADGE_ICONS[badge.type]}
-                    headline={BADGE_LABELS[badge.type](badge.value).toUpperCase() + '!'}
-                    subtext={profile.displayName}
-                    label="Paylaş"
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        <div>
+          <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
+            Rozetler
+          </h2>
+          <BadgeCatalogGrid profile={profile} />
+        </div>
 
         <section className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
           <h2 className="mb-1 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">

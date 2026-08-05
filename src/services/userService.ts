@@ -14,17 +14,20 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { UserProfile, Prediction, Badge } from '@/types';
-import { calculateCurrentStreak, calculateBestStreak, STREAK_TARGET } from '@/utils/streakUtils';
+import { calculateCurrentStreak, calculateBestStreak } from '@/utils/streakUtils';
 import { isUsernameTaken, claimUsername, releaseUsername } from '@/services/usernameService';
 import { containsProfanity } from '@/utils/profanityFilter';
 import { toDateKey } from '@/utils/dateUtils';
 import { calculateXP, getLevelInfo } from '@/utils/xpUtils';
 
+/** Art arda kaç doğru tahminle kazanılan seri rozet eşikleri. */
+const MATCH_STREAK_MILESTONES = [3, 5, 10, 15, 20, 30, 50, 100]; // 100 = "Efsane Seri"
+
 /** Toplam doğru tahmin sayısına göre kazanılan rozet eşikleri. */
-const CORRECT_TOTAL_MILESTONES = [50, 100, 250, 500, 1000];
+const CORRECT_TOTAL_MILESTONES = [50, 100, 250, 500, 1000, 2500, 5000];
 
 /** Art arda kaç gün uygulamayı açtığına göre kazanılan rozet eşikleri. */
-export const ACTIVITY_STREAK_MILESTONES = [7, 30, 60, 90, 180, 365];
+export const ACTIVITY_STREAK_MILESTONES = [3, 7, 15, 30, 60, 100, 365];
 
 /**
  * Ham rozet verisini güncel Badge şekline çevirir. Eski kayıtlarda (bu özellik
@@ -291,17 +294,19 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
   const existingBadges: Badge[] = normalizeBadges(userSnap.data()?.badges);
   const currentActivityStreak = (userSnap.data()?.activityStreak as number) ?? 0;
 
-  // Kullanıcının serisi hedefe (15) ulaştığında yeni bir rozet eklenir. Eski
-  // kod "tam olarak 15" anını yakalamaya çalışıyordu (===), ama seri yeniden
-  // hesaplandığında (ör. sıralama mantığı değiştiğinde, ya da birden fazla
-  // maç arka arkaya hızlıca sonuçlandığında) değer 15'i atlayıp doğrudan daha
-  // yükseğe çıkabiliyordu - bu da rozetin hiç verilmemesine yol açıyordu.
-  // Artık ">= 15 VE bu rozet daha önce hiç verilmemiş" kontrolü yapılıyor -
-  // bu, hangi şekilde 15'e ulaşılırsa ulaşılsın rozetin garantili verilmesini sağlar.
+  // Seri rozetleri: her eşik (3, 5, 10, 15, 20, 30, 50, 100) en fazla bir kez
+  // verilir - eşik aşıldıkça otomatik kazanılır. Eskiden sadece TEK bir eşik
+  // (15) vardı ve "tam olarak 15" anını yakalamaya çalışıyordu (===) - seri
+  // birden fazla maç arka arkaya hızlıca sonuçlandığında bu anı atlayıp
+  // rozetin hiç verilmemesine yol açabiliyordu. Artık CORRECT_TOTAL_MILESTONES
+  // ile aynı ">= eşik VE daha önce hiç verilmemiş" mantığı kullanılıyor - bu,
+  // hem çoklu eşik hem de "atlanan an" sorununu birlikte çözüyor.
   const badges = [...existingBadges];
-  const alreadyHasMatchStreakBadge = existingBadges.some((b) => b.type === 'matchStreak' && b.value === STREAK_TARGET);
-  if (currentStreak >= STREAK_TARGET && !alreadyHasMatchStreakBadge) {
-    badges.push({ type: 'matchStreak', value: STREAK_TARGET, achievedAt: new Date().toISOString() });
+  for (const milestone of MATCH_STREAK_MILESTONES) {
+    const alreadyHas = existingBadges.some((b) => b.type === 'matchStreak' && b.value === milestone);
+    if (!alreadyHas && currentStreak >= milestone) {
+      badges.push({ type: 'matchStreak', value: milestone, achievedAt: new Date().toISOString() });
+    }
   }
 
   // Toplam doğru tahmin eşikleri: her eşik en fazla bir kez verilir (daha önce
