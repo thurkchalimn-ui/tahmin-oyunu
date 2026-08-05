@@ -13,7 +13,7 @@ import { FollowLists } from '@/components/common/FollowLists';
 import { ProfileStatGrid } from '@/components/profile/ProfileStatGrid';
 import { PerformanceSummary } from '@/components/profile/PerformanceSummary';
 import { RecentPredictionCards } from '@/components/profile/RecentPredictionCards';
-import { BadgeCatalogGrid } from '@/components/profile/BadgeCatalogGrid';
+import { RecentBadgesPreview } from '@/components/profile/RecentBadgesPreview';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 
