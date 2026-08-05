@@ -70,7 +70,7 @@ export function LeaderboardPage() {
         </p>
       </div>
 
-      <div className="mb-4 flex justify-center">
+      <div className="mb-4">
         <PeriodTabs value={tab} onChange={setTab} />
       </div>
 

@@ -30,12 +30,12 @@ export function WeeklyPodium({ topThree, source }: WeeklyPodiumProps) {
 
   return (
     <section className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h2 className="flex min-w-0 items-center gap-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
           <IconBadge icon={<Crown size={16} />} size="sm" />
-          {source === 'week' ? 'Haftalık Liderlik' : 'Genel Liderlik'}
+          <span className="truncate">{source === 'week' ? 'Haftalık Liderlik' : 'Genel Liderlik'}</span>
         </h2>
-        <Link to="/liderlik" className="font-mono text-xs text-scoreboard-amber hover:underline">
+        <Link to="/liderlik" className="shrink-0 font-mono text-xs text-scoreboard-amber hover:underline">
           Tümünü Gör →
         </Link>
       </div>
