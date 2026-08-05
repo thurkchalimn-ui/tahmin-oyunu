@@ -54,7 +54,7 @@ export function getBadgeCategories(): BadgeCategory[] {
         })),
         {
           id: 'matchStreak-legendary',
-          icon: <Crown size={22} />,
+          icon: <span className="text-xl">⚽</span>,
           subLabel: 'Efsane Seri',
           isUnlocked: (p: UserProfile) => hasMatchStreak(p, 100),
         },

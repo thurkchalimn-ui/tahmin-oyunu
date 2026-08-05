@@ -52,8 +52,8 @@ export function RecentBadgesPreview({ profile, viewAllHref = '/rozetler' }: Rece
             <div key={item.id} className="flex shrink-0 flex-col items-center gap-1.5">
               <div
                 style={{ clipPath: SHIELD_CLIP_PATH }}
-                className="relative flex h-14 w-14 flex-col items-center justify-center gap-0.5
-                  bg-gradient-to-b from-scoreboard-amber/25 via-scoreboard-amber/10 to-transparent
+                className="relative flex h-14 w-14 flex-col items-center justify-center gap-0.5 border-2
+                  border-scoreboard-amber bg-gradient-to-b from-scoreboard-amber/25 via-scoreboard-amber/10 to-transparent
                   text-scoreboard-amber shadow-glow"
               >
                 {item.numberLabel ? (

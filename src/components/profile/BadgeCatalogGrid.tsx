@@ -76,10 +76,10 @@ export function BadgeCatalogGrid({ profile }: BadgeCatalogGridProps) {
                   <div key={item.id} className="flex flex-col items-center gap-1.5">
                     <div
                       style={{ clipPath: SHIELD_CLIP_PATH }}
-                      className={`relative flex h-14 w-14 flex-col items-center justify-center gap-0.5 ${
+                      className={`relative flex h-14 w-14 flex-col items-center justify-center gap-0.5 border-2 ${
                         unlocked
-                          ? 'bg-gradient-to-b from-scoreboard-amber/25 via-scoreboard-amber/10 to-transparent text-scoreboard-amber shadow-glow'
-                          : 'bg-pitch-700/10 text-pitch-700/30 dark:bg-pitch-700/30 dark:text-pitch-100/20'
+                          ? 'border-scoreboard-amber bg-gradient-to-b from-scoreboard-amber/25 via-scoreboard-amber/10 to-transparent text-scoreboard-amber shadow-glow'
+                          : 'border-pitch-700/20 bg-pitch-700/10 text-pitch-700/30 dark:border-pitch-700/60 dark:bg-pitch-700/30 dark:text-pitch-100/20'
                       }`}
                     >
                       {unlocked ? (

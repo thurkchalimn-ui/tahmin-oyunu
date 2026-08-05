@@ -12,3 +12,4 @@ dist-ssr
 # Firebase servis hesabı anahtarları - ASLA commit edilmemeli
 *firebase-adminsdk*.json
 serviceAccountKey.json
+automation/key.json
