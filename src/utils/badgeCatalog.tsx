@@ -15,6 +15,7 @@ export interface BadgeCategory {
   key: string;
   title: string;
   description: string;
+  shape: 'shield' | 'tag'; // Devamlılık rozetleri "tag" (asma etiket), diğerleri "shield" (kalkan)
   items: BadgeCatalogItem[];
 }
 
@@ -43,6 +44,7 @@ export function getBadgeCategories(): BadgeCategory[] {
     {
       key: 'seri',
       title: 'Seri Rozetleri',
+      shape: 'shield',
       description: 'Arka arkaya doğru tahmin yap ve serini en üst seviyeye çıkar.',
       items: [
         ...seriValues.map((v) => ({
@@ -63,6 +65,7 @@ export function getBadgeCategories(): BadgeCategory[] {
     {
       key: 'devamlilik',
       title: 'Devamlılık Rozetleri',
+      shape: 'tag',
       description: 'Her gün uygulamaya gir, serini koru.',
       items: devamlilikValues.map((v) => ({
         id: `activityStreak-${v}`,
@@ -74,6 +77,7 @@ export function getBadgeCategories(): BadgeCategory[] {
     {
       key: 'tahmin',
       title: 'Tahmin Rozetleri',
+      shape: 'shield',
       description: 'Toplam doğru tahmin sayını artır.',
       items: tahminValues.map((v) => ({
         id: `correctTotal-${v}`,
@@ -86,6 +90,7 @@ export function getBadgeCategories(): BadgeCategory[] {
     {
       key: 'basari',
       title: 'Başarı Rozetleri',
+      shape: 'shield',
       description: 'Özel başarılarla koleksiyonunu tamamla.',
       items: [
         {

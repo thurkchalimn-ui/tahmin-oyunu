@@ -1,14 +1,13 @@
 import { Link } from 'react-router-dom';
 import type { UserProfile } from '@/types';
 import { getBadgeCategories, getBadgeCompletionStats } from '@/utils/badgeCatalog';
+import { BadgeShield } from '@/components/common/BadgeShield';
 
 interface RecentBadgesPreviewProps {
   profile: UserProfile;
   /** Kendi profilinde /rozetler'e, başkasının profilinde farklı bir hedefe gitmek için. */
   viewAllHref?: string;
 }
-
-const SHIELD_CLIP_PATH = 'polygon(50% 0%, 100% 15%, 100% 55%, 50% 100%, 0% 55%, 0% 15%)';
 
 /**
  * Profildeki kompakt "Son Alınan Rozetler" önizlemesi - tam katalog artık
@@ -19,10 +18,9 @@ export function RecentBadgesPreview({ profile, viewAllHref = '/rozetler' }: Rece
   const categories = getBadgeCategories();
   const { earned, total } = getBadgeCompletionStats(profile);
 
-  // Tüm katalogdaki KAZANILMIŞ öğeleri, kullanıcının badges dizisindeki
-  // achievedAt sırasına göre (en son kazanılan en önce) bul.
+  // Tüm katalogdaki KAZANILMIŞ öğeleri (kategorinin şekliyle birlikte) bul.
   const earnedItems = categories
-    .flatMap((cat) => cat.items.filter((item) => item.isUnlocked(profile)))
+    .flatMap((cat) => cat.items.filter((item) => item.isUnlocked(profile)).map((item) => ({ item, shape: cat.shape })))
     .slice(-6)
     .reverse();
 
@@ -48,23 +46,15 @@ export function RecentBadgesPreview({ profile, viewAllHref = '/rozetler' }: Rece
         </p>
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-1">
-          {earnedItems.map((item) => (
+          {earnedItems.map(({ item, shape }) => (
             <div key={item.id} className="flex shrink-0 flex-col items-center gap-1.5">
-              <div
-                style={{ clipPath: SHIELD_CLIP_PATH }}
-                className="relative flex h-14 w-14 flex-col items-center justify-center gap-0.5 border-2
-                  border-scoreboard-amber bg-gradient-to-b from-scoreboard-amber/25 via-scoreboard-amber/10 to-transparent
-                  text-scoreboard-amber shadow-glow"
-              >
-                {item.numberLabel ? (
-                  <>
-                    {item.topIcon}
-                    <span className="font-mono text-base font-bold leading-none">{item.numberLabel}</span>
-                  </>
-                ) : (
-                  item.icon
-                )}
-              </div>
+              <BadgeShield
+                shape={shape}
+                unlocked
+                numberLabel={item.numberLabel}
+                topIcon={item.topIcon}
+                icon={item.icon}
+              />
               <p className="max-w-[64px] text-center font-mono text-[9px] leading-tight text-pitch-900 dark:text-pitch-100">
                 {item.subLabel}
               </p>

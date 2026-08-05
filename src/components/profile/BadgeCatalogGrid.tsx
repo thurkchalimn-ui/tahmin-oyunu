@@ -1,18 +1,16 @@
-import { Lock } from 'lucide-react';
 import type { UserProfile } from '@/types';
 import { getBadgeCategories, getBadgeCompletionStats } from '@/utils/badgeCatalog';
+import { BadgeShield } from '@/components/common/BadgeShield';
 
 interface BadgeCatalogGridProps {
   profile: UserProfile;
 }
 
-// Klasik kalkan silüeti - görseldeki rozetlerle aynı form
-const SHIELD_CLIP_PATH = 'polygon(50% 0%, 100% 15%, 100% 55%, 50% 100%, 0% 55%, 0% 15%)';
-
 /**
  * Profildeki tam "Rozetler" kataloğu - mockup'takiyle aynı düzen: üstte
  * toplam rozet/tamamlama oranı, altında kategori kategori (Seri/Devamlılık/
- * Tahmin/Başarı) kalkan ızgarası, kilitli olanlar soluk+kilit ikonlu.
+ * Tahmin/Başarı) rozet ızgarası, kilitli olanlar soluk+kilit ikonlu. Şekil
+ * kategoriye göre değişir (bkz. BadgeShield.tsx).
  */
 export function BadgeCatalogGrid({ profile }: BadgeCatalogGridProps) {
   const categories = getBadgeCategories();
@@ -74,27 +72,13 @@ export function BadgeCatalogGrid({ profile }: BadgeCatalogGridProps) {
                 const unlocked = item.isUnlocked(profile);
                 return (
                   <div key={item.id} className="flex flex-col items-center gap-1.5">
-                    <div
-                      style={{ clipPath: SHIELD_CLIP_PATH }}
-                      className={`relative flex h-14 w-14 flex-col items-center justify-center gap-0.5 border-2 ${
-                        unlocked
-                          ? 'border-scoreboard-amber bg-gradient-to-b from-scoreboard-amber/25 via-scoreboard-amber/10 to-transparent text-scoreboard-amber shadow-glow'
-                          : 'border-pitch-700/20 bg-pitch-700/10 text-pitch-700/30 dark:border-pitch-700/60 dark:bg-pitch-700/30 dark:text-pitch-100/20'
-                      }`}
-                    >
-                      {unlocked ? (
-                        item.numberLabel ? (
-                          <>
-                            {item.topIcon}
-                            <span className="font-mono text-base font-bold leading-none">{item.numberLabel}</span>
-                          </>
-                        ) : (
-                          item.icon
-                        )
-                      ) : (
-                        <Lock size={16} />
-                      )}
-                    </div>
+                    <BadgeShield
+                      shape={category.shape}
+                      unlocked={unlocked}
+                      numberLabel={item.numberLabel}
+                      topIcon={item.topIcon}
+                      icon={item.icon}
+                    />
                     <p
                       className={`text-center font-mono text-[9px] leading-tight ${
                         unlocked
