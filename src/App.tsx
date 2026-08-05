@@ -14,6 +14,7 @@ import { ChatPage } from '@/pages/ChatPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { PlayerProfilePage } from '@/pages/PlayerProfilePage';
 import { AllPredictionsPage } from '@/pages/AllPredictionsPage';
+import { BadgesPage } from '@/pages/BadgesPage';
 import { LeaguesPage } from '@/pages/LeaguesPage';
 import { LeaguePage } from '@/pages/LeaguePage';
 import { AdminPage } from '@/pages/AdminPage';
@@ -38,6 +39,7 @@ export default function App() {
                 <Route path="/liderlik" element={<LeaderboardPage />} />
                 <Route path="/sohbet" element={<ChatPage />} />
                 <Route path="/oyuncu/:uid" element={<PlayerProfilePage />} />
+                <Route path="/oyuncu/:uid/rozetler" element={<BadgesPage />} />
                 <Route path="/gizlilik" element={<PrivacyPolicyPage />} />
                 <Route
                   path="/ligler"
@@ -68,6 +70,14 @@ export default function App() {
                   element={
                     <ProtectedRoute>
                       <AllPredictionsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/rozetler"
+                  element={
+                    <ProtectedRoute>
+                      <BadgesPage />
                     </ProtectedRoute>
                   }
                 />

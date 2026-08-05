@@ -14,7 +14,7 @@ import { enablePushNotifications, type PushPermissionResult } from '@/services/n
 import { StreakBadge } from '@/components/leaderboard/StreakBadge';
 import { Avatar } from '@/components/common/Avatar';
 import { ShareButton } from '@/components/common/ShareButton';
-import { BadgeCatalogGrid } from '@/components/profile/BadgeCatalogGrid';
+import { RecentBadgesPreview } from '@/components/profile/RecentBadgesPreview';
 import { useAvatarOptions } from '@/hooks/useAvatarOptions';
 import { useFollowCounts } from '@/hooks/useFollowCounts';
 import { useUserRank } from '@/hooks/useUserRank';
@@ -225,12 +225,7 @@ export function ProfilePage() {
 
         <RecentPredictionCards items={history ?? []} viewAllHref="/tahminlerim" />
 
-        <div>
-          <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
-            Rozetler
-          </h2>
-          <BadgeCatalogGrid profile={profile} />
-        </div>
+        <RecentBadgesPreview profile={profile} />
 
         <section className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
           <h2 className="mb-1 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">

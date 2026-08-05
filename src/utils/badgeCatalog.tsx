@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
+import { Crown, Target, Rocket, Flame, Star, Medal } from 'lucide-react';
 import type { UserProfile } from '@/types';
 
 export interface BadgeCatalogItem {
   id: string;
   numberLabel?: string; // Kalkanın içine yazılacak sayı (ör. "15")
-  icon?: ReactNode; // numberLabel yoksa gösterilecek ikon (ör. Efsane Seri için taç)
+  topIcon?: ReactNode; // Sayının üstünde küçük gösterilen ikon (ör. taç/yıldız)
+  icon?: ReactNode; // numberLabel yoksa gösterilecek büyük ikon (ör. Başarı rozetleri)
   subLabel: string; // Kalkanın altındaki metin (ör. "15 Doğru")
   isUnlocked: (profile: UserProfile) => boolean;
 }
@@ -46,11 +48,13 @@ export function getBadgeCategories(): BadgeCategory[] {
         ...seriValues.map((v) => ({
           id: `matchStreak-${v}`,
           numberLabel: String(v),
+          topIcon: <Crown size={11} />,
           subLabel: `${v} Doğru`,
           isUnlocked: (p: UserProfile) => hasMatchStreak(p, v),
         })),
         {
           id: 'matchStreak-legendary',
+          icon: <Crown size={22} />,
           subLabel: 'Efsane Seri',
           isUnlocked: (p: UserProfile) => hasMatchStreak(p, 100),
         },
@@ -74,6 +78,7 @@ export function getBadgeCategories(): BadgeCategory[] {
       items: tahminValues.map((v) => ({
         id: `correctTotal-${v}`,
         numberLabel: String(v),
+        topIcon: <Star size={11} />,
         subLabel: `${v} Doğru`,
         isUnlocked: (p: UserProfile) => hasCorrectTotal(p, v),
       })),
@@ -85,36 +90,43 @@ export function getBadgeCategories(): BadgeCategory[] {
       items: [
         {
           id: 'first-prediction',
+          icon: <Target size={22} />,
           subLabel: 'İlk Tahmin',
           isUnlocked: (p: UserProfile) => p.totalPredictions >= 1,
         },
         {
           id: 'first-10-streak',
+          icon: <Rocket size={22} />,
           subLabel: 'İlk 10 Seri',
           isUnlocked: (p: UserProfile) => p.bestStreak >= 10,
         },
         {
           id: 'first-15-streak',
+          icon: <Flame size={22} />,
           subLabel: 'İlk 15 Seri',
           isUnlocked: (p: UserProfile) => p.bestStreak >= 15,
         },
         {
           id: 'first-badge',
+          icon: <Star size={22} />,
           subLabel: 'İlk Rozet',
           isUnlocked: (p: UserProfile) => p.badges.length >= 1,
         },
         {
           id: 'ten-badges',
+          icon: <Star size={22} />,
           subLabel: '10 Rozet',
           isUnlocked: (p: UserProfile) => p.badges.length >= 10,
         },
         {
           id: 'twentyfive-badges',
+          icon: <Medal size={22} />,
           subLabel: '25 Rozet',
           isUnlocked: (p: UserProfile) => p.badges.length >= 25,
         },
         {
           id: 'all-badges',
+          icon: <Crown size={22} />,
           subLabel: 'Tüm Rozetler',
           // Seri + Devamlılık + Tahmin kategorilerindeki tüm rozetleri
           // kazanmış olmak (bu kendi kategorisindeki diğer öğeler hariç)

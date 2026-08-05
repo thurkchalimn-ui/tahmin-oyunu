@@ -6,6 +6,9 @@ interface BadgeCatalogGridProps {
   profile: UserProfile;
 }
 
+// Klasik kalkan silüeti - görseldeki rozetlerle aynı form
+const SHIELD_CLIP_PATH = 'polygon(50% 0%, 100% 15%, 100% 55%, 50% 100%, 0% 55%, 0% 15%)';
+
 /**
  * Profildeki tam "Rozetler" kataloğu - mockup'takiyle aynı düzen: üstte
  * toplam rozet/tamamlama oranı, altında kategori kategori (Seri/Devamlılık/
@@ -72,13 +75,25 @@ export function BadgeCatalogGrid({ profile }: BadgeCatalogGridProps) {
                 return (
                   <div key={item.id} className="flex flex-col items-center gap-1.5">
                     <div
-                      className={`flex h-14 w-14 items-center justify-center rounded-xl border-2 font-mono text-sm font-bold ${
+                      style={{ clipPath: SHIELD_CLIP_PATH }}
+                      className={`relative flex h-14 w-14 flex-col items-center justify-center gap-0.5 ${
                         unlocked
-                          ? 'border-scoreboard-amber bg-gradient-to-b from-scoreboard-amber/20 to-transparent text-scoreboard-amber shadow-glow'
-                          : 'border-pitch-700/15 bg-pitch-700/5 text-pitch-700/30 dark:border-pitch-700 dark:bg-pitch-700/20 dark:text-pitch-100/20'
+                          ? 'bg-gradient-to-b from-scoreboard-amber/25 via-scoreboard-amber/10 to-transparent text-scoreboard-amber shadow-glow'
+                          : 'bg-pitch-700/10 text-pitch-700/30 dark:bg-pitch-700/30 dark:text-pitch-100/20'
                       }`}
                     >
-                      {unlocked ? (item.numberLabel ?? item.icon ?? '★') : <Lock size={16} />}
+                      {unlocked ? (
+                        item.numberLabel ? (
+                          <>
+                            {item.topIcon}
+                            <span className="font-mono text-base font-bold leading-none">{item.numberLabel}</span>
+                          </>
+                        ) : (
+                          item.icon
+                        )
+                      ) : (
+                        <Lock size={16} />
+                      )}
                     </div>
                     <p
                       className={`text-center font-mono text-[9px] leading-tight ${

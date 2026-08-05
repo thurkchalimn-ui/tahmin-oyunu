@@ -100,12 +100,7 @@ export function PlayerProfilePage() {
 
         <RecentPredictionCards items={history ?? []} title="Son Tahminleri" />
 
-        <div>
-          <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
-            Rozetler
-          </h2>
-          <BadgeCatalogGrid profile={profile} />
-        </div>
+        <RecentBadgesPreview profile={profile} viewAllHref={uid ? `/oyuncu/${uid}/rozetler` : '/rozetler'} />
 
         {uid && <FollowLists uid={uid} />}
       </div>
