@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Camera, BadgeCheck } from 'lucide-react';
+import { LevelBadge } from '@/components/common/LevelBadge';
 import { useAuth } from '@/hooks/useAuth';
 import { usePredictionHistory } from '@/hooks/usePredictionHistory';
 import {
@@ -143,8 +144,15 @@ export function ProfilePage() {
                 </span>
               )}
             </h1>
+            <div className="mt-1">
+              <LevelBadge xp={profile.xp} size="sm" />
+            </div>
           </div>
         </div>
+
+        {/* Seviye ilerleme çubuğu - büyük halde, XP'nin bir sonraki
+            seviyeye ne kadar yakın olduğunu gösterir */}
+        <LevelBadge xp={profile.xp} size="lg" />
 
         {/* Kamera ikonuna tıklanınca açılan/kapanan avatar seçim paneli -
             artık sayfanın altında sabit bir bölüm değil, avatarın hemen
@@ -194,6 +202,7 @@ export function ProfilePage() {
           totalPredictions={profile.totalPredictions}
           bestStreak={profile.bestStreak}
           activityStreak={profile.activityStreak ?? 0}
+          xp={profile.xp}
           memberSince={profile.createdAt}
         />
 

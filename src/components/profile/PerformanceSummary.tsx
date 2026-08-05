@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { TrendingUp, CheckCircle2, Percent, Target, ListChecks, Calendar, Flame } from 'lucide-react';
+import { TrendingUp, CheckCircle2, Percent, Target, ListChecks, Calendar, Flame, Star } from 'lucide-react';
 import { IconBadge } from '@/components/common/IconBadge';
 
 interface PerformanceSummaryProps {
@@ -7,6 +7,7 @@ interface PerformanceSummaryProps {
   totalPredictions: number;
   bestStreak: number;
   activityStreak: number;
+  xp: number;
   memberSince: string; // ISO tarih
 }
 
@@ -20,16 +21,16 @@ function formatMemberSince(iso: string): string {
 
 /**
  * Profil sayfasındaki "Performans Özeti" kartı - mockup'takiyle aynı ikon +
- * kutucuk düzeni, ama sadece gerçek verilerimiz: Doğru Tahmin, Başarı Oranı,
- * En İyi Seri (mockup'ta "gün" yazıyordu ama bizde bu bir MAÇ serisi -
- * "maç" olarak düzeltildi), Toplam Tahmin, Üyelik Tarihi. XP/Kazanılan Ödül
- * gibi elimizde olmayan veriler dahil edilmedi.
+ * kutucuk düzeni: Doğru Tahmin, Başarı Oranı, En İyi Seri (mockup'ta "gün"
+ * yazıyordu ama bizde bu bir MAÇ serisi - "maç" olarak düzeltildi), Toplam
+ * Tahmin, Günlük Giriş Serisi, Kazanılan XP, Üyelik Tarihi.
  */
 export function PerformanceSummary({
   correctPredictions,
   totalPredictions,
   bestStreak,
   activityStreak,
+  xp,
   memberSince,
 }: PerformanceSummaryProps) {
   const accuracy = totalPredictions > 0 ? Math.round((correctPredictions / totalPredictions) * 100) : 0;
@@ -47,6 +48,7 @@ export function PerformanceSummary({
         <Stat icon={<Target size={15} />} value={bestStreak} label="En İyi Seri (maç)" accent="text-scoreboard-amber" />
         <Stat icon={<ListChecks size={15} />} value={totalPredictions} label="Toplam Tahmin" />
         <Stat icon={<Flame size={15} />} value={activityStreak} label="Günlük Giriş Serisi" accent="text-scoreboard-amber" />
+        <Stat icon={<Star size={15} />} value={xp} label="Kazanılan XP" accent="text-scoreboard-amber" />
         <Stat icon={<Calendar size={15} />} value={formatMemberSince(memberSince)} label="Üyelik Tarihi" small />
       </div>
     </section>

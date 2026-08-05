@@ -73,6 +73,8 @@ export interface UserProfile {
   lastActiveAt?: string | null; // Uygulamayı en son ne zaman açtığı (admin istatistikleri için - saatte bir güncellenir)
   activityStreak?: number; // Art arda kaç gündür uygulamayı açtığı (bir gün atlarsa sıfırlanır)
   lastActiveDateKey?: string | null; // activityStreak'in son sayıldığı gün ('YYYY-MM-DD')
+  xp: number; // Deneyim puanı - doğru/yanlış tahmin, rozet ve giriş serisinden hesaplanır (bkz. utils/xpUtils.ts)
+  level: number; // xp'den TÜRETİLİR (Firestore'da ayrıca saklanmaz) - bkz. getLevelInfo()
   createdAt: string;
   updatedAt: string;
 }
@@ -100,6 +102,7 @@ export interface ChatMessage {
   displayName: string;
   avatarUrl?: string | null; // Gönderenin mesaj anındaki profil görseli
   badges?: Badge[]; // Gönderenin mesaj anındaki rozetleri
+  xp?: number; // Gönderenin mesaj anındaki XP'si (Seviye rozeti göstermek için)
   text: string;
   isAdmin: boolean; // Gönderen admin mi? (Firestore kuralında doğrulanır, sahte etiket takılamaz)
   replyTo?: {

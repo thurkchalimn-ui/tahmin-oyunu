@@ -4,6 +4,7 @@ import { formatChatTime } from '@/utils/dateUtils';
 import { Link } from 'react-router-dom';
 import { Avatar } from '@/components/common/Avatar';
 import { BadgeIcons } from '@/components/common/BadgeIcons';
+import { LevelBadge } from '@/components/common/LevelBadge';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -70,6 +71,7 @@ export function ChatMessageList({
                   </span>
                 )}
               </Link>
+              <LevelBadge xp={message.xp ?? 0} size="sm" />
               {message.badges && message.badges.length > 0 && <BadgeIcons badges={message.badges} />}
               <span className="font-mono text-[10px] text-pitch-700/40 dark:text-pitch-100/30">
                 {formatChatTime(message.createdAt)}

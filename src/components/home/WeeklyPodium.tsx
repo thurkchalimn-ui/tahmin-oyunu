@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Crown } from 'lucide-react';
 import { Avatar } from '@/components/common/Avatar';
 import { IconBadge } from '@/components/common/IconBadge';
+import { LevelBadge } from '@/components/common/LevelBadge';
 import type { UserProfile } from '@/types';
 
 interface WeeklyPodiumProps {
@@ -66,8 +67,9 @@ export function WeeklyPodium({ topThree, source }: WeeklyPodiumProps) {
               <p className="mt-1 max-w-[90px] truncate text-center font-body text-xs font-medium text-pitch-900 dark:text-pitch-100">
                 {user.displayName}
               </p>
+              <LevelBadge xp={user.xp} size="sm" />
               <p className="font-mono text-[10px] text-pitch-700/50 dark:text-pitch-100/40">
-                {user.bestStreak} en iyi seri
+                {user.xp} XP
               </p>
             </Link>
           );

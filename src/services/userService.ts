@@ -18,6 +18,7 @@ import { calculateCurrentStreak, calculateBestStreak, STREAK_TARGET } from '@/ut
 import { isUsernameTaken, claimUsername, releaseUsername } from '@/services/usernameService';
 import { containsProfanity } from '@/utils/profanityFilter';
 import { toDateKey } from '@/utils/dateUtils';
+import { calculateXP, getLevelInfo } from '@/utils/xpUtils';
 
 /** Toplam doğru tahmin sayısına göre kazanılan rozet eşikleri. */
 const CORRECT_TOTAL_MILESTONES = [50, 100, 250, 500, 1000];
@@ -42,6 +43,7 @@ function normalizeBadges(raw: unknown): Badge[] {
 /** Firestore Timestamp alanlarını ISO string'e çevirerek UserProfile'a dönüştürür. */
 export function mapUserDoc(id: string, data: Record<string, unknown>): UserProfile {
   const toIso = (v: unknown) => (v instanceof Timestamp ? v.toDate().toISOString() : (v as string) ?? '');
+  const xp = (data.xp as number) ?? 0;
   return {
     uid: id,
     email: (data.email as string) ?? '',
@@ -61,6 +63,8 @@ export function mapUserDoc(id: string, data: Record<string, unknown>): UserProfi
     lastActiveAt: data.lastActiveAt ? toIso(data.lastActiveAt) : null,
     activityStreak: (data.activityStreak as number) ?? 0,
     lastActiveDateKey: (data.lastActiveDateKey as string) || null,
+    xp,
+    level: getLevelInfo(xp).level,
     createdAt: toIso(data.createdAt),
     updatedAt: toIso(data.updatedAt),
   };
@@ -86,13 +90,17 @@ export function subscribeUserProfile(
   );
 }
 
-/** Liderlik tablosunu en yüksek "bestStreak" değerine göre gerçek zamanlı dinler. */
+/**
+ * Liderlik tablosunu en yüksek XP'ye göre gerçek zamanlı dinler.
+ * ÖNEMLİ: Daha önce `bestStreak`e göre sıralanıyordu - artık XP/Seviye
+ * sistemi eklendiği için ana sıralama ölçütü XP oldu (bkz. xpUtils.ts).
+ */
 export function subscribeLeaderboard(
   onChange: (users: UserProfile[]) => void,
   onError: (message: string) => void,
   topN = 50,
 ): () => void {
-  const q = query(collection(db, 'users'), orderBy('bestStreak', 'desc'), fbLimit(topN));
+  const q = query(collection(db, 'users'), orderBy('xp', 'desc'), fbLimit(topN));
   return onSnapshot(
     q,
     (snap) => onChange(snap.docs.map((d) => mapUserDoc(d.id, d.data()))),
@@ -164,10 +172,20 @@ export async function touchLastActive(uid: string, currentLastActiveAt: string |
  * içinde tekrar çağrılırsa hiçbir şey yapmaz). Bugün ile en son sayılan gün
  * arasında tam bir gün fark varsa seri +1 artar; daha fazla gün atlanmışsa
  * (kullanıcı bir günü kaçırmışsa) seri 1'e sıfırlanır.
+ *
+ * ÖNEMLİ: Giriş serisi XP'nin bir bileşeni olduğu için (bkz. xpUtils.ts),
+ * `current` artık correctPredictions/totalPredictions da içeriyor - bu
+ * değerler değişmese bile XP'nin yeniden hesaplanıp güncel tutulması için gerekli.
  */
 export async function touchDailyActivity(
   uid: string,
-  current: { activityStreak: number; lastActiveDateKey: string | null; badges: Badge[] },
+  current: {
+    activityStreak: number;
+    lastActiveDateKey: string | null;
+    badges: Badge[];
+    correctPredictions: number;
+    totalPredictions: number;
+  },
 ): Promise<void> {
   const todayKey = toDateKey(new Date());
   if (current.lastActiveDateKey === todayKey) return; // Bugün zaten sayıldı
@@ -186,10 +204,18 @@ export async function touchDailyActivity(
     }
   }
 
+  const xp = calculateXP({
+    correctPredictions: current.correctPredictions,
+    totalPredictions: current.totalPredictions,
+    badgeCount: badges.length,
+    activityStreak: newStreak,
+  });
+
   await updateDoc(doc(db, 'users', uid), {
     activityStreak: newStreak,
     lastActiveDateKey: todayKey,
     badges,
+    xp,
     updatedAt: Timestamp.now(),
   });
 }
@@ -230,8 +256,8 @@ async function getMatchOrderingInfoByIds(
 /**
  * Bir maç sonucu girildikten sonra çağrılır: kullanıcının tüm sonuçlanmış
  * tahminlerini, ait oldukları maçın GERÇEK BAŞLAMA SAATİNE (kickoffAt) göre
- * kronolojik sıraya dizip yeniden değerlendirir, güncel seriyi, en iyi seriyi
- * ve 15'lik hedefe ulaşıldıysa yeni rozeti hesaplayıp kaydeder.
+ * kronolojik sıraya dizip yeniden değerlendirir, güncel seriyi, en iyi seriyi,
+ * XP'yi ve 15'lik hedefe ulaşıldıysa yeni rozeti hesaplayıp kaydeder.
  *
  * ÖNEMLİ: Sıralama, maçın admin panelinde EKLENME sırasına göre değil, gerçek
  * `kickoffAt` saatine (aynı saatte başlayan maçlarda ev sahibi takım adına göre
@@ -263,6 +289,7 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
   const existingBadges: Badge[] = normalizeBadges(userSnap.data()?.badges);
+  const currentActivityStreak = (userSnap.data()?.activityStreak as number) ?? 0;
 
   // Kullanıcının serisi hedefe (15) ulaştığında yeni bir rozet eklenir. Eski
   // kod "tam olarak 15" anını yakalamaya çalışıyordu (===), ama seri yeniden
@@ -286,12 +313,21 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
     }
   }
 
+  // XP - her zaman GÜNCEL verilerden sıfırdan hesaplanır (bkz. xpUtils.ts).
+  const xp = calculateXP({
+    correctPredictions,
+    totalPredictions,
+    badgeCount: badges.length,
+    activityStreak: currentActivityStreak,
+  });
+
   await updateDoc(userRef, {
     currentStreak,
     bestStreak,
     totalPredictions,
     correctPredictions,
     badges,
+    xp,
     updatedAt: Timestamp.now(),
   });
 }

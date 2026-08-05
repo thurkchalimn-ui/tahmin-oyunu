@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { UserProfile } from '@/types';
 import { Avatar } from '@/components/common/Avatar';
 import { BadgeIcons } from '@/components/common/BadgeIcons';
+import { LevelBadge } from '@/components/common/LevelBadge';
 
 interface LeaderboardTableProps {
   users: UserProfile[];
@@ -37,6 +38,7 @@ export function LeaderboardTable({ users, currentUserId, mode = 'all' }: Leaderb
             <th className="px-1.5 py-2 sm:px-4 sm:py-3">Oyuncu</th>
             {mode === 'all' && (
               <>
+                <th className="px-1 py-2 text-right sm:px-4 sm:py-3">XP</th>
                 <th className="px-1 py-2 text-right sm:px-4 sm:py-3">
                   <span className="sm:hidden">En İyi</span>
                   <span className="hidden sm:inline">En İyi Seri</span>
@@ -81,6 +83,7 @@ export function LeaderboardTable({ users, currentUserId, mode = 'all' }: Leaderb
                   >
                     <Avatar avatarUrl={user.avatarUrl} size="sm" />
                     <span className="truncate">{user.displayName}</span>
+                    {mode === 'all' && <LevelBadge xp={user.xp} size="sm" />}
                   </Link>
                   {user.badges.length > 0 && (
                     <span className="ml-1">
@@ -90,6 +93,9 @@ export function LeaderboardTable({ users, currentUserId, mode = 'all' }: Leaderb
                 </td>
                 {mode === 'all' && (
                   <>
+                    <td className="px-1 py-2 text-right font-mono font-bold text-scoreboard-amber sm:px-4 sm:py-3">
+                      {user.xp}
+                    </td>
                     <td className="px-1 py-2 text-right font-mono text-scoreboard-amber sm:px-4 sm:py-3">
                       {user.bestStreak}
                     </td>

@@ -78,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             activityStreak: p.activityStreak ?? 0,
             lastActiveDateKey: p.lastActiveDateKey ?? null,
             badges: p.badges,
+            correctPredictions: p.correctPredictions,
+            totalPredictions: p.totalPredictions,
           }).catch(() => {});
         }
       },

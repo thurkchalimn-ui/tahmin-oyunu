@@ -69,6 +69,7 @@ export function HomePage() {
             dailyStreak={profile.activityStreak ?? 0}
             correctPredictions={profile.correctPredictions}
             rank={rank}
+            xp={profile.xp}
           />
         )}
 

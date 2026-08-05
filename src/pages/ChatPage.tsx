@@ -31,6 +31,7 @@ export function ChatPage() {
       profile.avatarUrl,
       replyingTo ? { messageId: replyingTo.id, displayName: replyingTo.displayName, text: replyingTo.text } : null,
       profile.badges,
+      profile.xp,
     );
     setReplyingTo(null);
   }

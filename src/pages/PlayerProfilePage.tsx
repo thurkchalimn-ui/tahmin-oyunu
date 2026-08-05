@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { LevelBadge } from '@/components/common/LevelBadge';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { usePredictionHistory } from '@/hooks/usePredictionHistory';
@@ -68,6 +69,9 @@ export function PlayerProfilePage() {
             <h1 className="font-display text-xl font-semibold text-pitch-900 dark:text-pitch-100">
               {profile.displayName}
             </h1>
+            <div className="mt-1">
+              <LevelBadge xp={profile.xp} size="sm" />
+            </div>
             {uid && (
               <div className="mt-1">
                 <FollowButton currentUid={firebaseUser?.uid} targetUid={uid} />
@@ -83,6 +87,7 @@ export function PlayerProfilePage() {
           totalPredictions={profile.totalPredictions}
           bestStreak={profile.bestStreak}
           activityStreak={profile.activityStreak ?? 0}
+          xp={profile.xp}
           memberSince={profile.createdAt}
         />
 

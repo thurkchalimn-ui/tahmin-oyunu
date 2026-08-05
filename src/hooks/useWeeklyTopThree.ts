@@ -44,13 +44,23 @@ export function useWeeklyTopThree(): WeeklyTopThreeResult {
           resolvedSource = 'all';
         }
 
-        // Gerçek bestStreak değerlerini tamamla
+        // Gerçek bestStreak ve xp değerlerini tamamla (haftalık önbellek
+        // ikisini de içermiyor - otomasyon bunları cache'e yazmıyor)
         if (topThree.length > 0) {
           const snap = await getDocs(
             query(collection(db, 'users'), where(documentId(), 'in', topThree.map((u) => u.uid))),
           );
-          const bestStreakByUid = new Map(snap.docs.map((d) => [d.id, (d.data().bestStreak as number) ?? 0]));
-          topThree = topThree.map((u) => ({ ...u, bestStreak: bestStreakByUid.get(u.uid) ?? u.bestStreak }));
+          const dataByUid = new Map(
+            snap.docs.map((d) => [
+              d.id,
+              { bestStreak: (d.data().bestStreak as number) ?? 0, xp: (d.data().xp as number) ?? 0 },
+            ]),
+          );
+          topThree = topThree.map((u) => ({
+            ...u,
+            bestStreak: dataByUid.get(u.uid)?.bestStreak ?? u.bestStreak,
+            xp: dataByUid.get(u.uid)?.xp ?? u.xp,
+          }));
         }
 
         if (!cancelled) {

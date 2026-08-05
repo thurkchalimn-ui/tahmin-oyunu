@@ -26,6 +26,7 @@ function mapMessageDoc(id: string, data: Record<string, unknown>): ChatMessage {
     displayName: (data.displayName as string) ?? 'İsimsiz Oyuncu',
     avatarUrl: (data.avatarUrl as string) || null,
     badges: (data.badges as Badge[]) ?? [],
+    xp: (data.xp as number) ?? 0,
     text: data.text as string,
     isAdmin: (data.isAdmin as boolean) ?? false,
     replyTo: replyTo ?? null,
@@ -47,6 +48,7 @@ export async function sendMessage(
   avatarUrl?: string | null,
   replyTo?: { messageId: string; displayName: string; text: string } | null,
   badges?: Badge[],
+  xp?: number,
 ): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) throw new Error('Boş mesaj gönderilemez.');
@@ -58,6 +60,7 @@ export async function sendMessage(
     displayName,
     avatarUrl: avatarUrl || null,
     badges: badges ?? [],
+    xp: xp ?? 0,
     text: trimmed,
     isAdmin,
     replyTo: replyTo

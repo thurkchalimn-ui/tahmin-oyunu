@@ -51,10 +51,10 @@ export async function getUserRank(correctPredictions: number): Promise<number> {
  * önizleme sadece uid/avatarUrl/displayName/correctPredictions kullanıyor.
  */
 export async function getAllTimeTopThree(): Promise<
-  { uid: string; displayName: string; avatarUrl: string | null; correctPredictions: number }[]
+  { uid: string; displayName: string; avatarUrl: string | null; correctPredictions: number; xp: number }[]
 > {
   const snap = await getDocs(
-    query(collection(db, 'users'), orderBy('bestStreak', 'desc'), limit(3)),
+    query(collection(db, 'users'), orderBy('xp', 'desc'), limit(3)),
   );
   return snap.docs.map((d) => {
     const data = d.data();
@@ -63,6 +63,7 @@ export async function getAllTimeTopThree(): Promise<
       displayName: (data.displayName as string) ?? 'İsimsiz Oyuncu',
       avatarUrl: (data.avatarUrl as string) ?? null,
       correctPredictions: (data.correctPredictions as number) ?? 0,
+      xp: (data.xp as number) ?? 0,
     };
   });
 }
