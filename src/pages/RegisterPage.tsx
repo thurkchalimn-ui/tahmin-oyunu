@@ -1,12 +1,23 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { doc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '@/config/firebase';
 import { registerUser } from '@/services/authService';
 import { Button } from '@/components/common/Button';
 import { translateAuthError, isValidEmail, isValidPassword, isNonEmpty } from '@/utils/validators';
 
-/** Yeni kullanıcı kayıt sayfası. */
+/**
+ * Yeni kullanıcı kayıt sayfası. Adreste bir davet parametresi varsa
+ * (ör. /kayit?ref=DAVET_EDEN_UID - bkz. profildeki "Arkadaş Davet Et"
+ * bölümü), kayıt başarılı olduktan sonra bu bilgi kullanıcının profiline
+ * TEK SEFERLİK olarak yazılır (bkz. firestore.rules) - davet eden kişi
+ * otomasyon script'i tarafından periyodik olarak +25 XP kazanır.
+ */
 export function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const referrerUid = searchParams.get('ref');
+
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,6 +44,14 @@ export function RegisterPage() {
     setIsSubmitting(true);
     try {
       await registerUser(email, password, displayName);
+
+      // Davet linkiyle gelindiyse ve kendi kendini davet etmiyorsa, davet
+      // edeni kaydet. Bu işlem başarısız olsa bile (ör. ağ hatası) kayıt
+      // akışını durdurmuyoruz - kritik olmayan bir ek bilgi.
+      if (referrerUid && auth.currentUser && referrerUid !== auth.currentUser.uid) {
+        await updateDoc(doc(db, 'users', auth.currentUser.uid), { invitedByUid: referrerUid }).catch(() => {});
+      }
+
       navigate('/');
     } catch (err) {
       const code = (err as { code?: string }).code;
@@ -55,6 +74,12 @@ export function RegisterPage() {
       <h1 className="font-display text-2xl font-semibold text-pitch-900 dark:text-pitch-100">
         Kayıt Ol
       </h1>
+
+      {referrerUid && (
+        <p className="rounded-md bg-scoreboard-amber/10 px-3 py-2 font-mono text-xs text-scoreboard-amberDark dark:text-scoreboard-amber">
+          🎉 Bir arkadaşının davetiyle geldin!
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm text-pitch-900 dark:text-pitch-100">

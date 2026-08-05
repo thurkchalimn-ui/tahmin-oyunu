@@ -11,6 +11,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
+import { createNotification } from '@/services/notificationCenterService';
 
 /** Takip dokümanı ID'si - iki kullanıcı arasında en fazla bir kayıt olmasını garanti eder. */
 function followDocId(followerUid: string, followedUid: string): string {
@@ -19,6 +20,8 @@ function followDocId(followerUid: string, followedUid: string): string {
 
 /**
  * Bir kullanıcıyı takip eder (tek yönlü, Twitter tarzı - karşı taraf onayı gerekmez).
+ * Takip edilen kullanıcıya "yeni takipçi" bildirimi düşer (bkz.
+ * notificationCenterService.ts).
  * NOT: Takip edilen kullanıcının XP'si (her takipçi +5 XP kazandırır, bkz.
  * xpUtils.ts) BURADAN GÜNCELLENMEZ - çünkü Firestore güvenlik kuralı bir
  * kullanıcının sadece KENDİ profilini güncelleyebilmesine izin verir, takip
@@ -28,13 +31,20 @@ function followDocId(followerUid: string, followedUid: string): string {
  * hesaplar - bu yüzden yeni bir takipçinin XP'ye yansıması anlık değil,
  * otomasyonun bir sonraki çalışmasını bekler (birkaç dakika).
  */
-export async function followUser(followerUid: string, followedUid: string): Promise<void> {
+export async function followUser(followerUid: string, followedUid: string, followerDisplayName: string): Promise<void> {
   if (followerUid === followedUid) throw new Error('Kendini takip edemezsin.');
   await setDoc(doc(db, 'follows', followDocId(followerUid, followedUid)), {
     followerUid,
     followedUid,
     createdAt: Timestamp.now(),
   });
+  await createNotification(
+    followedUid,
+    'follow',
+    '👤 Yeni Takipçi',
+    `${followerDisplayName} seni takip etmeye başladı.`,
+    `/oyuncu/${followerUid}`,
+  ).catch(() => {});
 }
 
 /** Takibi bırakır. */

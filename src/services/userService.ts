@@ -20,6 +20,8 @@ import { isUsernameTaken, claimUsername, releaseUsername } from '@/services/user
 import { containsProfanity } from '@/utils/profanityFilter';
 import { toDateKey } from '@/utils/dateUtils';
 import { calculateXP, getLevelInfo } from '@/utils/xpUtils';
+import { createNotification } from '@/services/notificationCenterService';
+import { BADGE_LABELS } from '@/components/common/BadgeIcons';
 
 /**
  * Takipçi sayısını okur (sadece sayım - kota dostu). followService.ts'deki
@@ -40,6 +42,40 @@ async function getFollowerCountInline(uid: string): Promise<number> {
 async function getInviteCountInline(uid: string): Promise<number> {
   const snap = await getCountFromServer(query(collection(db, 'users'), where('invitedByUid', '==', uid)));
   return snap.data().count;
+}
+
+/**
+ * Yeni kazanılan rozetler için ve (varsa) seviye atladıysa bildirim
+ * oluşturur. `touchDailyActivity` ve `recalculateUserStreak`'in ikisinden de
+ * çağrılır - tek bir yerde tutularak tutarlılık sağlanır.
+ */
+async function notifyNewBadgesAndLevelUp(
+  uid: string,
+  newlyEarnedBadges: Badge[],
+  oldXp: number,
+  newXp: number,
+): Promise<void> {
+  for (const badge of newlyEarnedBadges) {
+    await createNotification(
+      uid,
+      'badge',
+      '🏅 Yeni Rozet!',
+      BADGE_LABELS[badge.type](badge.value) + ' rozetini kazandın.',
+      '/rozetler',
+    ).catch(() => {});
+  }
+
+  const oldLevel = getLevelInfo(oldXp).level;
+  const newLevel = getLevelInfo(newXp).level;
+  if (newLevel > oldLevel) {
+    await createNotification(
+      uid,
+      'levelup',
+      '👑 Seviye Atladın!',
+      `Artık Seviye ${newLevel} oyuncususun.`,
+      '/profil',
+    ).catch(() => {});
+  }
 }
 
 /** Art arda kaç doğru tahminle kazanılan seri rozet eşikleri. */
@@ -211,6 +247,7 @@ export async function touchDailyActivity(
     badges: Badge[];
     correctPredictions: number;
     totalPredictions: number;
+    xp: number;
   },
 ): Promise<void> {
   const todayKey = toDateKey(new Date());
@@ -223,10 +260,13 @@ export async function touchDailyActivity(
   const newStreak = current.lastActiveDateKey === yesterdayKey ? current.activityStreak + 1 : 1;
 
   const badges = [...current.badges];
+  const newlyEarnedBadges: Badge[] = [];
   for (const milestone of ACTIVITY_STREAK_MILESTONES) {
     const alreadyHas = current.badges.some((b) => b.type === 'activityStreak' && b.value === milestone);
     if (!alreadyHas && newStreak >= milestone) {
-      badges.push({ type: 'activityStreak', value: milestone, achievedAt: new Date().toISOString() });
+      const badge: Badge = { type: 'activityStreak', value: milestone, achievedAt: new Date().toISOString() };
+      badges.push(badge);
+      newlyEarnedBadges.push(badge);
     }
   }
 
@@ -240,6 +280,8 @@ export async function touchDailyActivity(
     followerCount,
     inviteCount,
   });
+
+  await notifyNewBadgesAndLevelUp(uid, newlyEarnedBadges, current.xp, xp);
 
   await updateDoc(doc(db, 'users', uid), {
     activityStreak: newStreak,
@@ -329,10 +371,13 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
   // ile aynı ">= eşik VE daha önce hiç verilmemiş" mantığı kullanılıyor - bu,
   // hem çoklu eşik hem de "atlanan an" sorununu birlikte çözüyor.
   const badges = [...existingBadges];
+  const newlyEarnedBadges: Badge[] = [];
   for (const milestone of MATCH_STREAK_MILESTONES) {
     const alreadyHas = existingBadges.some((b) => b.type === 'matchStreak' && b.value === milestone);
     if (!alreadyHas && currentStreak >= milestone) {
-      badges.push({ type: 'matchStreak', value: milestone, achievedAt: new Date().toISOString() });
+      const badge: Badge = { type: 'matchStreak', value: milestone, achievedAt: new Date().toISOString() };
+      badges.push(badge);
+      newlyEarnedBadges.push(badge);
     }
   }
 
@@ -341,11 +386,14 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
   for (const milestone of CORRECT_TOTAL_MILESTONES) {
     const alreadyHas = existingBadges.some((b) => b.type === 'correctTotal' && b.value === milestone);
     if (!alreadyHas && correctPredictions >= milestone) {
-      badges.push({ type: 'correctTotal', value: milestone, achievedAt: new Date().toISOString() });
+      const badge: Badge = { type: 'correctTotal', value: milestone, achievedAt: new Date().toISOString() };
+      badges.push(badge);
+      newlyEarnedBadges.push(badge);
     }
   }
 
   // XP - her zaman GÜNCEL verilerden sıfırdan hesaplanır (bkz. xpUtils.ts).
+  const oldXp = (userSnap.data()?.xp as number) ?? 0;
   const followerCount = await getFollowerCountInline(uid);
   const inviteCount = await getInviteCountInline(uid);
   const xp = calculateXP({
@@ -356,6 +404,8 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
     followerCount,
     inviteCount,
   });
+
+  await notifyNewBadgesAndLevelUp(uid, newlyEarnedBadges, oldXp, xp);
 
   await updateDoc(userRef, {
     currentStreak,

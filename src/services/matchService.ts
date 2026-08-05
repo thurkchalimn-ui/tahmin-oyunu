@@ -17,6 +17,7 @@ import {
 import { db } from '@/config/firebase';
 import type { Match, PredictionChoice } from '@/types';
 import { recalculateUserStreak } from '@/services/userService';
+import { createNotification } from '@/services/notificationCenterService';
 
 /** Takım adını, tutarlı bir Firestore doküman ID'sine çevirir (küçük harf, boşluk/aksan temizliği). */
 function normalizeTeamKey(teamName: string): string {
@@ -248,6 +249,15 @@ export async function setMatchResult(matchId: string, homeGoals: number, awayGoa
         type: 'result', // Otomasyon script'i, kullanıcının bu türü kapatıp kapatmadığını kontrol eder
         createdAt: Timestamp.now(),
       });
+      // Uygulama içi bildirim merkezi (zil ikonu) - notificationQueue'dan
+      // AYRI, kalıcı bir bildirim geçmişi (bkz. notificationCenterService.ts).
+      await createNotification(
+        data.userId as string,
+        'result',
+        isCorrect ? '✅ Doğru Tahmin!' : '❌ Yanlış Tahmin',
+        `${matchLabel} maçı ${homeGoals}-${awayGoals} bitti.`,
+        '/maclar',
+      ).catch(() => {});
     }),
   );
 

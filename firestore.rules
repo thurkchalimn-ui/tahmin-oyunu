@@ -43,7 +43,14 @@ service cloud.firestore {
       allow update: if isAdmin() ||
         (isOwner(uid) &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['displayName', 'updatedAt', 'lastSeenChatAt', 'lastSeenRank', 'lastSeenProfileAt', 'fcmTokens', 'avatarUrl', 'notifyOnResult', 'notifyOnReminder', 'lastActiveAt', 'activityStreak', 'lastActiveDateKey', 'badges', 'xp']));
+            .hasOnly(['displayName', 'updatedAt', 'lastSeenChatAt', 'lastSeenRank', 'lastSeenProfileAt', 'fcmTokens', 'avatarUrl', 'notifyOnResult', 'notifyOnReminder', 'lastActiveAt', 'activityStreak', 'lastActiveDateKey', 'badges', 'xp'])) ||
+        // Davet linkiyle kayıt olan kullanıcı, davet edeni SADECE BİR KEZ
+        // (henüz hiç ayarlanmamışsa) kaydedebilir - sonradan değiştirilemez,
+        // böylece kayıt sonrası referansı manipüle etmek mümkün olmaz.
+        (isOwner(uid) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['invitedByUid']) &&
+          resource.data.invitedByUid == null &&
+          request.resource.data.invitedByUid is string);
       allow delete: if isOwner(uid);
     }
 
@@ -124,6 +131,24 @@ service cloud.firestore {
       allow create: if isAdmin();
       allow update: if false;
       allow delete: if false;
+    }
+
+    // notifications/{id}: uygulama içi bildirim merkezi (zil ikonu). Bu,
+    // notificationQueue'dan (SADECE push gönderimi için, admin/otomasyon
+    // tarafından oluşturulan, kalıcı olmayan bir kuyruk) FARKLI - burası
+    // kullanıcının kendi bildirim GEÇMİŞİ, kalıcı olarak saklanır.
+    // ÖNEMLİ: create izni herhangi bir giriş yapmış kullanıcıya açık, çünkü
+    // bildirimler doğası gereği "başkası için" oluşturulur (ör. birini takip
+    // ettiğinde ona bildirim düşer, admin bir maç sonucu girdiğinde etkilenen
+    // kullanıcılara bildirim düşer - bu işlemi yapan kişi bildirimin SAHİBİ
+    // değildir). read/update/delete ise sadece bildirimin sahibine açık -
+    // gizlilik burada korunuyor.
+    match /notifications/{id} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if request.auth != null && request.resource.data.userId is string;
+      allow update: if isOwner(resource.data.userId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isOwner(resource.data.userId);
     }
 
     // predictions/{predictionId}: kullanıcı sadece kendi tahminini,

@@ -2,13 +2,16 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { logoutUser } from '@/services/authService';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
+import { NotificationBell } from '@/components/common/NotificationBell';
 import { Button } from '@/components/common/Button';
 import logo from '@/assets/logo.png';
 
 /**
- * Uygulama genelinde görünen üst gezinme çubuğu. Sadece logo ve oturum
- * işlemlerini içerir; ana gezinme (Liderlik/Sohbet/Profil) daha mobil uygulama
- * hissi vermesi için alttaki BottomNav banner'ına taşınmıştır (bkz. BottomNav.tsx).
+ * Uygulama genelinde görünen üst gezinme çubuğu. Logo, bildirim zili (sadece
+ * giriş yapmışsa - NotificationBell kendi içinde bu kontrolü yapar) ve
+ * oturum işlemlerini içerir; ana gezinme (Liderlik/Sohbet/Profil) daha
+ * mobil uygulama hissi vermesi için alttaki BottomNav banner'ına taşınmıştır
+ * (bkz. BottomNav.tsx).
  */
 export function Navbar() {
   const { firebaseUser } = useAuth();
@@ -20,6 +23,7 @@ export function Navbar() {
           <img src={logo} alt="Tahmin Serisi" className="h-16 w-16 object-contain" />
         </NavLink>
         <div className="flex items-center gap-3">
+          <NotificationBell />
           <ThemeToggle />
           {firebaseUser ? (
             <Button variant="ghost" onClick={() => logoutUser()} className="!px-3 !py-1.5 text-xs">

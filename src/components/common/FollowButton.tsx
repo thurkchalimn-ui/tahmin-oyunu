@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { followUser, unfollowUser, isFollowing as checkIsFollowing } from '@/services/followService';
 import { Button } from '@/components/common/Button';
 
@@ -9,6 +10,7 @@ interface FollowButtonProps {
 
 /** Bir kullanıcının profilinde gösterilen "Takip Et" / "Takip Ediliyor" butonu. */
 export function FollowButton({ currentUid, targetUid }: FollowButtonProps) {
+  const { profile } = useAuth();
   const [following, setFollowing] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -26,7 +28,9 @@ export function FollowButton({ currentUid, targetUid }: FollowButtonProps) {
         await unfollowUser(currentUid, targetUid);
         setFollowing(false);
       } else {
-        await followUser(currentUid, targetUid);
+        // Takip edilen kişiye "yeni takipçi" bildirimi düşsün diye kendi
+        // görünen adımızı da geçiyoruz (bkz. followService.ts).
+        await followUser(currentUid, targetUid, profile?.displayName ?? 'Bir kullanıcı');
         setFollowing(true);
       }
     } finally {

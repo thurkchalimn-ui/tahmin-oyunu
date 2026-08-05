@@ -96,6 +96,21 @@ export interface AsyncState<T> {
   error: string | null;
 }
 
+// Uygulama içi bildirim merkezi (zil ikonu) - notificationQueue'dan farklı,
+// bu kalıcı bir geçmiş, sadece push gönderimi için değil.
+export type NotificationType = 'result' | 'badge' | 'follow' | 'reminder' | 'levelup';
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  isRead: boolean;
+  link?: string | null; // Tıklanınca gidilecek yer (ör. /oyuncu/uid, /rozetler)
+  createdAt: string;
+}
+
 // Sohbet kanalındaki tek bir mesaj
 export interface ChatMessage {
   id: string;
