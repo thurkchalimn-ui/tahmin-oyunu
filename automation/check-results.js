@@ -522,7 +522,7 @@ function calculateXP({ correctPredictions, totalPredictions, badgeCount, activit
     badgeCount * 50 +
     activityStreak * 5 +
     followerCount * 5 +
-    inviteCount * 25
+    inviteCount * 50
   );
 }
 

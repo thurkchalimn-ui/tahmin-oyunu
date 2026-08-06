@@ -10,7 +10,7 @@ interface InviteFriendCardProps {
  * Profildeki "Arkadaş Davet Et" kartı - kullanıcının kendi davet linkini
  * (kayıt sayfasına ?ref=uid ile) gösterir, kopyalama ve paylaşma imkanı
  * sunar. Her başarılı davet, otomasyon script'i tarafından periyodik olarak
- * +25 XP olarak hesaba katılır (bkz. xpUtils.ts, check-results.js).
+ * +50 XP olarak hesaba katılır (bkz. xpUtils.ts, check-results.js).
  */
 export function InviteFriendCard({ uid }: InviteFriendCardProps) {
   const [copied, setCopied] = useState(false);
@@ -49,7 +49,7 @@ export function InviteFriendCard({ uid }: InviteFriendCardProps) {
         Arkadaş Davet Et
       </h2>
       <p className="mb-3 font-body text-xs text-pitch-700/60 dark:text-pitch-100/50">
-        Davet linkinle kayıt olan her arkadaşın için <span className="font-bold text-scoreboard-amber">+25 XP</span> kazanırsın.
+        Davet linkinle kayıt olan her arkadaşın için <span className="font-bold text-scoreboard-amber">+50 XP</span> kazanırsın.
       </p>
 
       <div className="flex items-center gap-2">
