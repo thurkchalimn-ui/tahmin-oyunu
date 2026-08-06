@@ -81,7 +81,7 @@ export function HomePage() {
         </section>
 
         {(weeklyTopThree.length > 0 || recentResults.length > 0) && (
-          <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-4">
             <WeeklyPodium topThree={weeklyTopThree} source={weeklySource} />
             <RecentResultsPreview matches={recentResults} predictions={predictions ?? []} />
           </div>
