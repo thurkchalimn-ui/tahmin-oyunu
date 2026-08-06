@@ -80,7 +80,7 @@ export function LeaderboardPage() {
         <ErrorMessage message={active.error} />
       ) : (
         <div className="flex flex-col gap-4">
-          <LeaderboardPodium topThree={topThree} />
+          <LeaderboardPodium topThree={topThree} mode={tab === 'all' ? 'all' : 'period'} />
           <LeaderboardTable
             users={restOfList}
             currentUserId={firebaseUser?.uid}

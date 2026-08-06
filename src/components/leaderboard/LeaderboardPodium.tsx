@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Crown, Flame, Star } from 'lucide-react';
+import { Crown, Flame, Star, CheckCircle2 } from 'lucide-react';
 import type { UserProfile } from '@/types';
 import { Avatar } from '@/components/common/Avatar';
 
 interface LeaderboardPodiumProps {
   topThree: UserProfile[];
+  /** 'all': XP + en iyi seri gösterilir. 'period': o döneme ait doğru tahmin sayısı gösterilir
+      (dönemsel önbellek gerçek XP/bestStreak İÇERMEZ - bu yüzden mod ayrımı şart). */
+  mode?: 'all' | 'period';
 }
 
 const RANK_STYLES = [
@@ -13,8 +16,14 @@ const RANK_STYLES = [
   { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-14 w-14', avatarSize: 'lg' as const },
 ];
 
-/** Liderlik tablosu sayfasının en üstündeki büyük podyum - ilk 3 kullanıcı. */
-export function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) {
+/**
+ * Liderlik tablosu sayfasının en üstündeki büyük podyum - ilk 3 kullanıcı.
+ * ÖNEMLİ: Haftalık/Aylık sekmelerinde (mode='period') veri kaynağı olan
+ * dönemsel önbellek gerçek XP/bestStreak tutmuyor (sadece o döneme ait
+ * doğru/toplam tahmin sayısını tutuyor) - bu yüzden o modda XP/Seri yerine
+ * "X doğru" gösterilir, aksi halde alan boş/0 görünürdü.
+ */
+export function LeaderboardPodium({ topThree, mode = 'all' }: LeaderboardPodiumProps) {
   if (topThree.length === 0) return null;
 
   return (
@@ -42,14 +51,23 @@ export function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) {
               <p className="mt-1 max-w-[110px] truncate text-center font-body text-sm font-semibold text-pitch-100">
                 {user.displayName}
               </p>
-              <p className="flex items-center gap-1 font-mono text-xs font-bold text-scoreboard-amber">
-                <Star size={12} />
-                {user.xp} XP
-              </p>
-              <p className="flex items-center gap-1 font-mono text-[11px] text-pitch-100/50">
-                <Flame size={11} />
-                Seri: {user.bestStreak}
-              </p>
+              {mode === 'all' ? (
+                <>
+                  <p className="flex items-center gap-1 font-mono text-xs font-bold text-scoreboard-amber">
+                    <Star size={12} />
+                    {user.xp} XP
+                  </p>
+                  <p className="flex items-center gap-1 font-mono text-[11px] text-pitch-100/50">
+                    <Flame size={11} />
+                    Seri: {user.bestStreak}
+                  </p>
+                </>
+              ) : (
+                <p className="flex items-center gap-1 font-mono text-xs font-bold text-scoreboard-amber">
+                  <CheckCircle2 size={12} />
+                  {user.correctPredictions} doğru
+                </p>
+              )}
             </Link>
           );
         })}
