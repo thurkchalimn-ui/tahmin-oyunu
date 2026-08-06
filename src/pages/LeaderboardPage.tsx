@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Crown } from 'lucide-react';
+import { Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { usePeriodLeaderboard } from '@/hooks/usePeriodLeaderboard';
 import { useUserRank } from '@/hooks/useUserRank';
 import { markLeaderboardSeen } from '@/services/readStatusService';
+import { getCurrentMonthKey, shiftMonthKey, formatMonthLabel } from '@/services/periodLeaderboardService';
 import { LeaderboardTable } from '@/components/leaderboard/LeaderboardTable';
 import { LeaderboardPodium } from '@/components/leaderboard/LeaderboardPodium';
 import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
@@ -18,14 +19,19 @@ import type { StatsPeriod } from '@/utils/periodUtils';
  * arasında geçiş yapılabilir. "Genel" (tüm-zamanlar) sekmesinde sıralama
  * XP'ye göredir; podyum ve kendi sıranın en altta sabit gösterilmesi de bu
  * sekmede tam olarak çalışır (dönemsel önbellekte gerçek XP tutulmuyor).
+ *
+ * ÖDÜL VERMEK İÇİN: "Aylık" sekmesinde artık sadece bugünün ayı değil,
+ * GEÇMİŞ aylar da (◀ ▶ oklarıyla) gezilebilir - her ay kendi verisini
+ * kalıcı olarak saklıyor (bkz. periodLeaderboardService.ts, check-results.js).
  */
 export function LeaderboardPage() {
   const { firebaseUser, profile } = useAuth();
   const [tab, setTab] = useState<StatsPeriod>('all');
+  const [monthKey, setMonthKey] = useState(getCurrentMonthKey());
 
   const allTime = useLeaderboard();
   const week = usePeriodLeaderboard('week');
-  const month = usePeriodLeaderboard('month');
+  const month = usePeriodLeaderboard('month', monthKey);
   const rank = useUserRank(profile?.correctPredictions);
 
   const active = tab === 'all' ? allTime : tab === 'week' ? week : month;
@@ -37,6 +43,8 @@ export function LeaderboardPage() {
     if (tab !== 'all' || !profile || !rank) return null;
     return { rank, user: profile };
   }, [tab, profile, rank]);
+
+  const isCurrentMonth = monthKey === getCurrentMonthKey();
 
   // Sayfa açılıp "Genel" listesi yüklenince, kullanıcının o anki sırasını
   // "görüldü" olarak kaydet - BottomNav'daki kırmızı nokta kaybolur. Bu
@@ -73,6 +81,32 @@ export function LeaderboardPage() {
       <div className="mb-4">
         <PeriodTabs value={tab} onChange={setTab} />
       </div>
+
+      {/* Ay seçici - sadece "Aylık" sekmesinde görünür, ödül vermek için geçmiş aylara bakabilmek adına */}
+      {tab === 'month' && (
+        <div className="mb-4 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => setMonthKey((k) => shiftMonthKey(k, -1))}
+            aria-label="Önceki ay"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-pitch-700/15 text-pitch-900 transition hover:bg-pitch-700/5 dark:border-pitch-700 dark:text-pitch-100 dark:hover:bg-pitch-700/30"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="min-w-[140px] text-center font-mono text-sm font-bold text-pitch-900 dark:text-pitch-100">
+            {formatMonthLabel(monthKey)}
+          </span>
+          <button
+            type="button"
+            onClick={() => setMonthKey((k) => shiftMonthKey(k, 1))}
+            disabled={isCurrentMonth}
+            aria-label="Sonraki ay"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-pitch-700/15 text-pitch-900 transition hover:bg-pitch-700/5 disabled:cursor-not-allowed disabled:opacity-30 dark:border-pitch-700 dark:text-pitch-100 dark:hover:bg-pitch-700/30"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
 
       {active.loading ? (
         <LoadingSpinner label="Liderlik tablosu yükleniyor..." />

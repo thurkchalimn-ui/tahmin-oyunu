@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
-import type { AsyncState, UserProfile } from '@/types';
+import type { UserProfile, AsyncState } from '@/types';
 import { getPeriodLeaderboard, type LeaderboardPeriod } from '@/services/periodLeaderboardService';
 
-/** Belirli bir dönem (hafta/ay) için liderlik tablosunu getirir. */
-export function usePeriodLeaderboard(period: LeaderboardPeriod): AsyncState<UserProfile[]> {
+/**
+ * Haftalık/aylık liderlik tablosunu (önbellekten, tek okumayla) getirir.
+ * `monthKey` verilirse ('2026-08' gibi) o AYIN geçmiş verisi çekilir -
+ * verilmezse bugünün ayı kullanılır. `period === 'week'` iken `monthKey`
+ * yok sayılır (haftalık için geçmiş tutulmuyor, sadece güncel hafta var).
+ */
+export function usePeriodLeaderboard(period: LeaderboardPeriod, monthKey?: string): AsyncState<UserProfile[]> {
   const [state, setState] = useState<AsyncState<UserProfile[]>>({
     data: null,
     loading: true,
@@ -12,10 +17,10 @@ export function usePeriodLeaderboard(period: LeaderboardPeriod): AsyncState<User
 
   useEffect(() => {
     let cancelled = false;
-    setState({ data: null, loading: true, error: null });
-    getPeriodLeaderboard(period)
-      .then((data) => {
-        if (!cancelled) setState({ data, loading: false, error: null });
+    setState((prev) => ({ ...prev, loading: true }));
+    getPeriodLeaderboard(period, monthKey)
+      .then((users) => {
+        if (!cancelled) setState({ data: users, loading: false, error: null });
       })
       .catch(() => {
         if (!cancelled) setState({ data: null, loading: false, error: 'Liderlik tablosu yüklenemedi.' });
@@ -23,7 +28,7 @@ export function usePeriodLeaderboard(period: LeaderboardPeriod): AsyncState<User
     return () => {
       cancelled = true;
     };
-  }, [period]);
+  }, [period, monthKey]);
 
   return state;
 }

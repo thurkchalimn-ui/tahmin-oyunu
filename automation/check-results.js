@@ -508,6 +508,18 @@ function endOfMonthKey() {
   return nextMonth.toISOString().slice(0, 10);
 }
 
+/**
+ * Bugünün ay anahtarını ("2026-08" gibi) hesaplar. Aylık liderlik önbelleği
+ * artık TEK bir "month" dokümanına yazılıp her ay üzerine yazılmıyor - her
+ * ay kendi anahtarıyla AYRI bir dokümana yazılıyor (ör. leaderboardCache/month_2026-08)
+ * - bu sayede geçmiş aylar SİLİNMEDEN kalıcı olarak saklanır (ödül verme
+ * amacıyla geçmiş aylara bakılabilsin diye, bkz. src/services/periodLeaderboardService.ts).
+ */
+function currentMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
 /** userService.ts / xpUtils.ts ile BİREBİR AYNI eşikler ve formül. */
 const MATCH_STREAK_MILESTONES = [3, 5, 10, 15, 20, 30, 50, 100];
 const ACTIVITY_STREAK_MILESTONES = [3, 7, 15, 30, 60, 100, 365];
@@ -604,13 +616,18 @@ async function recalculateAllUsersXP() {
 async function cachePeriodLeaderboard(period) {
   const start = period === 'week' ? startOfWeekKey() : startOfMonthKey();
   const end = period === 'week' ? endOfWeekKey() : endOfMonthKey();
+  // ÖNEMLİ: 'week' için hep aynı dokümana ('week') yazılır (geçici, sadece
+  // güncel hafta). 'month' için ise HER AY kendi anahtarına yazılır (ör.
+  // 'month_2026-08') - böylece geçmiş aylar bir sonraki ayda ÜZERİNE
+  // YAZILMAZ, kalıcı olarak saklanır.
+  const docId = period === 'week' ? 'week' : `month_${currentMonthKey()}`;
 
   const matchesSnap = await db.collection('matches').where('date', '>=', start).where('date', '<', end).get();
   const matchIds = matchesSnap.docs.map((d) => d.id);
 
   if (matchIds.length === 0) {
-    await db.collection('leaderboardCache').doc(period).set({ entries: [], computedAt: Date.now() });
-    console.log(`[check-results] ${period} liderlik önbelleği güncellendi (0 maç, boş).`);
+    await db.collection('leaderboardCache').doc(docId).set({ entries: [], computedAt: Date.now() });
+    console.log(`[check-results] ${docId} liderlik önbelleği güncellendi (0 maç, boş).`);
     return;
   }
 
@@ -656,8 +673,8 @@ async function cachePeriodLeaderboard(period) {
     return accB - accA;
   });
 
-  await db.collection('leaderboardCache').doc(period).set({ entries, computedAt: Date.now() });
-  console.log(`[check-results] ${period} liderlik önbelleği güncellendi (${entries.length} kullanıcı).`);
+  await db.collection('leaderboardCache').doc(docId).set({ entries, computedAt: Date.now() });
+  console.log(`[check-results] ${docId} liderlik önbelleği güncellendi (${entries.length} kullanıcı).`);
 }
 
 function sleep(ms) {

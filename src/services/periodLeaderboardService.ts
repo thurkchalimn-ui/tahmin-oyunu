@@ -13,16 +13,45 @@ interface CachedEntry {
   correctPredictions: number;
 }
 
+/** Bugünün ay anahtarını döner (ör. "2026-08"). */
+export function getCurrentMonthKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Verilen ay anahtarından bir ay öncesinin/sonrasının anahtarını hesaplar (ay seçicide ileri/geri gitmek için). */
+export function shiftMonthKey(monthKey: string, delta: number): string {
+  const [year, month] = monthKey.split('-').map(Number);
+  const date = new Date(year, month - 1 + delta, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Bir ay anahtarını ("2026-08") Türkçe okunur hale getirir ("Ağustos 2026"). */
+export function formatMonthLabel(monthKey: string): string {
+  const [year, month] = monthKey.split('-').map(Number);
+  const date = new Date(year, month - 1, 1);
+  return date.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+}
+
 /**
  * Haftalık/aylık liderlik tablosunu getirir. ÖNEMLİ: Bu hesaplama artık
  * istemci tarafında YAPILMAZ - otomasyon script'i (automation/check-results.js)
- * bunu arka planda her ~6 saatte bir hesaplayıp `leaderboardCache/{period}`
+ * bunu arka planda her ~6 saatte bir hesaplayıp `leaderboardCache/{docId}`
  * dokümanına yazıyor; burada sadece o hazır dokümanı TEK bir okuma ile
- * çekiyoruz. Bu, önceki (her sayfa açılışında onlarca sorgu yapan) yönteme
- * göre Firestore okuma kotasını ciddi şekilde azaltır.
+ * çekiyoruz.
+ *
+ * ÖNEMLİ (ay geçmişi): 'week' için hep aynı dokümana ('week') bakılır -
+ * sadece güncel hafta tutulur. 'month' için ise her ay KENDİ dokümanına
+ * yazılır (ör. 'month_2026-08') ve bir sonraki ay bunun ÜZERİNE YAZMAZ -
+ * bu sayede geçmiş aylara (ödül vermek için) bakılabilir. `monthKey`
+ * verilmezse bugünün ayı kullanılır.
  */
-export async function getPeriodLeaderboard(period: LeaderboardPeriod): Promise<UserProfile[]> {
-  const snap = await getDoc(doc(db, 'leaderboardCache', period));
+export async function getPeriodLeaderboard(
+  period: LeaderboardPeriod,
+  monthKey?: string,
+): Promise<UserProfile[]> {
+  const docId = period === 'week' ? 'week' : `month_${monthKey ?? getCurrentMonthKey()}`;
+  const snap = await getDoc(doc(db, 'leaderboardCache', docId));
   if (!snap.exists()) return [];
 
   const entries = (snap.data().entries as CachedEntry[]) ?? [];
@@ -37,6 +66,8 @@ export async function getPeriodLeaderboard(period: LeaderboardPeriod): Promise<U
     badges: e.badges ?? [],
     isAdmin: false,
     avatarUrl: e.avatarUrl,
+    xp: 0,
+    level: 1,
     createdAt: '',
     updatedAt: '',
   }));
