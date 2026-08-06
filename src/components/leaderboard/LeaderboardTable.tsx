@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { Star, Flame, ChevronRight } from 'lucide-react';
 import type { UserProfile } from '@/types';
 import { Avatar } from '@/components/common/Avatar';
-import { BadgeIcons } from '@/components/common/BadgeIcons';
 
 interface LeaderboardTableProps {
   users: UserProfile[];
@@ -103,7 +102,6 @@ function Row({
         >
           {isPinned ? `Sen (${user.displayName})` : user.displayName}
         </span>
-        {user.badges.length > 0 && <BadgeIcons badges={user.badges} />}
       </div>
 
       {mode === 'all' ? (
