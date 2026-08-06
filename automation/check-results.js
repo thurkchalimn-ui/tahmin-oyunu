@@ -377,6 +377,18 @@ async function updateLiveScores(allPending, now) {
 async function runOnce() {
   console.log('[check-results] Tur başlıyor:', new Date().toISOString());
 
+  const now = Date.now();
+
+  // --- Yoğun saat kontrolü: bugün/dün için maçlardan birinin [kickoff-1sa,
+  // kickoff+4sa] penceresinde değilsek, bu turda HİÇBİR ağır iş yapılmaz
+  // (bildirim kuyruğu dahil) - gece yarısı gibi saatlerde gereksiz Firestore
+  // sorgusu/API çağrısı yapılmasın diye.
+  if (!(await isWithinMatchHours(now))) {
+    console.log('[check-results] Yoğun saatler dışında - bu tur tamamen atlandı.');
+    console.log('[check-results] Tur tamamlandı.');
+    return;
+  }
+
   // --- 1) Admin panelinden elle girilen sonuçlara ait bekleyen bildirimler ---
   await processNotificationQueue();
 
@@ -388,7 +400,6 @@ async function runOnce() {
   //  - Üst sınır (şu an + 30 dakika = hatırlatma penceresi): henüz yaklaşmamış
   //    (30 dakikadan uzun süre sonra başlayacak) maçlar sorguya hiç dahil
   //    edilmez - onlara zaten hiçbir işlem yapılmıyor, sadece kota tüketiyorlardı.
-  const now = Date.now();
   // "Bugünün başlangıcı" Türkiye saatine (UTC+3) göre hesaplanır - GitHub Actions
   // runner'ları UTC'de çalıştığı için, bu düzeltme yapılmazsa gece yarısına yakın
   // (ör. Türkiye saatiyle 00:30) başlayan maçlar yanlışlıkla "dünün maçı" sayılıp
@@ -604,6 +615,41 @@ async function recalculateAllUsersXP() {
   }
 
   console.log(`[check-results] Kullanıcı XP/rozet güncellemesi: ${updated} kullanıcı güncellendi.`);
+}
+
+/**
+ * Bugün için "yoğun saatler" penceresini hesaplar: ilk maçın başlama
+ * saatinden 1 saat öncesi, son maçın başlama saatinden 4 saat sonrasına
+ * kadar (maçın ortalama süresi ~2 saat + maç bittikten sonra istenen 2
+ * saatlik tampon = toplam 4 saat). Bu pencerenin DIŞINDA hiçbir ağır iş
+ * (bildirim kuyruğu işleme, hatırlatma taraması, canlı skor çekme) yapılmaz -
+ * gece yarısı gibi saatlerde Firestore'a gereksiz sorgu atılmasın diye.
+ */
+async function isWithinMatchHours(now) {
+  const todayKey = new Date(now).toISOString().slice(0, 10);
+  // Dünün tarihi de kontrol edilir - gece yarısına yakın (ör. 23:00) başlayan
+  // bir maç, "bugün" sorgusunda hiç görünmez ama hâlâ 4 saatlik penceresinde
+  // olabilir (ör. saat 00:30'dayız). Bu sınır durumunu kaçırmamak için.
+  const yesterdayKey = new Date(now - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const snap = await db.collection('matches').where('date', 'in', [yesterdayKey, todayKey]).get();
+  if (snap.empty) return false;
+
+  const kickoffTimes = snap.docs
+    .map((d) => {
+      const kickoffAt = d.data().kickoffAt;
+      const date = kickoffAt?.toDate ? kickoffAt.toDate() : new Date(kickoffAt);
+      return date.getTime();
+    })
+    .filter((t) => !Number.isNaN(t));
+  if (kickoffTimes.length === 0) return false;
+
+  // ÖNEMLİ: min/max ile TEK bir geniş pencere hesaplamak yerine (bu, dün
+  // 10:00'daki bir maçla bugün 22:00'daki bir maçı yanlışlıkla 36 saatlik
+  // TEK bir pencereye birleştirirdi), HER maç kendi [kickoff-1sa, kickoff+4sa]
+  // penceresiyle AYRI AYRI kontrol edilir - şu an herhangi BİRİNİN
+  // penceresindeysek yeterlidir.
+  return kickoffTimes.some((t) => now >= t - 60 * 60 * 1000 && now <= t + 240 * 60 * 1000);
 }
 
 /**
