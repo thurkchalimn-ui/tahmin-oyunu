@@ -204,7 +204,6 @@ export function ProfilePage() {
           bestStreak={profile.bestStreak}
           activityStreak={profile.activityStreak ?? 0}
           xp={profile.xp}
-          memberSince={profile.createdAt}
         />
 
         {/* Güncel seri - büyük, vurgulu bir "hero" kartı olarak */}

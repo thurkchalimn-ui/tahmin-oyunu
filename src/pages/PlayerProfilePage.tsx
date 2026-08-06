@@ -87,7 +87,6 @@ export function PlayerProfilePage() {
           bestStreak={profile.bestStreak}
           activityStreak={profile.activityStreak ?? 0}
           xp={profile.xp}
-          memberSince={profile.createdAt}
         />
 
         <section className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-5 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">

@@ -16,7 +16,7 @@ interface HomeStatStripProps {
 export function HomeStatStrip({ dailyStreak, correctPredictions, rank, xp }: HomeStatStripProps) {
   return (
     <div className="grid grid-cols-4 gap-2">
-      <Tile icon={<Flame size={16} />} value={dailyStreak} label="Giriş Serisi" />
+      <Tile icon={<Flame size={16} />} value={dailyStreak} label="Giriş Serisi" suffix=" gün" />
       <Tile icon={<CheckCircle2 size={16} />} value={correctPredictions} label="Doğru Tahmin" />
       <Tile icon={<BarChart3 size={16} />} value={rank ?? '—'} label="Sıralama" prefix={rank ? '#' : ''} />
       <Tile icon={<Star size={16} />} value={xp} label="Toplam XP" />
@@ -29,11 +29,13 @@ function Tile({
   value,
   label,
   prefix = '',
+  suffix = '',
 }: {
   icon: ReactNode;
   value: number | string;
   label: string;
   prefix?: string;
+  suffix?: string;
 }) {
   return (
     <div
@@ -44,6 +46,7 @@ function Tile({
       <p className="font-mono text-lg font-bold text-pitch-900 dark:text-pitch-100">
         {prefix}
         {value}
+        {suffix}
       </p>
       <p className="font-mono text-[10px] uppercase leading-tight text-pitch-700/60 dark:text-pitch-100/50">
         {label}

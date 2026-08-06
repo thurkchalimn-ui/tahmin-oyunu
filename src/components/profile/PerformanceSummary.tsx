@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { TrendingUp, CheckCircle2, Percent, Target, ListChecks, Calendar, Flame, Star } from 'lucide-react';
+import { TrendingUp, CheckCircle2, Percent, Target, ListChecks, Flame, Star } from 'lucide-react';
 import { IconBadge } from '@/components/common/IconBadge';
 
 interface PerformanceSummaryProps {
@@ -8,22 +8,12 @@ interface PerformanceSummaryProps {
   bestStreak: number;
   activityStreak: number;
   xp: number;
-  memberSince: string; // ISO tarih
-}
-
-/** Tarihi 'DD Ay YYYY' formatında (Türkçe ay adıyla) gösterir. */
-function formatMemberSince(iso: string): string {
-  if (!iso) return '—';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 /**
- * Profil sayfasındaki "Performans Özeti" kartı - mockup'takiyle aynı ikon +
- * kutucuk düzeni: Doğru Tahmin, Başarı Oranı, En İyi Seri (mockup'ta "gün"
- * yazıyordu ama bizde bu bir MAÇ serisi - "maç" olarak düzeltildi), Toplam
- * Tahmin, Günlük Giriş Serisi, Kazanılan XP, Üyelik Tarihi.
+ * Profil sayfasındaki "Performans Özeti" kartı: Doğru Tahmin, Başarı Oranı,
+ * En İyi Seri (maç), Toplam Tahmin, Günlük Giriş Serisi, Kazanılan XP.
+ * "Üyelik Tarihi" kaldırıldı.
  */
 export function PerformanceSummary({
   correctPredictions,
@@ -31,7 +21,6 @@ export function PerformanceSummary({
   bestStreak,
   activityStreak,
   xp,
-  memberSince,
 }: PerformanceSummaryProps) {
   const accuracy = totalPredictions > 0 ? Math.round((correctPredictions / totalPredictions) * 100) : 0;
 
@@ -49,7 +38,6 @@ export function PerformanceSummary({
         <Stat icon={<ListChecks size={15} />} value={totalPredictions} label="Toplam Tahmin" />
         <Stat icon={<Flame size={15} />} value={activityStreak} label="Günlük Giriş Serisi" accent="text-scoreboard-amber" />
         <Stat icon={<Star size={15} />} value={xp} label="Kazanılan XP" accent="text-scoreboard-amber" />
-        <Stat icon={<Calendar size={15} />} value={formatMemberSince(memberSince)} label="Üyelik Tarihi" small />
       </div>
     </section>
   );
@@ -60,13 +48,11 @@ function Stat({
   value,
   label,
   accent,
-  small = false,
 }: {
   icon: ReactNode;
   value: number | string;
   label: string;
   accent?: string;
-  small?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -74,11 +60,7 @@ function Stat({
         {icon}
         {label}
       </span>
-      <span
-        className={`font-mono font-bold text-pitch-900 dark:text-pitch-100 ${
-          small ? 'text-sm' : 'text-xl'
-        } ${accent ?? ''}`}
-      >
+      <span className={`font-mono text-xl font-bold text-pitch-900 dark:text-pitch-100 ${accent ?? ''}`}>
         {value}
       </span>
     </div>
