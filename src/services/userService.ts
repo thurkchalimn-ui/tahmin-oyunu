@@ -290,7 +290,7 @@ export async function touchDailyActivity(
   const xp = calculateXP({
     correctPredictions: current.correctPredictions,
     totalPredictions: current.totalPredictions,
-    badgeCount: badges.length,
+    badges,
     activityStreak: newStreak,
     followerCount,
     inviteCount,
@@ -425,7 +425,7 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
   const xp = calculateXP({
     correctPredictions,
     totalPredictions,
-    badgeCount: badges.length,
+    badges,
     activityStreak: currentActivityStreak,
     followerCount,
     inviteCount,

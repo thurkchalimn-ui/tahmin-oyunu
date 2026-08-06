@@ -514,12 +514,16 @@ const ACTIVITY_STREAK_MILESTONES = [3, 7, 15, 30, 60, 100, 365];
 const CORRECT_TOTAL_MILESTONES = [50, 100, 250, 500, 1000, 2500, 5000];
 const FOLLOWER_COUNT_MILESTONES = [5, 10, 25, 50, 100, 250, 500];
 
-function calculateXP({ correctPredictions, totalPredictions, badgeCount, activityStreak, followerCount, inviteCount }) {
+// Oyunun adı "Tahmin Serisi" - seri, oyunun kalbi. Bu yüzden seri rozetleri
+// (matchStreak) diğerleri gibi sabit +50 XP yerine, ulaşılan eşikle
+// orantılı XP veriyor (eşik × 10) - bkz. src/utils/xpUtils.ts (birebir aynı mantık).
+function calculateXP({ correctPredictions, totalPredictions, badges, activityStreak, followerCount, inviteCount }) {
   const wrongPredictions = Math.max(0, totalPredictions - correctPredictions);
+  const badgeXP = badges.reduce((sum, b) => sum + (b.type === 'matchStreak' ? b.value * 10 : 50), 0);
   return (
     correctPredictions * 10 +
     wrongPredictions * 2 +
-    badgeCount * 50 +
+    badgeXP +
     activityStreak * 5 +
     followerCount * 5 +
     inviteCount * 50
@@ -579,7 +583,7 @@ async function recalculateAllUsersXP() {
     const inviteCountSnap = await db.collection('users').where('invitedByUid', '==', userDoc.id).count().get();
     const inviteCount = inviteCountSnap.data().count;
 
-    const xp = calculateXP({ correctPredictions, totalPredictions, badgeCount: badges.length, activityStreak, followerCount, inviteCount });
+    const xp = calculateXP({ correctPredictions, totalPredictions, badges, activityStreak, followerCount, inviteCount });
 
     if (xp !== (data.xp ?? 0) || badges.length !== (Array.isArray(data.badges) ? data.badges.length : 0)) {
       await userDoc.ref.update({ xp, badges });
