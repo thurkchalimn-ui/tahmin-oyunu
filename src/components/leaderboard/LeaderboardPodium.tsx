@@ -12,13 +12,18 @@ interface LeaderboardPodiumProps {
 
 const RANK_STYLES = [
   { order: 'order-2', ring: 'ring-scoreboard-amber', size: 'h-[102px] w-[102px]', avatarSize: 'xl' as const },
-  { order: 'order-1', ring: 'ring-pitch-100/40', size: 'h-14 w-14', avatarSize: 'lg' as const },
+  { order: 'order-1', ring: 'ring-pitch-700/20 dark:ring-pitch-100/40', size: 'h-14 w-14', avatarSize: 'lg' as const },
   { order: 'order-3', ring: 'ring-scoreboard-amberDark/50', size: 'h-14 w-14', avatarSize: 'lg' as const },
 ];
 
 /**
  * Liderlik tablosu sayfasının en üstündeki büyük podyum - ilk 3 kullanıcı.
- * ÖNEMLİ: Haftalık/Aylık sekmelerinde (mode='period') veri kaynağı olan
+ * ÖNEMLİ: Arka plan artık açık modda beyaz, koyu modda pitch tonlarında -
+ * önceden `dark:` öneki olmadan sabit koyu renk kullanıldığı için açık moda
+ * geçildiğinde bile koyu kalıyordu. İçerideki metin renkleri de buna göre
+ * güncellendi (beyaz zeminde okunaklı olacak şekilde).
+ *
+ * Ayrıca: Haftalık/Aylık sekmelerinde (mode='period') veri kaynağı olan
  * dönemsel önbellek gerçek XP/bestStreak tutmuyor (sadece o döneme ait
  * doğru/toplam tahmin sayısını tutuyor) - bu yüzden o modda XP/Seri yerine
  * "X doğru" gösterilir, aksi halde alan boş/0 görünürdü.
@@ -27,7 +32,7 @@ export function LeaderboardPodium({ topThree, mode = 'all' }: LeaderboardPodiumP
   if (topThree.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-pitch-700/15 bg-gradient-to-b from-pitch-900 to-pitch-950 p-6 shadow-stadium dark:border-pitch-700">
+    <div className="rounded-2xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-6 shadow-stadium dark:border-pitch-700 dark:from-pitch-900 dark:to-pitch-950">
       <div className="flex items-end justify-center gap-6">
         {topThree.map((user, i) => {
           const style = RANK_STYLES[i];
@@ -39,7 +44,7 @@ export function LeaderboardPodium({ topThree, mode = 'all' }: LeaderboardPodiumP
             >
               <span
                 className={`flex items-center gap-1 font-mono text-sm font-bold ${
-                  i === 0 ? 'text-scoreboard-amber' : 'text-pitch-100/70'
+                  i === 0 ? 'text-scoreboard-amber' : 'text-pitch-700/70 dark:text-pitch-100/70'
                 }`}
               >
                 {i === 0 && <Crown size={16} />}
@@ -48,7 +53,7 @@ export function LeaderboardPodium({ topThree, mode = 'all' }: LeaderboardPodiumP
               <div className={`relative rounded-full ring-2 ${style.ring} ${style.size}`}>
                 <Avatar avatarUrl={user.avatarUrl} size={style.avatarSize} />
               </div>
-              <p className="mt-1 max-w-[110px] truncate text-center font-body text-sm font-semibold text-pitch-100">
+              <p className="mt-1 max-w-[110px] truncate text-center font-body text-sm font-semibold text-pitch-900 dark:text-pitch-100">
                 {user.displayName}
               </p>
               {mode === 'all' ? (
@@ -57,7 +62,7 @@ export function LeaderboardPodium({ topThree, mode = 'all' }: LeaderboardPodiumP
                     <Star size={12} />
                     {user.xp} XP
                   </p>
-                  <p className="flex items-center gap-1 font-mono text-[11px] text-pitch-100/50">
+                  <p className="flex items-center gap-1 font-mono text-[11px] text-pitch-700/50 dark:text-pitch-100/50">
                     <Flame size={11} />
                     Seri: {user.bestStreak}
                   </p>
