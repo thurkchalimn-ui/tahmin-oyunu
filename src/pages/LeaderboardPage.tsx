@@ -7,6 +7,9 @@ import { usePeriodLeaderboard } from '@/hooks/usePeriodLeaderboard';
 import { useUserRank } from '@/hooks/useUserRank';
 import { markLeaderboardSeen } from '@/services/readStatusService';
 import { getCurrentMonthKey, shiftMonthKey, formatMonthLabel } from '@/services/periodLeaderboardService';
+
+/** Ay seçicide gidilebilecek en eski ay - bundan öncesinin verisi yok (sezon başlangıcı). */
+const EARLIEST_MONTH_KEY = '2026-07';
 import { LeaderboardTable } from '@/components/leaderboard/LeaderboardTable';
 import { LeaderboardPodium } from '@/components/leaderboard/LeaderboardPodium';
 import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
@@ -45,6 +48,7 @@ export function LeaderboardPage() {
   }, [tab, profile, rank]);
 
   const isCurrentMonth = monthKey === getCurrentMonthKey();
+  const isEarliestMonth = monthKey === EARLIEST_MONTH_KEY;
 
   // Sayfa açılıp "Genel" listesi yüklenince, kullanıcının o anki sırasını
   // "görüldü" olarak kaydet - BottomNav'daki kırmızı nokta kaybolur. Bu
@@ -87,9 +91,10 @@ export function LeaderboardPage() {
         <div className="mb-4 flex items-center justify-center gap-3">
           <button
             type="button"
-            onClick={() => setMonthKey((k) => shiftMonthKey(k, -1))}
+            onClick={() => setMonthKey((k) => (k === EARLIEST_MONTH_KEY ? k : shiftMonthKey(k, -1)))}
+            disabled={isEarliestMonth}
             aria-label="Önceki ay"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-pitch-700/15 text-pitch-900 transition hover:bg-pitch-700/5 dark:border-pitch-700 dark:text-pitch-100 dark:hover:bg-pitch-700/30"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-pitch-700/15 text-pitch-900 transition hover:bg-pitch-700/5 disabled:cursor-not-allowed disabled:opacity-30 dark:border-pitch-700 dark:text-pitch-100 dark:hover:bg-pitch-700/30"
           >
             <ChevronLeft size={16} />
           </button>
