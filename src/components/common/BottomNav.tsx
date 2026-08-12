@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Trophy, MessageCircle, User, ShieldCheck } from 'lucide-react';
+import { Home, Trophy, MessageCircle, User, ShieldCheck, Target } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUnreadIndicators } from '@/hooks/useUnreadIndicators';
 
@@ -16,6 +16,9 @@ interface NavItem {
  * tab bar'ı hissi verir). Ana Sayfa, Liderlik, Sohbet, Profil ve (admin ise)
  * Admin sekmelerini içerir. İlgili sekmede yeni bir şey varsa (yeni mesaj,
  * sıra değişikliği, sonuçlanan maç) kırmızı bir nokta gösterilir.
+ *
+ * ORTADA, diğerlerinden büyük ve çubuğun üzerine taşan (Instagram/TikTok'taki
+ * "+" butonu gibi) bir "Tahmin Yap" butonu var - /maclar sayfasına götürür.
  */
 export function BottomNav() {
   const { firebaseUser, isAdmin } = useAuth();
@@ -29,6 +32,36 @@ export function BottomNav() {
   if (firebaseUser) items.push({ to: '/profil', label: 'Profil', Icon: User, showDot: hasProfileUnread });
   if (isAdmin) items.push({ to: '/admin', label: 'Admin', Icon: ShieldCheck });
 
+  // Ortada büyük buton doğru yerde dursun diye liste ikiye bölünüyor
+  const splitAt = Math.ceil(items.length / 2);
+  const leftItems = items.slice(0, splitAt);
+  const rightItems = items.slice(splitAt);
+
+  function renderItem({ to, label, Icon, end, showDot }: NavItem) {
+    return (
+      <NavLink
+        key={to}
+        to={to}
+        end={end}
+        className={({ isActive }) =>
+          `relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-mono transition-colors ${
+            isActive
+              ? 'text-scoreboard-amber'
+              : 'text-pitch-700/60 hover:text-scoreboard-amber dark:text-pitch-100/50'
+          }`
+        }
+      >
+        <span className="relative">
+          <Icon className="h-5 w-5" strokeWidth={2} />
+          {showDot && (
+            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-pick-wrong ring-2 ring-pitch-100 dark:ring-pitch-900" />
+          )}
+        </span>
+        {label}
+      </NavLink>
+    );
+  }
+
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-20 border-t border-pitch-700/20 bg-pitch-100/95
@@ -36,28 +69,23 @@ export function BottomNav() {
       aria-label="Ana gezinme"
     >
       <div className="mx-auto flex max-w-4xl items-stretch justify-around">
-        {items.map(({ to, label, Icon, end, showDot }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              `relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-mono transition-colors ${
-                isActive
-                  ? 'text-scoreboard-amber'
-                  : 'text-pitch-700/60 hover:text-scoreboard-amber dark:text-pitch-100/50'
-              }`
-            }
+        {leftItems.map(renderItem)}
+
+        {/* Ortadaki büyük "Tahmin Yap" butonu - çubuğun üzerine taşıyor */}
+        <NavLink to="/maclar" className="relative flex flex-1 flex-col items-center justify-end">
+          <span
+            className="absolute -top-6 flex h-14 w-14 items-center justify-center rounded-full
+              bg-scoreboard-amber text-pitch-950 shadow-glow ring-4 ring-pitch-100 transition
+              hover:brightness-105 dark:ring-pitch-900"
           >
-            <span className="relative">
-              <Icon className="h-5 w-5" strokeWidth={2} />
-              {showDot && (
-                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-pick-wrong ring-2 ring-pitch-100 dark:ring-pitch-900" />
-              )}
-            </span>
-            {label}
-          </NavLink>
-        ))}
+            <Target size={24} strokeWidth={2.5} />
+          </span>
+          <span className="pb-2 pt-9 font-mono text-[10px] font-bold text-scoreboard-amberDark dark:text-scoreboard-amber">
+            Tahmin Yap
+          </span>
+        </NavLink>
+
+        {rightItems.map(renderItem)}
       </div>
     </nav>
   );
