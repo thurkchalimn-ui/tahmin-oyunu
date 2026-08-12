@@ -16,7 +16,7 @@ interface HomeStatStripProps {
 export function HomeStatStrip({ dailyStreak, correctPredictions, rank, xp }: HomeStatStripProps) {
   return (
     <div className="grid grid-cols-4 gap-2">
-      <Tile icon={<Flame size={16} />} value={dailyStreak} label="Giriş Serisi" suffix=" gün" />
+      <Tile icon={<Flame size={16} />} value={dailyStreak} label="Giriş Serisi" />
       <Tile icon={<CheckCircle2 size={16} />} value={correctPredictions} label="Doğru Tahmin" />
       <Tile icon={<BarChart3 size={16} />} value={rank ?? '—'} label="Sıralama" prefix={rank ? '#' : ''} />
       <Tile icon={<Star size={16} />} value={xp} label="Toplam XP" />
