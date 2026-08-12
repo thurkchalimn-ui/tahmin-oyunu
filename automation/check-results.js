@@ -626,14 +626,26 @@ async function recalculateAllUsersXP() {
  * gece yarısı gibi saatlerde Firestore'a gereksiz sorgu atılmasın diye.
  */
 async function isWithinMatchHours(now) {
-  const todayKey = new Date(now).toISOString().slice(0, 10);
+  // ÖNEMLİ (DÜZELTME): "Bugün" Türkiye saatine (UTC+3) göre hesaplanmalı -
+  // ham UTC tarihi kullanmak, akşam/gece maçlarında (TR saatiyle günün geç
+  // saatlerinde ama UTC henüz bir önceki günde olabilir) YANLIŞ güne
+  // bakılmasına yol açıyordu - bu da "bugün hiç maç yok" sanılıp tüm
+  // bildirimlerin (hatırlatma + sonuç) sessizce atlanmasına neden oluyordu.
+  // runOnce()'daki startOfTodayIso hesaplamasıyla AYNI mantık kullanılıyor.
+  const TR_OFFSET_MS = 3 * 60 * 60 * 1000;
+  const trNow = new Date(now + TR_OFFSET_MS);
+  const todayKey = `${trNow.getUTCFullYear()}-${String(trNow.getUTCMonth() + 1).padStart(2, '0')}-${String(trNow.getUTCDate()).padStart(2, '0')}`;
+  const trYesterday = new Date(now + TR_OFFSET_MS - 24 * 60 * 60 * 1000);
   // Dünün tarihi de kontrol edilir - gece yarısına yakın (ör. 23:00) başlayan
   // bir maç, "bugün" sorgusunda hiç görünmez ama hâlâ 4 saatlik penceresinde
   // olabilir (ör. saat 00:30'dayız). Bu sınır durumunu kaçırmamak için.
-  const yesterdayKey = new Date(now - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const yesterdayKey = `${trYesterday.getUTCFullYear()}-${String(trYesterday.getUTCMonth() + 1).padStart(2, '0')}-${String(trYesterday.getUTCDate()).padStart(2, '0')}`;
 
   const snap = await db.collection('matches').where('date', 'in', [yesterdayKey, todayKey]).get();
-  if (snap.empty) return false;
+  if (snap.empty) {
+    console.log(`[check-results] isWithinMatchHours: ${yesterdayKey}/${todayKey} için hiç maç bulunamadı.`);
+    return false;
+  }
 
   const kickoffTimes = snap.docs
     .map((d) => {
@@ -649,7 +661,11 @@ async function isWithinMatchHours(now) {
   // TEK bir pencereye birleştirirdi), HER maç kendi [kickoff-1sa, kickoff+4sa]
   // penceresiyle AYRI AYRI kontrol edilir - şu an herhangi BİRİNİN
   // penceresindeysek yeterlidir.
-  return kickoffTimes.some((t) => now >= t - 60 * 60 * 1000 && now <= t + 240 * 60 * 1000);
+  const result = kickoffTimes.some((t) => now >= t - 60 * 60 * 1000 && now <= t + 240 * 60 * 1000);
+  console.log(
+    `[check-results] isWithinMatchHours: ${kickoffTimes.length} maç bulundu (${yesterdayKey}/${todayKey}), sonuç=${result}`,
+  );
+  return result;
 }
 
 /**
