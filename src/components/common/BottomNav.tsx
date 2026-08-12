@@ -33,7 +33,10 @@ export function BottomNav() {
   if (isAdmin) items.push({ to: '/admin', label: 'Admin', Icon: ShieldCheck });
 
   // Ortada büyük buton doğru yerde dursun diye liste ikiye bölünüyor
-  const splitAt = Math.ceil(items.length / 2);
+  // Sabit olarak 2'de bölünür - Ana Sayfa + Liderlik her zaman solda, Sohbet +
+  // Profil (+ varsa Admin) her zaman sağda kalsın diye (kullanıcı sayısına
+  // göre otomatik ortalama YERİNE sabit bir bölünme noktası).
+  const splitAt = 2;
   const leftItems = items.slice(0, splitAt);
   const rightItems = items.slice(splitAt);
 
