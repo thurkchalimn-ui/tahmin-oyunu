@@ -35,11 +35,11 @@ export function LeaderboardTable({ users, currentUserId, mode = 'all', ownRow, r
     <div className="flex flex-col gap-2">
       <div className="overflow-hidden rounded-xl border border-pitch-700/15 dark:border-pitch-700">
         {mode === 'all' && (
-          <div className="flex items-center gap-3 bg-pitch-700/5 px-4 py-2 font-mono text-[10px] uppercase tracking-wide text-pitch-700/60 dark:bg-pitch-800 dark:text-pitch-100/50">
+          <div className="flex items-center gap-3 bg-pitch-700/5 px-4 py-2 font-mono text-[9px] uppercase tracking-wide text-pitch-700/60 dark:bg-pitch-800 dark:text-pitch-100/50">
             <span className="w-8">Sıra</span>
             <span className="flex-1">Oyuncu</span>
-            <span className="w-20 text-right">XP</span>
-            <span className="w-20 text-right">En İyi Seri</span>
+            <span className="w-12 text-right">XP</span>
+            <span className="w-10 text-right">Seri</span>
             <span className="w-4" />
           </div>
         )}
@@ -106,12 +106,12 @@ function Row({
 
       {mode === 'all' ? (
         <>
-          <span className="flex w-20 shrink-0 items-center justify-end gap-1 font-mono text-sm font-bold text-scoreboard-amber">
-            <Star size={12} />
+          <span className="flex w-12 shrink-0 items-center justify-end gap-0.5 font-mono text-xs font-bold text-scoreboard-amber">
+            <Star size={11} />
             {user.xp}
           </span>
-          <span className="flex w-20 shrink-0 items-center justify-end gap-1 font-mono text-xs text-pitch-700/70 dark:text-pitch-100/60">
-            <Flame size={11} className="text-scoreboard-amber" />
+          <span className="flex w-10 shrink-0 items-center justify-end gap-0.5 font-mono text-[11px] text-pitch-700/70 dark:text-pitch-100/60">
+            <Flame size={10} className="text-scoreboard-amber" />
             {user.bestStreak}
           </span>
         </>
