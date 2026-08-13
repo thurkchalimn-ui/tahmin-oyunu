@@ -472,14 +472,15 @@ async function runOnce() {
   }
 
   // --- 3) Canlı skor güncelleme (sadece FOOTBALL_DATA_KEY tanımlıysa) ---
-  // ÖNEMLİ: API-Football'un ücretsiz planı günde sadece 100 istek veriyor.
-  // Döngü 5 dakikada bir çalıştığı için, HER turda çağırmak günü çok hızlı
-  // tüketirdi (5 saat 45 dakikalık tek bir çalışmada bile ~69 çağrı yapardı).
-  // Bunun yerine en fazla 15 dakikada bir gerçek bir API çağrısı yapılır.
-  if (FOOTBALL_DATA_KEY && now - lastLiveScoreFetchAt >= LIVE_SCORE_FETCH_INTERVAL_MS) {
-    lastLiveScoreFetchAt = now;
-    await updateLiveScores(allPending, now);
-  }
+  // CANLI SKOR ÖZELLİĞİ İPTAL EDİLDİ (kullanıcı isteğiyle) - artık maçlar
+  // sadece admin panelinden elle sonuçlandırılıyor, football-data.org'a hiç
+  // istek atılmıyor. Fonksiyonun kendisi (updateLiveScores) silinmedi,
+  // sadece çağrısı kapatıldı - ileride tekrar istenirse bu bloğu geri açmak
+  // yeterli olur.
+  // if (FOOTBALL_DATA_KEY && now - lastLiveScoreFetchAt >= LIVE_SCORE_FETCH_INTERVAL_MS) {
+  //   lastLiveScoreFetchAt = now;
+  //   await updateLiveScores(allPending, now);
+  // }
 
   console.log('[check-results] Tur tamamlandı.');
 }
