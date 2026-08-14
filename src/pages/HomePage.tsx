@@ -1,15 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMatches } from '@/hooks/useMatches';
 import { usePredictions } from '@/hooks/usePredictions';
 import { useWeeklyTopThree } from '@/hooks/useWeeklyTopThree';
 import { useRecentResults } from '@/hooks/useRecentResults';
 import { useUserRank } from '@/hooks/useUserRank';
-import { StreakBadge } from '@/components/leaderboard/StreakBadge';
+import { StreakHeroBanner } from '@/components/home/StreakHeroBanner';
 import { HomeMatchBanner } from '@/components/home/HomeMatchBanner';
 import { HomeStatStrip } from '@/components/home/HomeStatStrip';
 import { WeeklyPodium } from '@/components/home/WeeklyPodium';
 import { RecentResultsPreview } from '@/components/home/RecentResultsPreview';
+import { RecentBadgesPreview } from '@/components/profile/RecentBadgesPreview';
 import { AdBanner } from '@/components/common/AdBanner';
 import { todayKey } from '@/utils/dateUtils';
 
@@ -24,12 +25,11 @@ const STADIUM_GLOW_STYLE = {
 };
 
 /**
- * Ana sayfa: ÖZET sayfası - bugünün maç bannerı, istatistik şeridi, güncel
- * seri, haftalık podyum ve son sonuçlar önizlemesi. Maçların listelendiği ve
- * tahmin yapıldığı yer artık burası DEĞİL - "Tahmin Yap" butonu ayrı bir
- * sayfaya (/maclar, bkz. MatchesPage.tsx) yönlendirir. Burada sadece
- * bugünün maç sayısı/tahmin edilen sayısını hesaplamak için hafif bir
- * maç+tahmin sorgusu yapılır, liste hiç render edilmez.
+ * Ana sayfa: ÖZET sayfası. Düzen (üstten alta): büyük seri bandı (Güncel Serin
+ * + En İyi Seri), istatistik şeridi, bugünün maç bannerı, rozetler önizlemesi,
+ * en altta haftalık/genel liderlik podyumu ve son sonuçlar. Maçların
+ * listelendiği ve tahmin yapıldığı yer artık burası DEĞİL - "Tahmin Yap"
+ * butonu ayrı bir sayfaya (/maclar, bkz. MatchesPage.tsx) yönlendirir.
  */
 export function HomePage() {
   const { firebaseUser, profile } = useAuth();
@@ -57,12 +57,7 @@ export function HomePage() {
       />
 
       <div className="relative mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6">
-        {todayBannerData && (
-          <HomeMatchBanner
-            predictedCount={todayBannerData.predictedCount}
-            totalCount={todayBannerData.totalCount}
-          />
-        )}
+        {profile && <StreakHeroBanner currentStreak={profile.currentStreak ?? 0} bestStreak={profile.bestStreak ?? 0} />}
 
         {profile && (
           <HomeStatStrip
@@ -73,12 +68,14 @@ export function HomePage() {
           />
         )}
 
-        <section className="rounded-xl border border-pitch-700/15 bg-white p-5 shadow-stadium dark:border-pitch-700 dark:bg-pitch-800">
-          <p className="mb-2 font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/50">
-            Güncel Serin
-          </p>
-          <StreakBadge currentStreak={profile?.currentStreak ?? 0} />
-        </section>
+        {todayBannerData && (
+          <HomeMatchBanner
+            predictedCount={todayBannerData.predictedCount}
+            totalCount={todayBannerData.totalCount}
+          />
+        )}
+
+        {profile && <RecentBadgesPreview profile={profile} />}
 
         {(weeklyTopThree.length > 0 || recentResults.length > 0) && (
           <div className="flex flex-col gap-4">
