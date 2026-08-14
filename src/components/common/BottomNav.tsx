@@ -69,6 +69,7 @@ export function BottomNav() {
     <nav
       className="fixed inset-x-0 bottom-0 z-20 border-t border-pitch-700/20 bg-pitch-100/95
         backdrop-blur dark:border-pitch-700 dark:bg-pitch-900/95"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       aria-label="Ana gezinme"
     >
       <div className="mx-auto flex max-w-4xl items-stretch justify-around">
