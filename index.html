@@ -3,21 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-
     <!-- iPhone/iPad "Ana Ekrana Ekle" simgesi - bu olmadan tarayıcı otomatik olarak
          sayfa başlığının ilk harfini kullanır. Şeffaflık desteklenmediği için PNG kullanılır. -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Tahmin Serisi" />
-
     <!-- Android/PWA: ana ekrana ekleme, uygulama simgesi ve tema rengi -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0E1A16" />
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- ÖNEMLİ: maximum-scale=1 ve user-scalable=no, kullanıcının parmaklarıyla
+         ekranı büyütüp küçültmesini (pinch-zoom) engeller - "sayfa büyüyor,
+         tam görünmüyor" sorununun bir kısmı buradan kaynaklanıyordu.
+         viewport-fit=cover, iPhone'un çentik/Dynamic Island bölgesinde
+         içeriğin doğru hizalanmasını sağlar. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="description" content="Günlük 20 maç tahmin oyunu - 15 maçlık seriyi tamamla, rozetini kazan." />
     <title>Tahmin Serisi</title>
+    <!-- ÖNEMLİ: iOS Safari, yazı boyutu 16px'den KÜÇÜK olan bir input/textarea'ya
+         dokunulduğunda sayfayı otomatik olarak yakınlaştırır (kullanıcı isteği
+         dışında) - "ekran büyüyor" sorununun asıl kaynağı genelde budur.
+         Aşağıdaki kural, TÜM form elemanlarını en az 16px yaparak bu otomatik
+         yakınlaştırmayı baştan engeller (görsel boyut Tailwind sınıflarıyla
+         ayrıca küçük gösterilebilir, bu sadece iOS'un tetiklenme eşiğini geçiyor). -->
+    <style>
+      input, textarea, select { font-size: 16px !important; }
+    </style>
     <!-- Skorbord temalı fontlar -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -25,6 +36,9 @@
       href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap"
       rel="stylesheet"
     />
+    <!-- Google AdSense - site sahipliği doğrulama + reklam gösterimi -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4349493488605502"
+     crossorigin="anonymous"></script>
   </head>
   <body class="bg-pitch-100 dark:bg-pitch-900">
     <div id="root"></div>
