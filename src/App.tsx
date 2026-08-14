@@ -5,6 +5,7 @@ import { Navbar } from '@/components/common/Navbar';
 import { BottomNav } from '@/components/common/BottomNav';
 import { EmailVerificationBanner } from '@/components/common/EmailVerificationBanner';
 import { InstallPrompt } from '@/components/common/InstallPrompt';
+import { Analytics } from '@vercel/analytics/react';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
 import { HomePage } from '@/pages/HomePage';
 import { MatchesPage } from '@/pages/MatchesPage';
@@ -97,6 +98,7 @@ export default function App() {
             </main>
             <BottomNav />
             <InstallPrompt />
+            <Analytics />
           </div>
         </BrowserRouter>
       </AuthProvider>
