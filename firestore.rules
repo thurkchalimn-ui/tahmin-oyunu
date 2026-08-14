@@ -43,7 +43,7 @@ service cloud.firestore {
       allow update: if isAdmin() ||
         (isOwner(uid) &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['displayName', 'updatedAt', 'lastSeenChatAt', 'lastSeenRank', 'lastSeenProfileAt', 'fcmTokens', 'avatarUrl', 'notifyOnResult', 'notifyOnReminder', 'lastActiveAt', 'activityStreak', 'lastActiveDateKey', 'badges', 'xp'])) ||
+            .hasOnly(['displayName', 'updatedAt', 'lastSeenChatAt', 'lastSeenRank', 'lastSeenProfileAt', 'fcmTokens', 'avatarUrl', 'notifyOnResult', 'notifyOnReminder', 'lastActiveAt', 'activityStreak', 'lastActiveDateKey', 'badges', 'xp', 'socialFollowClaimed'])) ||
         // Davet linkiyle kayıt olan kullanıcı, davet edeni SADECE BİR KEZ
         // (henüz hiç ayarlanmamışsa) kaydedebilir - sonradan değiştirilemez,
         // böylece kayıt sonrası referansı manipüle etmek mümkün olmaz.
@@ -74,6 +74,24 @@ service cloud.firestore {
       allow create: if isOwner(request.resource.data.followerUid);
       allow update: if false;
       allow delete: if isOwner(resource.data.followerUid);
+    }
+
+    // duels/{id}: arkadaşlar arası 1v1 tahmin düellosu. Meydan okuyan
+    // (challengerUid) daveti oluşturur; sadece rakip (opponentUid) daveti
+    // kabul/red edebilir (status günceller). Sonuç hesaplaması (score,
+    // winnerUid) SADECE otomasyon script'i (Admin SDK, kuralları bypass eder)
+    // tarafından yazılır - istemci bu alanları asla değiştiremez, aksi halde
+    // bir kullanıcı kendini kazanan ilan edebilirdi.
+    match /duels/{duelId} {
+      allow read: if isOwner(resource.data.challengerUid) || isOwner(resource.data.opponentUid);
+      allow create: if isOwner(request.resource.data.challengerUid) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.opponentUid != request.resource.data.challengerUid;
+      allow update: if isOwner(resource.data.opponentUid) &&
+        resource.data.status == 'pending' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt']) &&
+        (request.resource.data.status == 'accepted' || request.resource.data.status == 'declined');
+      allow delete: if false;
     }
 
     // leagues/{leagueId}: kullanıcıların kurduğu özel (arkadaş grubu) ligler.

@@ -80,6 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             badges: p.badges,
             correctPredictions: p.correctPredictions,
             totalPredictions: p.totalPredictions,
+            xp: p.xp,
+            socialFollowClaimed: p.socialFollowClaimed,
           }).catch(() => {});
         }
       },

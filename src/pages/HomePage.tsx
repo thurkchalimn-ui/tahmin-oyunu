@@ -11,6 +11,7 @@ import { HomeStatStrip } from '@/components/home/HomeStatStrip';
 import { WeeklyPodium } from '@/components/home/WeeklyPodium';
 import { RecentResultsPreview } from '@/components/home/RecentResultsPreview';
 import { RecentBadgesPreview } from '@/components/profile/RecentBadgesPreview';
+import { SocialFollowCard } from '@/components/home/SocialFollowCard';
 import { AdBanner } from '@/components/common/AdBanner';
 import { todayKey } from '@/utils/dateUtils';
 
@@ -76,6 +77,8 @@ export function HomePage() {
         )}
 
         {profile && <RecentBadgesPreview profile={profile} />}
+
+        <SocialFollowCard />
 
         {(weeklyTopThree.length > 0 || recentResults.length > 0) && (
           <div className="flex flex-col gap-4">

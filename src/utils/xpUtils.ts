@@ -10,6 +10,7 @@ import type { Badge } from '@/types';
  *  - Günlük giriş serisinin her günü: +5 XP
  *  - Kazanılan her takipçi: +5 XP
  *  - Davet ettiğin her arkadaş (kayıt olduysa): +50 XP
+ *  - Sosyal medya hesaplarımızı (Instagram/Twitter) takip etmek: +25 XP her biri
  *
  * ÖNEMLİ: Oyunun adı "Tahmin Serisi" - yani SERİ, oyunun kalbi. Bu yüzden
  * seri rozetleri diğerleri gibi sabit +50 XP vermek yerine, ulaşılan eşikle
@@ -26,6 +27,7 @@ export function calculateXP(input: {
   activityStreak: number;
   followerCount: number;
   inviteCount: number;
+  socialFollowCount: number; // 0-2 (Instagram + Twitter, her biri en fazla 1 kez sayılır)
 }): number {
   const wrongPredictions = Math.max(0, input.totalPredictions - input.correctPredictions);
 
@@ -40,7 +42,8 @@ export function calculateXP(input: {
     badgeXP +
     input.activityStreak * 5 +
     input.followerCount * 5 +
-    input.inviteCount * 50
+    input.inviteCount * 50 +
+    input.socialFollowCount * 25
   );
 }
 

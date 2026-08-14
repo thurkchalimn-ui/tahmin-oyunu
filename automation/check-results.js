@@ -541,7 +541,7 @@ const FOLLOWER_COUNT_MILESTONES = [5, 10, 25, 50, 100, 250, 500];
 // Oyunun adı "Tahmin Serisi" - seri, oyunun kalbi. Bu yüzden seri rozetleri
 // (matchStreak) diğerleri gibi sabit +50 XP yerine, ulaşılan eşikle
 // orantılı XP veriyor (eşik × 10) - bkz. src/utils/xpUtils.ts (birebir aynı mantık).
-function calculateXP({ correctPredictions, totalPredictions, badges, activityStreak, followerCount, inviteCount }) {
+function calculateXP({ correctPredictions, totalPredictions, badges, activityStreak, followerCount, inviteCount, socialFollowCount }) {
   const wrongPredictions = Math.max(0, totalPredictions - correctPredictions);
   const badgeXP = badges.reduce((sum, b) => sum + (b.type === 'matchStreak' ? b.value * 10 : 50), 0);
   return (
@@ -550,7 +550,8 @@ function calculateXP({ correctPredictions, totalPredictions, badges, activityStr
     badgeXP +
     activityStreak * 5 +
     followerCount * 5 +
-    inviteCount * 50
+    inviteCount * 50 +
+    socialFollowCount * 25
   );
 }
 
@@ -607,7 +608,10 @@ async function recalculateAllUsersXP() {
     const inviteCountSnap = await db.collection('users').where('invitedByUid', '==', userDoc.id).count().get();
     const inviteCount = inviteCountSnap.data().count;
 
-    const xp = calculateXP({ correctPredictions, totalPredictions, badges, activityStreak, followerCount, inviteCount });
+    const socialFollowClaimed = data.socialFollowClaimed || {};
+    const socialFollowCount = Object.values(socialFollowClaimed).filter(Boolean).length;
+
+    const xp = calculateXP({ correctPredictions, totalPredictions, badges, activityStreak, followerCount, inviteCount, socialFollowCount });
 
     if (xp !== (data.xp ?? 0) || badges.length !== (Array.isArray(data.badges) ? data.badges.length : 0)) {
       await userDoc.ref.update({ xp, badges });
@@ -757,6 +761,78 @@ function sleep(ms) {
 const LOOP_INTERVAL_MS = 5 * 60 * 1000; // Tur arası bekleme: 5 dakika
 const MAX_RUNTIME_MS = 5 * 60 * 60 * 1000 + 45 * 60 * 1000; // ~5 saat 45 dakika (6 saatlik sınırın altında güvenli pay)
 
+/**
+ * 'accepted' durumundaki düelloları tarar - eğer 5 maçın HEPSİ sonuçlanmışsa
+ * (result != null), her iki oyuncunun bu 5 maçtaki doğru tahmin sayısını
+ * sayar (predictions koleksiyonundan `${uid}_${matchId}` ID'siyle doğrudan
+ * okuyarak - sorgu değil, hızlı doküman okuması), kazananı belirler,
+ * düelloyu 'completed' yapar ve her iki oyuncuya sonuç bildirimi gönderir.
+ * ÖNEMLİ: Bu, düellonun kazananını belirleyen TEK yer - istemci tarafında
+ * hiçbir şekilde yazılamaz (bkz. firestore.rules).
+ */
+async function resolveDuels() {
+  const pendingSnap = await db.collection('duels').where('status', '==', 'accepted').get();
+  if (pendingSnap.empty) return;
+
+  let resolvedCount = 0;
+
+  for (const duelDoc of pendingSnap.docs) {
+    const duel = duelDoc.data();
+    const matchIds = duel.matchIds || [];
+    if (matchIds.length !== 5) continue;
+
+    const matchSnaps = await Promise.all(matchIds.map((id) => db.collection('matches').doc(id).get()));
+    const allResolved = matchSnaps.every((s) => s.exists && s.data().result != null);
+    if (!allResolved) continue;
+
+    async function countCorrect(uid) {
+      let correct = 0;
+      for (const matchId of matchIds) {
+        const predSnap = await db.collection('predictions').doc(`${uid}_${matchId}`).get();
+        if (predSnap.exists && predSnap.data().isCorrect === true) correct += 1;
+      }
+      return correct;
+    }
+
+    const challengerScore = await countCorrect(duel.challengerUid);
+    const opponentScore = await countCorrect(duel.opponentUid);
+    const winnerUid =
+      challengerScore > opponentScore ? duel.challengerUid : opponentScore > challengerScore ? duel.opponentUid : null;
+
+    const nowIso = new Date().toISOString();
+    await duelDoc.ref.update({
+      status: 'completed',
+      challengerScore,
+      opponentScore,
+      winnerUid,
+      completedAt: nowIso,
+    });
+
+    const resultText =
+      winnerUid === duel.challengerUid
+        ? `${duel.challengerDisplayName} kazandı! (${challengerScore}-${opponentScore})`
+        : winnerUid === duel.opponentUid
+          ? `${duel.opponentDisplayName} kazandı! (${opponentScore}-${challengerScore})`
+          : `Berabere bitti! (${challengerScore}-${opponentScore})`;
+
+    for (const uid of [duel.challengerUid, duel.opponentUid]) {
+      await db.collection('notifications').add({
+        userId: uid,
+        type: 'duel',
+        title: '⚔️ Düello Sonuçlandı!',
+        body: resultText,
+        isRead: false,
+        link: `/duello/${duelDoc.id}`,
+        createdAt: new Date(),
+      });
+    }
+
+    resolvedCount += 1;
+  }
+
+  console.log(`[check-results] Düello sonuçlandırma: ${resolvedCount} düello tamamlandı.`);
+}
+
 async function main() {
   await acquireLockOrExit();
 
@@ -788,6 +864,11 @@ async function main() {
         await cachePeriodLeaderboard('month');
       } catch (err) {
         console.error('[check-results] Liderlik önbelleği güncellenemedi:', err);
+      }
+      try {
+        await resolveDuels();
+      } catch (err) {
+        console.error('[check-results] Düello sonuçlandırma başarısız:', err);
       }
     }
 

@@ -74,6 +74,7 @@ export interface UserProfile {
   activityStreak?: number; // Art arda kaç gündür uygulamayı açtığı (bir gün atlarsa sıfırlanır)
   lastActiveDateKey?: string | null; // activityStreak'in son sayıldığı gün ('YYYY-MM-DD')
   invitedByUid?: string | null; // Bu kullanıcıyı davet eden kişinin uid'si (davet linkiyle kayıt olduysa)
+  socialFollowClaimed?: { instagram?: boolean; twitter?: boolean }; // Dürüstlük esaslı - "Takip Ettim" butonuna basıldı mı
   xp: number; // Deneyim puanı - doğru/yanlış tahmin, rozet ve giriş serisinden hesaplanır (bkz. utils/xpUtils.ts)
   level: number; // xp'den TÜRETİLİR (Firestore'da ayrıca saklanmaz) - bkz. getLevelInfo()
   createdAt: string;
@@ -90,6 +91,28 @@ export interface League {
   createdAt: string;
 }
 
+// Arkadaşlar arası 1v1 tahmin düellosu - iki oyuncu AYNI 5 maçı tahmin eder,
+// kim daha çok doğru bilirse kazanır. Ödül yok, sadece sonuç/gurur meselesi.
+export type DuelStatus = 'pending' | 'accepted' | 'declined' | 'completed';
+
+export interface Duel {
+  id: string;
+  challengerUid: string;
+  challengerDisplayName: string;
+  challengerAvatarUrl: string | null;
+  opponentUid: string;
+  opponentDisplayName: string;
+  opponentAvatarUrl: string | null;
+  matchIds: string[]; // Tam olarak 5 maç
+  status: DuelStatus;
+  challengerScore: number | null; // Sadece status='completed' iken dolu
+  opponentScore: number | null;
+  winnerUid: string | null; // null = beraberlik (status='completed' iken anlamlı)
+  createdAt: string;
+  respondedAt: string | null;
+  completedAt: string | null;
+}
+
 export interface AsyncState<T> {
   data: T | null;
   loading: boolean;
@@ -98,7 +121,7 @@ export interface AsyncState<T> {
 
 // Uygulama içi bildirim merkezi (zil ikonu) - notificationQueue'dan farklı,
 // bu kalıcı bir geçmiş, sadece push gönderimi için değil.
-export type NotificationType = 'result' | 'badge' | 'follow' | 'reminder' | 'levelup';
+export type NotificationType = 'result' | 'badge' | 'follow' | 'reminder' | 'levelup' | 'duel';
 
 export interface AppNotification {
   id: string;

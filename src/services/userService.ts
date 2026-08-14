@@ -199,6 +199,43 @@ export async function updateDisplayName(uid: string, displayName: string): Promi
 }
 
 /**
+ * Kullanıcının "Takip Ettim" butonuna basmasıyla çağrılır (Instagram/Twitter)
+ * - dürüstlük esaslı bir sistem, gerçekten takip edildiği API üzerinden
+ * doğrulanmıyor (Meta/X'in resmi API onayı gerektirir, çok karmaşık bir
+ * süreç). Her platform için en fazla BİR KEZ +25 XP kazandırır. XP'yi
+ * hemen (bir sonraki tahmin/günlük giriş beklemeden) yansıtmak için burada
+ * doğrudan yeniden hesaplanır.
+ */
+export async function claimSocialFollow(uid: string, platform: 'instagram' | 'twitter'): Promise<void> {
+  const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) return;
+  const data = userSnap.data();
+
+  const currentClaimed = (data.socialFollowClaimed as { instagram?: boolean; twitter?: boolean }) ?? {};
+  if (currentClaimed[platform]) return; // Zaten alınmış, tekrar verme
+
+  const newClaimed = { ...currentClaimed, [platform]: true };
+  const socialFollowCount = Object.values(newClaimed).filter(Boolean).length;
+
+  const followerCount = await getFollowerCountInline(uid);
+  const inviteCount = await getInviteCountInline(uid);
+  const badges = normalizeBadges(data.badges);
+
+  const xp = calculateXP({
+    correctPredictions: (data.correctPredictions as number) ?? 0,
+    totalPredictions: (data.totalPredictions as number) ?? 0,
+    badges,
+    activityStreak: (data.activityStreak as number) ?? 0,
+    followerCount,
+    inviteCount,
+    socialFollowCount,
+  });
+
+  await updateDoc(userRef, { socialFollowClaimed: newClaimed, xp });
+}
+
+/**
  * Kullanıcının profil görselini (bir futbolcu fotoğrafı, takım logosu ya da
  * başka bir görsel linki) günceller. Boş bırakılırsa avatar kaldırılır ve
  * varsayılan ⚽ ikonuna dönülür.
@@ -251,6 +288,7 @@ export async function touchDailyActivity(
     correctPredictions: number;
     totalPredictions: number;
     xp: number;
+    socialFollowClaimed?: { instagram?: boolean; twitter?: boolean };
   },
 ): Promise<void> {
   const todayKey = toDateKey(new Date());
@@ -287,6 +325,8 @@ export async function touchDailyActivity(
     }
   }
 
+  const socialFollowCount = Object.values(current.socialFollowClaimed ?? {}).filter(Boolean).length;
+
   const xp = calculateXP({
     correctPredictions: current.correctPredictions,
     totalPredictions: current.totalPredictions,
@@ -294,6 +334,7 @@ export async function touchDailyActivity(
     activityStreak: newStreak,
     followerCount,
     inviteCount,
+    socialFollowCount,
   });
 
   await notifyNewBadgesAndLevelUp(uid, newlyEarnedBadges, current.xp, xp);
@@ -422,6 +463,11 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
     }
   }
 
+  const socialFollowClaimed = userSnap.data()?.socialFollowClaimed as
+    | { instagram?: boolean; twitter?: boolean }
+    | undefined;
+  const socialFollowCount = Object.values(socialFollowClaimed ?? {}).filter(Boolean).length;
+
   const xp = calculateXP({
     correctPredictions,
     totalPredictions,
@@ -429,6 +475,7 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
     activityStreak: currentActivityStreak,
     followerCount,
     inviteCount,
+    socialFollowCount,
   });
 
   await notifyNewBadgesAndLevelUp(uid, newlyEarnedBadges, oldXp, xp);
