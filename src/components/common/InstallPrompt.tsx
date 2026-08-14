@@ -47,8 +47,9 @@ export function InstallPrompt() {
         <div className="pr-4">
           <p className="mb-2 font-display text-sm font-semibold text-pitch-100">📲 Ana Ekrana Ekle</p>
           <p className="flex flex-wrap items-center gap-1 font-body text-xs text-pitch-100/70">
-            Alttaki <Share size={14} className="inline text-scoreboard-amber" /> paylaş simgesine dokun, sonra
-            <PlusSquare size={14} className="inline text-scoreboard-amber" /> "Ana Ekrana Ekle" seçeneğine bas.
+            <span className="font-bold text-scoreboard-amber">⋯</span> noktalara dokun, sonra
+            <Share size={14} className="inline text-scoreboard-amber" /> Paylaş'ı seç ve
+            <PlusSquare size={14} className="inline text-scoreboard-amber" /> "Ana Ekrana Ekle"ye bas — uygulaman hazır!
           </p>
         </div>
       )}
