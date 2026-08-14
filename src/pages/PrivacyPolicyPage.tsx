@@ -84,7 +84,12 @@ export function PrivacyPolicyPage() {
         <section>
           <h2 className="mb-1 font-display text-base font-semibold">8. İletişim</h2>
           <p className="text-pitch-700/80 dark:text-pitch-100/70">
-            Sorularınız için sohbet kanalından bir admin ile iletişime geçebilirsiniz.
+            Sorularınız için{' '}
+            <Link to="/iletisim" className="text-scoreboard-amber hover:underline">
+              Bize Ulaşın
+            </Link>{' '}
+            sayfasından bize e-posta gönderebilir ya da uygulama içindeki sohbet kanalından bir
+            admin ile iletişime geçebilirsiniz.
           </p>
         </section>
       </div>

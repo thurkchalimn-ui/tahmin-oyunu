@@ -20,6 +20,7 @@ import { LeaguesPage } from '@/pages/LeaguesPage';
 import { LeaguePage } from '@/pages/LeaguePage';
 import { AdminPage } from '@/pages/AdminPage';
 import { PrivacyPolicyPage } from '@/pages/PrivacyPolicyPage';
+import { ContactPage } from '@/pages/ContactPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 /** Uygulamanın kök bileşeni: provider'ları kurar ve rota tablosunu tanımlar. */
@@ -42,6 +43,7 @@ export default function App() {
                 <Route path="/oyuncu/:uid" element={<PlayerProfilePage />} />
                 <Route path="/oyuncu/:uid/rozetler" element={<BadgesPage />} />
                 <Route path="/gizlilik" element={<PrivacyPolicyPage />} />
+                <Route path="/iletisim" element={<ContactPage />} />
                 <Route
                   path="/ligler"
                   element={
