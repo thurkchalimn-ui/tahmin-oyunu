@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Calendar, ArrowRight } from 'lucide-react';
 
 interface HomeMatchBannerProps {
   predictedCount: number;
@@ -7,8 +8,9 @@ interface HomeMatchBannerProps {
 
 /**
  * Ana sayfanın en üstündeki büyük, vurgulu banner - bugün kaç maça tahmin
- * yapıldığını gösterir ve "Tahmin Yap" butonuyla maçların listelendiği ayrı
- * sayfaya (/maclar) yönlendirir. ÖNEMLİ: Arka plan artık açık modda beyaz,
+ * yapıldığını gösterir. Başlıkta takvim ikonu var; altta ayrıca "Günün
+ * Maçlarını Gör →" satırı, tıklanınca maçların listelendiği ayrı sayfaya
+ * (/maclar) yönlendiriyor. ÖNEMLİ: Arka plan artık açık modda beyaz,
  * koyu modda pitch tonlarında - önceden `dark:` öneki olmadan sabit koyu
  * renk kullanıldığı için açık moda geçildiğinde bile koyu kalıyordu.
  */
@@ -26,7 +28,8 @@ export function HomeMatchBanner({ predictedCount, totalCount }: HomeMatchBannerP
         className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-scoreboard-amber opacity-30 blur-2xl"
       />
 
-      <p className="relative font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/60">
+      <p className="relative flex items-center gap-2 font-mono text-xs uppercase tracking-wide text-pitch-700/60 dark:text-pitch-100/60">
+        <Calendar size={15} className="text-scoreboard-amber" />
         Bugünün Maçları
       </p>
       <p className="relative mt-1 font-display text-4xl font-bold text-pitch-900 dark:text-pitch-100">
@@ -41,10 +44,11 @@ export function HomeMatchBanner({ predictedCount, totalCount }: HomeMatchBannerP
 
       <Link
         to="/maclar"
-        className="relative mt-4 inline-block rounded-lg bg-scoreboard-amber px-5 py-2 font-display text-sm
-          font-semibold text-pitch-950 shadow-glow transition hover:brightness-105"
+        className="relative mt-4 flex items-center gap-1.5 font-display text-sm font-semibold text-scoreboard-amberDark
+          transition hover:gap-2.5 dark:text-scoreboard-amber"
       >
-        Tahmin Yap →
+        Günün Maçlarını Gör
+        <ArrowRight size={16} />
       </Link>
     </section>
   );

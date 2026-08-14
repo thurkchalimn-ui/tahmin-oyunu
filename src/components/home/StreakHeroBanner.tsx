@@ -18,19 +18,23 @@ export function StreakHeroBanner({ currentStreak, bestStreak }: StreakHeroBanner
         className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/15 blur-2xl"
       />
       <div className="relative grid grid-cols-2 divide-x divide-pitch-950/15">
-        <div className="flex flex-col items-center gap-1 pr-2">
-          <span className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-pitch-950/70">
-            <Flame size={13} />
+        <div className="flex flex-col items-center gap-1.5 pr-2">
+          <span className="font-mono text-[11px] font-bold uppercase tracking-wide text-pitch-950/70">
             Güncel Serin
           </span>
-          <span className="font-display text-4xl font-bold text-pitch-950">{currentStreak}</span>
+          <span className="flex items-center gap-2">
+            <Flame size={32} className="text-pitch-950/80" />
+            <span className="font-display text-4xl font-bold text-pitch-950">{currentStreak}</span>
+          </span>
         </div>
-        <div className="flex flex-col items-center gap-1 pl-2">
-          <span className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-pitch-950/70">
-            <Trophy size={13} />
+        <div className="flex flex-col items-center gap-1.5 pl-2">
+          <span className="font-mono text-[11px] font-bold uppercase tracking-wide text-pitch-950/70">
             En İyi Seri
           </span>
-          <span className="font-display text-4xl font-bold text-pitch-950">{bestStreak}</span>
+          <span className="flex items-center gap-2">
+            <Trophy size={32} className="text-pitch-950/80" />
+            <span className="font-display text-4xl font-bold text-pitch-950">{bestStreak}</span>
+          </span>
         </div>
       </div>
     </section>
