@@ -34,10 +34,13 @@ export function usePwaInstall() {
     const isAndroidChrome = /Android/.test(ua) && /Chrome/.test(ua) && !/Edg|OPR|SamsungBrowser/.test(ua);
     setPlatform(isIOS ? 'ios' : isAndroidChrome ? 'android-chrome' : 'other');
 
-    // Kullanıcı daha önce kapattıysa (7 gün boyunca) tekrar gösterme
+    // Kullanıcı kalıcı olarak kapattıysa (aynı gün içinde 10 kez X'e bastıysa)
+    // bir daha HİÇ gösterme. Aksi halde, son kapatmadan bu yana 7 gün
+    // geçmediyse geçici olarak gösterme.
+    const permanentlyDismissed = localStorage.getItem('pwaInstallPermanentlyDismissed') === 'true';
     const dismissedAt = localStorage.getItem('pwaInstallDismissedAt');
     const recentlyDismissed = dismissedAt && Date.now() - Number(dismissedAt) < 7 * 24 * 60 * 60 * 1000;
-    setDismissed(Boolean(recentlyDismissed));
+    setDismissed(permanentlyDismissed || Boolean(recentlyDismissed));
 
     function handleBeforeInstallPrompt(e: Event) {
       e.preventDefault();
@@ -56,7 +59,20 @@ export function usePwaInstall() {
   }
 
   function dismiss() {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const lastDismissDay = localStorage.getItem('pwaInstallDismissDay');
+    const countToday = lastDismissDay === todayKey ? Number(localStorage.getItem('pwaInstallDismissCount') ?? '0') + 1 : 1;
+
+    localStorage.setItem('pwaInstallDismissDay', todayKey);
+    localStorage.setItem('pwaInstallDismissCount', String(countToday));
     localStorage.setItem('pwaInstallDismissedAt', String(Date.now()));
+
+    // Aynı gün içinde 10 kez kapatıldıysa - bu kullanıcı açıkça istemiyor,
+    // bir daha HİÇ gösterme (7 günlük geçici bekleme yerine kalıcı gizleme).
+    if (countToday >= 10) {
+      localStorage.setItem('pwaInstallPermanentlyDismissed', 'true');
+    }
+
     setDismissed(true);
   }
 
