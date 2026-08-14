@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { Navbar } from '@/components/common/Navbar';
 import { BottomNav } from '@/components/common/BottomNav';
 import { EmailVerificationBanner } from '@/components/common/EmailVerificationBanner';
+import { InstallPrompt } from '@/components/common/InstallPrompt';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
 import { HomePage } from '@/pages/HomePage';
 import { MatchesPage } from '@/pages/MatchesPage';
@@ -93,6 +94,7 @@ export default function App() {
               </Routes>
             </main>
             <BottomNav />
+            <InstallPrompt />
           </div>
         </BrowserRouter>
       </AuthProvider>
