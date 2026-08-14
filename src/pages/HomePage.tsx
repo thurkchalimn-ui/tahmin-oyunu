@@ -57,6 +57,13 @@ export function HomePage() {
       />
 
       <div className="relative mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6">
+        {todayBannerData && (
+          <HomeMatchBanner
+            predictedCount={todayBannerData.predictedCount}
+            totalCount={todayBannerData.totalCount}
+          />
+        )}
+
         {profile && <StreakHeroBanner currentStreak={profile.currentStreak ?? 0} bestStreak={profile.bestStreak ?? 0} />}
 
         {profile && (
@@ -65,13 +72,6 @@ export function HomePage() {
             correctPredictions={profile.correctPredictions}
             rank={rank}
             xp={profile.xp}
-          />
-        )}
-
-        {todayBannerData && (
-          <HomeMatchBanner
-            predictedCount={todayBannerData.predictedCount}
-            totalCount={todayBannerData.totalCount}
           />
         )}
 
