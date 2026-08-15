@@ -37,7 +37,13 @@ export function CreateDuelPage() {
   const { data: matches, loading: matchesLoading } = useMatches(today);
 
   // Sadece henüz sonuçlanmamış maçlar seçilebilir (sonuçlanmış bir maçla düello anlamsız olurdu)
-  const pendingMatches = useMemo(() => (matches ?? []).filter((m) => m.result === null), [matches]);
+  // ÖNEMLİ: Sadece sonucu girilmemiş DEĞİL, aynı zamanda HENÜZ BAŞLAMAMIŞ
+  // maçlar seçilebilir - başlamış ama henüz sonuçlanmamış (devam eden) bir
+  // maç seçilirse haksız bir avantaj/dezavantaj oluşabilirdi.
+  const pendingMatches = useMemo(
+    () => (matches ?? []).filter((m) => m.result === null && new Date(m.kickoffAt).getTime() > Date.now()),
+    [matches],
+  );
 
   function toggleMatch(matchId: string) {
     setSelectedMatchIds((prev) => {

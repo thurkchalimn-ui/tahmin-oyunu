@@ -153,7 +153,7 @@ export function DuelDetailPage() {
         </div>
       )}
 
-      {/* 5 maç listesi */}
+      {/* 5 maç listesi - her iki oyuncunun seçimi yan yana, kazanan tahmin yeşil */}
       <section>
         <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">Maçlar</h2>
         <div className="flex flex-col gap-1.5">
@@ -161,6 +161,12 @@ export function DuelDetailPage() {
             const match = matches[matchId];
             const myChoice = myPicks[matchId];
             const locked = match && new Date(match.kickoffAt).getTime() <= Date.now();
+            const hasResult = !!match?.result;
+
+            const challengerChoice = duel.challengerPicks[matchId];
+            const opponentChoice = duel.opponentPicks[matchId];
+            const scoreLabel =
+              match?.homeGoals != null && match?.awayGoals != null ? `${match.homeGoals}-${match.awayGoals}` : null;
 
             return (
               <div
@@ -171,12 +177,26 @@ export function DuelDetailPage() {
                   <span className="text-pitch-900 dark:text-pitch-100">
                     {match ? `${match.homeTeam} - ${match.awayTeam}` : 'Yükleniyor...'}
                   </span>
-                  {match?.result && (
-                    <span className="font-mono text-xs font-bold text-scoreboard-amber">
-                      {CHOICE_LABELS[match.result]}
-                    </span>
+                  {scoreLabel && (
+                    <span className="font-mono text-xs font-bold text-scoreboard-amber">{scoreLabel}</span>
                   )}
                 </div>
+
+                {/* İki oyuncunun seçimi yan yana - doğru tahmin yeşil vurgulu */}
+                {hasResult && (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <PickChip
+                      label={duel.challengerDisplayName}
+                      choice={challengerChoice}
+                      isCorrect={challengerChoice === match?.result}
+                    />
+                    <PickChip
+                      label={duel.opponentDisplayName}
+                      choice={opponentChoice}
+                      isCorrect={opponentChoice === match?.result}
+                    />
+                  </div>
+                )}
 
                 {canPredict && match && !match.result && (
                   <div className="mt-2 flex gap-1.5">
@@ -207,6 +227,29 @@ export function DuelDetailPage() {
           })}
         </div>
       </section>
+    </div>
+  );
+}
+
+function PickChip({
+  label,
+  choice,
+  isCorrect,
+}: {
+  label: string;
+  choice: PredictionChoice | undefined;
+  isCorrect: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between rounded-md border px-2 py-1 text-xs ${
+        isCorrect
+          ? 'border-pick-correct/40 bg-pick-correct/10 text-pick-correct'
+          : 'border-pitch-700/15 text-pitch-700/60 dark:border-pitch-700 dark:text-pitch-100/50'
+      }`}
+    >
+      <span className="truncate">{label}</span>
+      <span className="ml-1 shrink-0 font-mono font-bold">{choice ? CHOICE_LABELS[choice] : '—'}</span>
     </div>
   );
 }

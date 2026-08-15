@@ -14,6 +14,8 @@ export interface Match {
   league?: string;
   kickoffAt: string; // ISO 8601 zaman damgası - maç başlangıcı (tahmin kilidi)
   result: PredictionChoice | null; // Sonuç girilene kadar null
+  homeGoals?: number | null; // Admin panelinden girilen kesin skor (result buradan türetilir)
+  awayGoals?: number | null;
   liveScore?: LiveScore | null; // Otomasyon tarafından maç sırasında güncellenir
   createdAt: string;
 }

@@ -229,6 +229,8 @@ export async function getMatchesByIds(matchIds: string[]): Promise<Record<string
       league: data.league,
       kickoffAt: data.kickoffAt,
       result: data.result ?? null,
+      homeGoals: data.homeGoals ?? null,
+      awayGoals: data.awayGoals ?? null,
       liveScore: data.liveScore ?? null,
       createdAt: data.createdAt,
     };
