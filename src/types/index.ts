@@ -75,6 +75,7 @@ export interface UserProfile {
   lastActiveDateKey?: string | null; // activityStreak'in son sayıldığı gün ('YYYY-MM-DD')
   invitedByUid?: string | null; // Bu kullanıcıyı davet eden kişinin uid'si (davet linkiyle kayıt olduysa)
   socialFollowClaimed?: { instagram?: boolean; twitter?: boolean }; // Dürüstlük esaslı - "Takip Ettim" butonuna basıldı mı
+  bonusXp?: number; // Sosyal medya takibi gibi KALICI, tekrar hesaplanmayan bonus XP (increment() ile artırılır)
   xp: number; // Deneyim puanı - doğru/yanlış tahmin, rozet ve giriş serisinden hesaplanır (bkz. utils/xpUtils.ts)
   level: number; // xp'den TÜRETİLİR (Firestore'da ayrıca saklanmaz) - bkz. getLevelInfo()
   createdAt: string;

@@ -43,7 +43,7 @@ service cloud.firestore {
       allow update: if isAdmin() ||
         (isOwner(uid) &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['displayName', 'updatedAt', 'lastSeenChatAt', 'lastSeenRank', 'lastSeenProfileAt', 'fcmTokens', 'avatarUrl', 'notifyOnResult', 'notifyOnReminder', 'lastActiveAt', 'activityStreak', 'lastActiveDateKey', 'badges', 'xp', 'socialFollowClaimed'])) ||
+            .hasOnly(['displayName', 'updatedAt', 'lastSeenChatAt', 'lastSeenRank', 'lastSeenProfileAt', 'fcmTokens', 'avatarUrl', 'notifyOnResult', 'notifyOnReminder', 'lastActiveAt', 'activityStreak', 'lastActiveDateKey', 'badges', 'xp', 'socialFollowClaimed', 'bonusXp'])) ||
         // Davet linkiyle kayıt olan kullanıcı, davet edeni SADECE BİR KEZ
         // (henüz hiç ayarlanmamışsa) kaydedebilir - sonradan değiştirilemez,
         // böylece kayıt sonrası referansı manipüle etmek mümkün olmaz.

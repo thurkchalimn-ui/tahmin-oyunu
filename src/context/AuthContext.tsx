@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             correctPredictions: p.correctPredictions,
             totalPredictions: p.totalPredictions,
             xp: p.xp,
-            socialFollowClaimed: p.socialFollowClaimed,
+            bonusXp: p.bonusXp,
           }).catch(() => {});
         }
       },

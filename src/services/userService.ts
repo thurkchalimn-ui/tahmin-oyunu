@@ -11,6 +11,7 @@ import {
   where,
   documentId,
   getCountFromServer,
+  increment,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
@@ -202,9 +203,15 @@ export async function updateDisplayName(uid: string, displayName: string): Promi
  * Kullanıcının "Takip Ettim" butonuna basmasıyla çağrılır (Instagram/Twitter)
  * - dürüstlük esaslı bir sistem, gerçekten takip edildiği API üzerinden
  * doğrulanmıyor (Meta/X'in resmi API onayı gerektirir, çok karmaşık bir
- * süreç). Her platform için en fazla BİR KEZ +25 XP kazandırır. XP'yi
- * hemen (bir sonraki tahmin/günlük giriş beklemeden) yansıtmak için burada
- * doğrudan yeniden hesaplanır.
+ * süreç). Her platform için en fazla BİR KEZ +25 XP kazandırır.
+ *
+ * ÖNEMLİ (KALICILIK): Bu XP, `bonusXp` alanına ve doğrudan `xp` alanına
+ * Firestore'un ATOMİK `increment()` işlemiyle eklenir - bir "oku, hesapla,
+ * yaz" adımı YOKTUR, bu yüzden yarış durumu (race condition) veya eski/stale
+ * bir profil anlık görüntüsü yüzünden bu bonusun "unutulup" bir sonraki XP
+ * yeniden hesaplamasında kaybolması ARTIK MÜMKÜN DEĞİL - `calculateXP()`
+ * fonksiyonu bu bonusa hiç dokunmuyor, sadece üzerine ekliyor (bkz.
+ * touchDailyActivity ve recalculateUserStreak'teki `+ bonusXp` satırları).
  */
 export async function claimSocialFollow(uid: string, platform: 'instagram' | 'twitter'): Promise<void> {
   const userRef = doc(db, 'users', uid);
@@ -216,23 +223,12 @@ export async function claimSocialFollow(uid: string, platform: 'instagram' | 'tw
   if (currentClaimed[platform]) return; // Zaten alınmış, tekrar verme
 
   const newClaimed = { ...currentClaimed, [platform]: true };
-  const socialFollowCount = Object.values(newClaimed).filter(Boolean).length;
 
-  const followerCount = await getFollowerCountInline(uid);
-  const inviteCount = await getInviteCountInline(uid);
-  const badges = normalizeBadges(data.badges);
-
-  const xp = calculateXP({
-    correctPredictions: (data.correctPredictions as number) ?? 0,
-    totalPredictions: (data.totalPredictions as number) ?? 0,
-    badges,
-    activityStreak: (data.activityStreak as number) ?? 0,
-    followerCount,
-    inviteCount,
-    socialFollowCount,
+  await updateDoc(userRef, {
+    socialFollowClaimed: newClaimed,
+    bonusXp: increment(25),
+    xp: increment(25),
   });
-
-  await updateDoc(userRef, { socialFollowClaimed: newClaimed, xp });
 }
 
 /**
@@ -288,7 +284,7 @@ export async function touchDailyActivity(
     correctPredictions: number;
     totalPredictions: number;
     xp: number;
-    socialFollowClaimed?: { instagram?: boolean; twitter?: boolean };
+    bonusXp?: number; // Sosyal medya takibi gibi kalıcı bonuslar - calculateXP()'ye DAHİL edilmez, sonuca eklenir
   },
 ): Promise<void> {
   const todayKey = toDateKey(new Date());
@@ -325,17 +321,15 @@ export async function touchDailyActivity(
     }
   }
 
-  const socialFollowCount = Object.values(current.socialFollowClaimed ?? {}).filter(Boolean).length;
-
-  const xp = calculateXP({
-    correctPredictions: current.correctPredictions,
-    totalPredictions: current.totalPredictions,
-    badges,
-    activityStreak: newStreak,
-    followerCount,
-    inviteCount,
-    socialFollowCount,
-  });
+  const xp =
+    calculateXP({
+      correctPredictions: current.correctPredictions,
+      totalPredictions: current.totalPredictions,
+      badges,
+      activityStreak: newStreak,
+      followerCount,
+      inviteCount,
+    }) + (current.bonusXp ?? 0);
 
   await notifyNewBadgesAndLevelUp(uid, newlyEarnedBadges, current.xp, xp);
 
@@ -463,20 +457,17 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
     }
   }
 
-  const socialFollowClaimed = userSnap.data()?.socialFollowClaimed as
-    | { instagram?: boolean; twitter?: boolean }
-    | undefined;
-  const socialFollowCount = Object.values(socialFollowClaimed ?? {}).filter(Boolean).length;
+  const bonusXp = (userSnap.data()?.bonusXp as number) ?? 0;
 
-  const xp = calculateXP({
-    correctPredictions,
-    totalPredictions,
-    badges,
-    activityStreak: currentActivityStreak,
-    followerCount,
-    inviteCount,
-    socialFollowCount,
-  });
+  const xp =
+    calculateXP({
+      correctPredictions,
+      totalPredictions,
+      badges,
+      activityStreak: currentActivityStreak,
+      followerCount,
+      inviteCount,
+    }) + bonusXp;
 
   await notifyNewBadgesAndLevelUp(uid, newlyEarnedBadges, oldXp, xp);
 
