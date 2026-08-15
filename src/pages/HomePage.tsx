@@ -12,6 +12,7 @@ import { WeeklyPodium } from '@/components/home/WeeklyPodium';
 import { RecentResultsPreview } from '@/components/home/RecentResultsPreview';
 import { RecentBadgesPreview } from '@/components/profile/RecentBadgesPreview';
 import { SocialFollowCard } from '@/components/home/SocialFollowCard';
+import { GuestWelcomeBanner } from '@/components/home/GuestWelcomeBanner';
 import { AdBanner } from '@/components/common/AdBanner';
 import { todayKey } from '@/utils/dateUtils';
 
@@ -58,6 +59,8 @@ export function HomePage() {
       />
 
       <div className="relative mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6">
+        {!firebaseUser && <GuestWelcomeBanner />}
+
         {todayBannerData && (
           <HomeMatchBanner
             predictedCount={todayBannerData.predictedCount}
