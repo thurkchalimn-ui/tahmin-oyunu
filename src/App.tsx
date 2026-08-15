@@ -23,6 +23,9 @@ import { AdminPage } from '@/pages/AdminPage';
 import { PrivacyPolicyPage } from '@/pages/PrivacyPolicyPage';
 import { ContactPage } from '@/pages/ContactPage';
 import { HowToPlayPage } from '@/pages/HowToPlayPage';
+import { DuelsPage } from '@/pages/DuelsPage';
+import { CreateDuelPage } from '@/pages/CreateDuelPage';
+import { DuelDetailPage } from '@/pages/DuelDetailPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 /** Uygulamanın kök bileşeni: provider'ları kurar ve rota tablosunu tanımlar. */
@@ -47,6 +50,30 @@ export default function App() {
                 <Route path="/gizlilik" element={<PrivacyPolicyPage />} />
                 <Route path="/iletisim" element={<ContactPage />} />
                 <Route path="/nasil-oynanir" element={<HowToPlayPage />} />
+                <Route
+                  path="/duello"
+                  element={
+                    <ProtectedRoute>
+                      <DuelsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/duello/yeni"
+                  element={
+                    <ProtectedRoute>
+                      <CreateDuelPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/duello/:duelId"
+                  element={
+                    <ProtectedRoute>
+                      <DuelDetailPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/ligler"
                   element={
