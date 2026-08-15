@@ -2,22 +2,35 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Swords, ArrowLeft, Check, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePredictions } from '@/hooks/usePredictions';
 import { subscribeDuel, getMatchesByIds, respondToDuel } from '@/services/duelService';
+import { submitPrediction } from '@/services/predictionService';
 import { Avatar } from '@/components/common/Avatar';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
-import type { Duel } from '@/types';
+import type { Duel, Match, PredictionChoice } from '@/types';
 
-type MatchInfo = { homeTeam: string; awayTeam: string; kickoffAt: string; result: string | null };
+const CHOICE_LABELS: Record<PredictionChoice, string> = { HOME: '1', DRAW: 'X', AWAY: '2' };
 
-/** Bir düellonun detayını gösterir: iki oyuncu, 5 maç, sonuç (varsa). */
+/**
+ * Bir düellonun detayını gösterir: iki oyuncu, 5 maç, sonuç (varsa).
+ * ÖNEMLİ: Düello kabul edildiğinde (status='accepted'), her iki oyuncu da
+ * BU SAYFADAN, düellodaki 5 maça doğrudan tahmin gönderebilir - challenger
+ * maçları seçerken herhangi bir tahmin yapmamıştı, sadece maçları belirlemişti.
+ * Tahminler normal `predictions` koleksiyonuna yazılır (predictionService.ts
+ * üzerinden) - otomasyondaki resolveDuels() zaten oradan okuyor, bu yüzden
+ * ekstra bir değişiklik gerekmedi.
+ */
 export function DuelDetailPage() {
   const { duelId } = useParams<{ duelId: string }>();
-  const { firebaseUser, profile } = useAuth();
+  const { firebaseUser, profile, emailVerified } = useAuth();
   const [duel, setDuel] = useState<Duel | null | undefined>(undefined);
-  const [matchInfo, setMatchInfo] = useState<Record<string, MatchInfo>>({});
+  const [matches, setMatches] = useState<Record<string, Match>>({});
   const [error, setError] = useState<string | null>(null);
   const [responding, setResponding] = useState(false);
+  const [submittingMatchId, setSubmittingMatchId] = useState<string | null>(null);
+
+  const { data: myPredictions } = usePredictions(firebaseUser?.uid);
 
   useEffect(() => {
     if (!duelId) return;
@@ -30,7 +43,7 @@ export function DuelDetailPage() {
   }, [duelId]);
 
   useEffect(() => {
-    if (duel) getMatchesByIds(duel.matchIds).then(setMatchInfo);
+    if (duel) getMatchesByIds(duel.matchIds).then(setMatches);
   }, [duel]);
 
   async function handleRespond(accept: boolean) {
@@ -43,13 +56,33 @@ export function DuelDetailPage() {
     }
   }
 
+  async function handlePredict(match: Match, choice: PredictionChoice) {
+    if (!firebaseUser) return;
+    if (!emailVerified) {
+      setError('Tahmin yapabilmek için önce e-postanı doğrulaman gerekiyor.');
+      return;
+    }
+    setError(null);
+    setSubmittingMatchId(match.id);
+    try {
+      await submitPrediction(firebaseUser.uid, match, choice);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Tahmin kaydedilemedi.');
+    } finally {
+      setSubmittingMatchId(null);
+    }
+  }
+
   if (duel === undefined) return <LoadingSpinner fullScreen label="Düello yükleniyor..." />;
-  if (error) return <ErrorMessage message={error} />;
+  if (error && !duel) return <ErrorMessage message={error} />;
   if (!duel) return <ErrorMessage message="Düello bulunamadı." />;
   if (!firebaseUser) return null;
 
   const isOpponent = duel.opponentUid === firebaseUser.uid;
   const canRespond = isOpponent && duel.status === 'pending';
+  const canPredict = duel.status === 'accepted';
+
+  const myPredictionByMatchId = new Map((myPredictions ?? []).map((p) => [p.matchId, p.choice]));
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6">
@@ -75,6 +108,8 @@ export function DuelDetailPage() {
         />
       </div>
 
+      {error && <ErrorMessage message={error} />}
+
       {duel.status === 'completed' && (
         <p className="text-center font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
           {duel.winnerUid === null
@@ -92,9 +127,9 @@ export function DuelDetailPage() {
           Karşı tarafın cevabı bekleniyor...
         </p>
       )}
-      {duel.status === 'accepted' && (
+      {canPredict && (
         <p className="text-center font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
-          5 maç sonuçlanınca kazanan otomatik belirlenecek.
+          Aşağıdaki 5 maça tahminini yap - 5'i de sonuçlanınca kazanan otomatik belirlenecek.
         </p>
       )}
 
@@ -126,17 +161,49 @@ export function DuelDetailPage() {
         <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">Maçlar</h2>
         <div className="flex flex-col gap-1.5">
           {duel.matchIds.map((matchId) => {
-            const info = matchInfo[matchId];
+            const match = matches[matchId];
+            const myChoice = myPredictionByMatchId.get(matchId);
+            const locked = match && new Date(match.kickoffAt).getTime() <= Date.now();
+
             return (
               <div
                 key={matchId}
-                className="flex items-center justify-between rounded-lg border border-pitch-700/15 bg-white px-3 py-2.5 text-sm dark:border-pitch-700 dark:bg-pitch-800"
+                className="rounded-lg border border-pitch-700/15 bg-white px-3 py-2.5 dark:border-pitch-700 dark:bg-pitch-800"
               >
-                <span className="text-pitch-900 dark:text-pitch-100">
-                  {info ? `${info.homeTeam} - ${info.awayTeam}` : 'Yükleniyor...'}
-                </span>
-                {info?.result && (
-                  <span className="font-mono text-xs font-bold text-scoreboard-amber">{info.result}</span>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-pitch-900 dark:text-pitch-100">
+                    {match ? `${match.homeTeam} - ${match.awayTeam}` : 'Yükleniyor...'}
+                  </span>
+                  {match?.result && (
+                    <span className="font-mono text-xs font-bold text-scoreboard-amber">
+                      {CHOICE_LABELS[match.result]}
+                    </span>
+                  )}
+                </div>
+
+                {canPredict && match && !match.result && (
+                  <div className="mt-2 flex gap-1.5">
+                    {(['HOME', 'DRAW', 'AWAY'] as PredictionChoice[]).map((choice) => (
+                      <button
+                        key={choice}
+                        type="button"
+                        disabled={locked || submittingMatchId === match.id}
+                        onClick={() => handlePredict(match, choice)}
+                        className={`flex-1 rounded-md border py-1.5 font-mono text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                          myChoice === choice
+                            ? 'border-scoreboard-amber bg-scoreboard-amber/15 text-scoreboard-amberDark dark:text-scoreboard-amber'
+                            : 'border-pitch-700/20 text-pitch-700/70 hover:bg-pitch-700/5 dark:border-pitch-700 dark:text-pitch-100/60'
+                        }`}
+                      >
+                        {CHOICE_LABELS[choice]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {canPredict && locked && !match?.result && (
+                  <p className="mt-1 font-mono text-[10px] text-pitch-700/40 dark:text-pitch-100/30">
+                    Maç başladı, tahmin kilitlendi.
+                  </p>
                 )}
               </div>
             );

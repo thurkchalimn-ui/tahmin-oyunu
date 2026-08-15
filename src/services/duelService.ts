@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { createNotification } from '@/services/notificationCenterService';
-import type { Duel, DuelStatus } from '@/types';
+import type { Duel, DuelStatus, Match } from '@/types';
 
 function mapDuelDoc(id: string, data: Record<string, unknown>): Duel {
   function toIso(v: unknown): string | null {
@@ -170,24 +170,33 @@ export function subscribeDuel(
 }
 
 /**
- * Verilen maç ID'lerinin ev sahibi/deplasman takım isimlerini ve kickoffAt
- * bilgisini tek seferde çeker (düello detay sayfasında maçları göstermek
- * için). Firestore'un `in` sorgusu en fazla 10 ID kabul eder - düellolarda
- * zaten sabit 5 maç olduğu için bu limit hiç sorun yaratmaz.
+ * Verilen maç ID'lerinin TAM maç nesnelerini (Match tipiyle birebir) tek
+ * seferde çeker - hem düello detay sayfasında maçları göstermek hem de
+ * kabul edilen düellodaki maçlara doğrudan tahmin gönderebilmek için (bkz.
+ * predictionService.ts'deki submitPrediction, tam bir Match nesnesi bekler).
+ * Firestore'un `in` sorgusu en fazla 10 ID kabul eder - düellolarda zaten
+ * sabit 5 maç olduğu için bu limit hiç sorun yaratmaz.
  */
-export async function getMatchesByIds(
-  matchIds: string[],
-): Promise<Record<string, { homeTeam: string; awayTeam: string; kickoffAt: string; result: string | null }>> {
+export async function getMatchesByIds(matchIds: string[]): Promise<Record<string, Match>> {
   if (matchIds.length === 0) return {};
   const snap = await getDocs(query(collection(db, 'matches'), where('__name__', 'in', matchIds)));
-  const result: Record<string, { homeTeam: string; awayTeam: string; kickoffAt: string; result: string | null }> = {};
+  const result: Record<string, Match> = {};
   snap.docs.forEach((d) => {
     const data = d.data();
     result[d.id] = {
-      homeTeam: data.homeTeam as string,
-      awayTeam: data.awayTeam as string,
-      kickoffAt: data.kickoffAt as string,
-      result: (data.result as string) ?? null,
+      id: d.id,
+      date: data.date,
+      dayOrder: data.dayOrder,
+      globalOrder: data.globalOrder,
+      homeTeam: data.homeTeam,
+      awayTeam: data.awayTeam,
+      homeTeamLogo: data.homeTeamLogo,
+      awayTeamLogo: data.awayTeamLogo,
+      league: data.league,
+      kickoffAt: data.kickoffAt,
+      result: data.result ?? null,
+      liveScore: data.liveScore ?? null,
+      createdAt: data.createdAt,
     };
   });
   return result;
