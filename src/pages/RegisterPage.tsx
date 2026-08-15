@@ -128,6 +128,12 @@ export function RegisterPage() {
       </p>
 
       <p className="text-center font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
+        <Link to="/nasil-oynanir" className="underline">
+          Nasıl Oynanır?
+        </Link>
+      </p>
+
+      <p className="text-center font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
         Kayıt olarak{' '}
         <Link to="/gizlilik" className="underline">
           Gizlilik Politikası ve Kullanım Şartları
