@@ -6,13 +6,13 @@ import {
   onSnapshot,
   query,
   where,
-  orderBy,
+  getDoc,
   getDocs,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { createNotification } from '@/services/notificationCenterService';
-import type { Duel, DuelStatus, Match } from '@/types';
+import type { Duel, DuelStatus, Match, PredictionChoice } from '@/types';
 
 function mapDuelDoc(id: string, data: Record<string, unknown>): Duel {
   function toIso(v: unknown): string | null {
@@ -29,6 +29,13 @@ function mapDuelDoc(id: string, data: Record<string, unknown>): Duel {
     opponentAvatarUrl: (data.opponentAvatarUrl as string) || null,
     matchIds: (data.matchIds as string[]) ?? [],
     status: data.status as DuelStatus,
+    // ÖNEMLİ: Düello seçimleri (challengerPicks/opponentPicks) normal
+    // `predictions` koleksiyonundan TAMAMEN AYRI - düellonun kendi
+    // dokümanının içinde saklanır. Bu, günlük tahmin havuzuyla karışmasını
+    // VE seri/XP hesaplamasını etkilemesini engeller (bkz. aşağıdaki
+    // submitDuelPick - normal submitPrediction'ı ASLA çağırmaz).
+    challengerPicks: (data.challengerPicks as Record<string, PredictionChoice>) ?? {},
+    opponentPicks: (data.opponentPicks as Record<string, PredictionChoice>) ?? {},
     challengerScore: (data.challengerScore as number) ?? null,
     opponentScore: (data.opponentScore as number) ?? null,
     winnerUid: (data.winnerUid as string) || null,
@@ -43,7 +50,9 @@ function mapDuelDoc(id: string, data: Record<string, unknown>): Duel {
  * bildirim düşer (bkz. notificationCenterService.ts). Sonuç hesaplaması
  * (challengerScore/opponentScore/winnerUid) burada YAPILMAZ - o, otomasyon
  * script'i tarafından, 5 maçın hepsi sonuçlandığında hesaplanır (bkz.
- * check-results.js'deki resolveDuels fonksiyonu).
+ * check-results.js'deki resolveDuels fonksiyonu, artık challengerPicks/
+ * opponentPicks alanlarını karşılaştırıyor - normal predictions koleksiyonuna
+ * hiç bakmıyor).
  */
 export async function createDuel(
   challengerUid: string,
@@ -66,6 +75,8 @@ export async function createDuel(
     opponentAvatarUrl,
     matchIds,
     status: 'pending',
+    challengerPicks: {},
+    opponentPicks: {},
     challengerScore: null,
     opponentScore: null,
     winnerUid: null,
@@ -106,22 +117,47 @@ export async function respondToDuel(
   ).catch(() => {});
 }
 
-/** Kullanıcının TÜM düellolarını (gönderdiği + aldığı, en yeniden en eskiye) gerçek zamanlı dinler. */
+/**
+ * Kabul edilmiş bir düellodaki bir maça, KENDİ (challengerPicks ya da
+ * opponentPicks) alanına seçim yazar - normal `predictions` koleksiyonuna
+ * ASLA dokunmaz. Bu yüzden düello tahminleri günlük tahmin hakkını
+ * tüketmez, seriye dahil olmaz ve XP kazandırmaz - tamamen düellonun
+ * kendi içinde kalır.
+ */
+export async function submitDuelPick(
+  duelId: string,
+  matchId: string,
+  choice: PredictionChoice,
+  isChallenger: boolean,
+): Promise<void> {
+  const duelRef = doc(db, 'duels', duelId);
+  const duelSnap = await getDoc(duelRef);
+  const existing = duelSnap.data();
+  const field = isChallenger ? 'challengerPicks' : 'opponentPicks';
+  const currentPicks = (existing?.[field] as Record<string, PredictionChoice>) ?? {};
+
+  await updateDoc(duelRef, {
+    [field]: { ...currentPicks, [matchId]: choice },
+  });
+}
+
+/**
+ * Kullanıcının TÜM düellolarını (gönderdiği + aldığı, en yeniden en eskiye)
+ * gerçek zamanlı dinler. ÖNEMLİ: Firestore sorgusunda BİLEREK `orderBy`
+ * kullanılmıyor - `where` + farklı bir alanda `orderBy` kombinasyonu,
+ * Firebase Console'da elle oluşturulması gereken bir "bileşik indeks"
+ * gerektirir; bu indeks oluşturulmadan sorgu sessizce başarısız olabiliyordu
+ * (düellolar var olduğu halde sayfada hiç görünmeme sorununun kök nedeni
+ * buydu). Sıralama zaten aşağıdaki emit() içinde JavaScript tarafında
+ * yapılıyor, bu yüzden orderBy'a hiç gerek yok.
+ */
 export function subscribeMyDuels(
   uid: string,
   onChange: (duels: Duel[]) => void,
   onError: (message: string) => void,
 ): () => void {
-  const asChallenger = query(
-    collection(db, 'duels'),
-    where('challengerUid', '==', uid),
-    orderBy('createdAt', 'desc'),
-  );
-  const asOpponent = query(
-    collection(db, 'duels'),
-    where('opponentUid', '==', uid),
-    orderBy('createdAt', 'desc'),
-  );
+  const asChallenger = query(collection(db, 'duels'), where('challengerUid', '==', uid));
+  const asOpponent = query(collection(db, 'duels'), where('opponentUid', '==', uid));
 
   let challengerDuels: Duel[] = [];
   let opponentDuels: Duel[] = [];
@@ -171,11 +207,9 @@ export function subscribeDuel(
 
 /**
  * Verilen maç ID'lerinin TAM maç nesnelerini (Match tipiyle birebir) tek
- * seferde çeker - hem düello detay sayfasında maçları göstermek hem de
- * kabul edilen düellodaki maçlara doğrudan tahmin gönderebilmek için (bkz.
- * predictionService.ts'deki submitPrediction, tam bir Match nesnesi bekler).
- * Firestore'un `in` sorgusu en fazla 10 ID kabul eder - düellolarda zaten
- * sabit 5 maç olduğu için bu limit hiç sorun yaratmaz.
+ * seferde çeker (düello detay sayfasında maçları göstermek için). Firestore'un
+ * `in` sorgusu en fazla 10 ID kabul eder - düellolarda zaten sabit 5 maç
+ * olduğu için bu limit hiç sorun yaratmaz.
  */
 export async function getMatchesByIds(matchIds: string[]): Promise<Record<string, Match>> {
   if (matchIds.length === 0) return {};

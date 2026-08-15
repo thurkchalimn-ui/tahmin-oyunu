@@ -105,6 +105,11 @@ export interface Duel {
   opponentDisplayName: string;
   opponentAvatarUrl: string | null;
   matchIds: string[]; // Tam olarak 5 maç
+  // ÖNEMLİ: Bu seçimler normal `predictions` koleksiyonundan TAMAMEN AYRI -
+  // günlük tahmin hakkını tüketmez, seriye dahil olmaz, XP kazandırmaz.
+  // Sadece bu düellonun sonucunu belirlemek için kullanılır.
+  challengerPicks: Record<string, PredictionChoice>; // { matchId: seçim }
+  opponentPicks: Record<string, PredictionChoice>;
   status: DuelStatus;
   challengerScore: number | null; // Sadece status='completed' iken dolu
   opponentScore: number | null;

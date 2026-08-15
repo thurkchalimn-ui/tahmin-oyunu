@@ -82,15 +82,37 @@ service cloud.firestore {
     // winnerUid) SADECE otomasyon script'i (Admin SDK, kuralları bypass eder)
     // tarafından yazılır - istemci bu alanları asla değiştiremez, aksi halde
     // bir kullanıcı kendini kazanan ilan edebilirdi.
+    // duels/{id}: arkadaşlar arası 1v1 tahmin düellosu. Meydan okuyan
+    // (challengerUid) daveti oluşturur; sadece rakip (opponentUid) daveti
+    // kabul/red edebilir (status günceller). Düello 'accepted' olduğunda,
+    // her iki taraf da SADECE KENDİ seçim alanını (challengerPicks ya da
+    // opponentPicks) güncelleyebilir - karşı tarafın seçimini değiştiremez.
+    // Sonuç hesaplaması (score, winnerUid) SADECE otomasyon script'i (Admin
+    // SDK, kuralları bypass eder) tarafından yazılır - istemci bu alanları
+    // asla değiştiremez, aksi halde bir kullanıcı kendini kazanan ilan
+    // edebilirdi.
     match /duels/{duelId} {
       allow read: if isOwner(resource.data.challengerUid) || isOwner(resource.data.opponentUid);
       allow create: if isOwner(request.resource.data.challengerUid) &&
         request.resource.data.status == 'pending' &&
         request.resource.data.opponentUid != request.resource.data.challengerUid;
-      allow update: if isOwner(resource.data.opponentUid) &&
-        resource.data.status == 'pending' &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt']) &&
-        (request.resource.data.status == 'accepted' || request.resource.data.status == 'declined');
+      allow update: if (
+        // Davet kabul/red (sadece rakip, sadece 'pending' iken)
+        (isOwner(resource.data.opponentUid) &&
+          resource.data.status == 'pending' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt']) &&
+          (request.resource.data.status == 'accepted' || request.resource.data.status == 'declined'))
+        ||
+        // Meydan okuyanın kendi seçimlerini girmesi (sadece 'accepted' iken)
+        (isOwner(resource.data.challengerUid) &&
+          resource.data.status == 'accepted' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['challengerPicks']))
+        ||
+        // Rakibin kendi seçimlerini girmesi (sadece 'accepted' iken)
+        (isOwner(resource.data.opponentUid) &&
+          resource.data.status == 'accepted' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['opponentPicks']))
+      );
       allow delete: if false;
     }
 

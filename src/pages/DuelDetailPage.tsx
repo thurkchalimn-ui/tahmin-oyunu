@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Swords, ArrowLeft, Check, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { usePredictions } from '@/hooks/usePredictions';
-import { subscribeDuel, getMatchesByIds, respondToDuel } from '@/services/duelService';
-import { submitPrediction } from '@/services/predictionService';
+import { subscribeDuel, getMatchesByIds, respondToDuel, submitDuelPick } from '@/services/duelService';
 import { Avatar } from '@/components/common/Avatar';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
@@ -15,22 +13,20 @@ const CHOICE_LABELS: Record<PredictionChoice, string> = { HOME: '1', DRAW: 'X', 
 /**
  * Bir düellonun detayını gösterir: iki oyuncu, 5 maç, sonuç (varsa).
  * ÖNEMLİ: Düello kabul edildiğinde (status='accepted'), her iki oyuncu da
- * BU SAYFADAN, düellodaki 5 maça doğrudan tahmin gönderebilir - challenger
- * maçları seçerken herhangi bir tahmin yapmamıştı, sadece maçları belirlemişti.
- * Tahminler normal `predictions` koleksiyonuna yazılır (predictionService.ts
- * üzerinden) - otomasyondaki resolveDuels() zaten oradan okuyor, bu yüzden
- * ekstra bir değişiklik gerekmedi.
+ * BU SAYFADAN, düellodaki 5 maça seçim yapabilir - ama bu seçimler normal
+ * `predictions` koleksiyonuna DEĞİL, düellonun kendi dokümanındaki
+ * challengerPicks/opponentPicks alanlarına yazılır (bkz. submitDuelPick).
+ * Bu sayede: günlük tahmin hakkını tüketmez, seriyi etkilemez, XP
+ * kazandırmaz - tamamen düellonun kendi içinde kalır.
  */
 export function DuelDetailPage() {
   const { duelId } = useParams<{ duelId: string }>();
-  const { firebaseUser, profile, emailVerified } = useAuth();
+  const { firebaseUser, profile } = useAuth();
   const [duel, setDuel] = useState<Duel | null | undefined>(undefined);
   const [matches, setMatches] = useState<Record<string, Match>>({});
   const [error, setError] = useState<string | null>(null);
   const [responding, setResponding] = useState(false);
   const [submittingMatchId, setSubmittingMatchId] = useState<string | null>(null);
-
-  const { data: myPredictions } = usePredictions(firebaseUser?.uid);
 
   useEffect(() => {
     if (!duelId) return;
@@ -57,17 +53,17 @@ export function DuelDetailPage() {
   }
 
   async function handlePredict(match: Match, choice: PredictionChoice) {
-    if (!firebaseUser) return;
-    if (!emailVerified) {
-      setError('Tahmin yapabilmek için önce e-postanı doğrulaman gerekiyor.');
-      return;
-    }
+    if (!duel || !firebaseUser) return;
+    const locked = new Date(match.kickoffAt).getTime() <= Date.now();
+    if (locked || match.result) return;
+
+    const isChallenger = duel.challengerUid === firebaseUser.uid;
     setError(null);
     setSubmittingMatchId(match.id);
     try {
-      await submitPrediction(firebaseUser.uid, match, choice);
+      await submitDuelPick(duel.id, match.id, choice, isChallenger);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Tahmin kaydedilemedi.');
+      setError(err instanceof Error ? err.message : 'Seçim kaydedilemedi.');
     } finally {
       setSubmittingMatchId(null);
     }
@@ -78,11 +74,11 @@ export function DuelDetailPage() {
   if (!duel) return <ErrorMessage message="Düello bulunamadı." />;
   if (!firebaseUser) return null;
 
+  const isChallenger = duel.challengerUid === firebaseUser.uid;
   const isOpponent = duel.opponentUid === firebaseUser.uid;
   const canRespond = isOpponent && duel.status === 'pending';
   const canPredict = duel.status === 'accepted';
-
-  const myPredictionByMatchId = new Map((myPredictions ?? []).map((p) => [p.matchId, p.choice]));
+  const myPicks = isChallenger ? duel.challengerPicks : duel.opponentPicks;
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6">
@@ -129,7 +125,8 @@ export function DuelDetailPage() {
       )}
       {canPredict && (
         <p className="text-center font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
-          Aşağıdaki 5 maça tahminini yap - 5'i de sonuçlanınca kazanan otomatik belirlenecek.
+          Aşağıdaki 5 maça SADECE bu düello için seçimini yap - günlük tahmin
+          hakkını etkilemez, XP kazandırmaz.
         </p>
       )}
 
@@ -162,7 +159,7 @@ export function DuelDetailPage() {
         <div className="flex flex-col gap-1.5">
           {duel.matchIds.map((matchId) => {
             const match = matches[matchId];
-            const myChoice = myPredictionByMatchId.get(matchId);
+            const myChoice = myPicks[matchId];
             const locked = match && new Date(match.kickoffAt).getTime() <= Date.now();
 
             return (
@@ -202,7 +199,7 @@ export function DuelDetailPage() {
                 )}
                 {canPredict && locked && !match?.result && (
                   <p className="mt-1 font-mono text-[10px] text-pitch-700/40 dark:text-pitch-100/30">
-                    Maç başladı, tahmin kilitlendi.
+                    Maç başladı, seçim kilitlendi.
                   </p>
                 )}
               </div>
