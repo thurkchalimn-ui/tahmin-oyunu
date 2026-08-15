@@ -4,7 +4,7 @@ import { Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { usePeriodLeaderboard } from '@/hooks/usePeriodLeaderboard';
-import { useUserRank } from '@/hooks/useUserRank';
+import { useXpRank } from '@/hooks/useXpRank';
 import { markLeaderboardSeen } from '@/services/readStatusService';
 import { getCurrentMonthKey, shiftMonthKey, formatMonthLabel } from '@/services/periodLeaderboardService';
 
@@ -35,7 +35,7 @@ export function LeaderboardPage() {
   const allTime = useLeaderboard();
   const week = usePeriodLeaderboard('week');
   const month = usePeriodLeaderboard('month', monthKey);
-  const rank = useUserRank(profile?.correctPredictions);
+  const rank = useXpRank(profile?.xp);
 
   const active = tab === 'all' ? allTime : tab === 'week' ? week : month;
 

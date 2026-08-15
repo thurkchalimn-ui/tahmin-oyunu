@@ -4,7 +4,7 @@ import { useMatches } from '@/hooks/useMatches';
 import { usePredictions } from '@/hooks/usePredictions';
 import { useWeeklyTopThree } from '@/hooks/useWeeklyTopThree';
 import { useRecentResults } from '@/hooks/useRecentResults';
-import { useUserRank } from '@/hooks/useUserRank';
+import { useXpRank } from '@/hooks/useXpRank';
 import { StreakHeroBanner } from '@/components/home/StreakHeroBanner';
 import { HomeMatchBanner } from '@/components/home/HomeMatchBanner';
 import { HomeStatStrip } from '@/components/home/HomeStatStrip';
@@ -40,7 +40,7 @@ export function HomePage() {
 
   const { data: weeklyTopThree, source: weeklySource } = useWeeklyTopThree();
   const { data: recentResults } = useRecentResults(4);
-  const rank = useUserRank(profile?.correctPredictions);
+  const rank = useXpRank(profile?.xp);
 
   const todayBannerData = useMemo(() => {
     if (!matches) return null;
