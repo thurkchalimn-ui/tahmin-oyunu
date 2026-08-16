@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Swords, ArrowLeft, Check, X } from 'lucide-react';
+import { Swords, ArrowLeft, Check, X, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { subscribeDuel, getMatchesByIds, respondToDuel, submitDuelPick } from '@/services/duelService';
+import { subscribeDuel, getMatchesByIds, respondToDuel, submitDuelPick, confirmDuelPicks } from '@/services/duelService';
 import { Avatar } from '@/components/common/Avatar';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import type { Duel, Match, PredictionChoice } from '@/types';
 
+const REQUIRED_MATCH_COUNT = 5;
 const CHOICE_LABELS: Record<PredictionChoice, string> = { HOME: '1', DRAW: 'X', AWAY: '2' };
 
 /**
@@ -16,8 +17,10 @@ const CHOICE_LABELS: Record<PredictionChoice, string> = { HOME: '1', DRAW: 'X', 
  * BU SAYFADAN, düellodaki 5 maça seçim yapabilir - ama bu seçimler normal
  * `predictions` koleksiyonuna DEĞİL, düellonun kendi dokümanındaki
  * challengerPicks/opponentPicks alanlarına yazılır (bkz. submitDuelPick).
- * Bu sayede: günlük tahmin hakkını tüketmez, seriyi etkilemez, XP
- * kazandırmaz - tamamen düellonun kendi içinde kalır.
+ * 5 seçim de yapıldıktan sonra "Seçimlerimi Onayla" ile KİLİTLENİR - bir
+ * daha değiştirilemez (bkz. firestore.rules). Karşı tarafın seçimleri,
+ * SADECE karşı taraf KENDİSİ de onayladığında görünür hale gelir - "kapalı
+ * zarf" mantığı, kimse önce görüp ona göre seçim yapamaz.
  */
 export function DuelDetailPage() {
   const { duelId } = useParams<{ duelId: string }>();
@@ -27,6 +30,7 @@ export function DuelDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [responding, setResponding] = useState(false);
   const [submittingMatchId, setSubmittingMatchId] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     if (!duelId) return;
@@ -69,16 +73,43 @@ export function DuelDetailPage() {
     }
   }
 
+  async function handleConfirm() {
+    if (!duel || !firebaseUser) return;
+    const isChallenger = duel.challengerUid === firebaseUser.uid;
+    setConfirming(true);
+    setError(null);
+    try {
+      await confirmDuelPicks(duel.id, isChallenger);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Onaylanamadı.');
+    } finally {
+      setConfirming(false);
+    }
+  }
+
+  const isChallenger = duel?.challengerUid === firebaseUser?.uid;
+  const myPicks = duel ? (isChallenger ? duel.challengerPicks : duel.opponentPicks) : {};
+  const myConfirmed = duel ? (isChallenger ? duel.challengerConfirmed : duel.opponentConfirmed) : false;
+  const opponentConfirmed = duel ? (isChallenger ? duel.opponentConfirmed : duel.challengerConfirmed) : false;
+
+  const allPicksMade = useMemo(
+    () => !!duel && duel.matchIds.every((id) => !!myPicks[id]),
+    [duel, myPicks],
+  );
+
   if (duel === undefined) return <LoadingSpinner fullScreen label="Düello yükleniyor..." />;
   if (error && !duel) return <ErrorMessage message={error} />;
   if (!duel) return <ErrorMessage message="Düello bulunamadı." />;
   if (!firebaseUser) return null;
 
-  const isChallenger = duel.challengerUid === firebaseUser.uid;
   const isOpponent = duel.opponentUid === firebaseUser.uid;
   const canRespond = isOpponent && duel.status === 'pending';
-  const canPredict = duel.status === 'accepted';
-  const myPicks = isChallenger ? duel.challengerPicks : duel.opponentPicks;
+  const canPredict = duel.status === 'accepted' && !myConfirmed;
+
+  // Karşı tarafın seçimleri, karşı taraf ONAYLADIYSA görünür (maç
+  // sonuçlanmasını beklemeye gerek yok - "kapalı zarf açıldı" mantığı).
+  // Maç zaten sonuçlanmışsa (hasResult), doğruluk vurgusuyla her zaman görünür.
+  const canRevealPicks = duel.status !== 'pending';
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6">
@@ -93,6 +124,7 @@ export function DuelDetailPage() {
           name={duel.challengerDisplayName}
           avatarUrl={duel.challengerAvatarUrl}
           score={duel.challengerScore}
+          confirmed={duel.challengerConfirmed}
           isWinner={duel.status === 'completed' && duel.winnerUid === duel.challengerUid}
         />
         <Swords className="text-scoreboard-amber" size={28} />
@@ -100,6 +132,7 @@ export function DuelDetailPage() {
           name={duel.opponentDisplayName}
           avatarUrl={duel.opponentAvatarUrl}
           score={duel.opponentScore}
+          confirmed={duel.opponentConfirmed}
           isWinner={duel.status === 'completed' && duel.winnerUid === duel.opponentUid}
         />
       </div>
@@ -123,10 +156,14 @@ export function DuelDetailPage() {
           Karşı tarafın cevabı bekleniyor...
         </p>
       )}
-      {canPredict && (
+      {duel.status === 'accepted' && myConfirmed && !opponentConfirmed && (
         <p className="text-center font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
-          Aşağıdaki 5 maça SADECE bu düello için seçimini yap - günlük tahmin
-          hakkını etkilemez, XP kazandırmaz.
+          Seçimlerini onayladın ✅ — karşı tarafın onaylaması bekleniyor.
+        </p>
+      )}
+      {duel.status === 'accepted' && !myConfirmed && (
+        <p className="text-center font-mono text-xs text-pitch-700/50 dark:text-pitch-100/40">
+          Aşağıdaki 5 maça seçimini yap - günlük tahmin hakkını etkilemez, XP kazandırmaz.
         </p>
       )}
 
@@ -153,14 +190,14 @@ export function DuelDetailPage() {
         </div>
       )}
 
-      {/* 5 maç listesi - her iki oyuncunun seçimi yan yana, kazanan tahmin yeşil */}
+      {/* 5 maç listesi */}
       <section>
         <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">Maçlar</h2>
         <div className="flex flex-col gap-1.5">
           {duel.matchIds.map((matchId) => {
             const match = matches[matchId];
             const myChoice = myPicks[matchId];
-            const locked = match && new Date(match.kickoffAt).getTime() <= Date.now();
+            const kickoffLocked = match && new Date(match.kickoffAt).getTime() <= Date.now();
             const hasResult = !!match?.result;
 
             const challengerChoice = duel.challengerPicks[matchId];
@@ -182,18 +219,20 @@ export function DuelDetailPage() {
                   )}
                 </div>
 
-                {/* İki oyuncunun seçimi yan yana - doğru tahmin yeşil vurgulu */}
-                {hasResult && (
+                {/* İki oyuncunun seçimi yan yana - ikisi de onayladıysa (ya
+                    da maç sonuçlandıysa) görünür; sonuçlanmışsa doğru
+                    tahmin yeşil vurgulu. */}
+                {canRevealPicks && (duel.challengerConfirmed || hasResult) && (duel.opponentConfirmed || hasResult) && (
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <PickChip
                       label={duel.challengerDisplayName}
                       choice={challengerChoice}
-                      isCorrect={challengerChoice === match?.result}
+                      isCorrect={hasResult && challengerChoice === match?.result}
                     />
                     <PickChip
                       label={duel.opponentDisplayName}
                       choice={opponentChoice}
-                      isCorrect={opponentChoice === match?.result}
+                      isCorrect={hasResult && opponentChoice === match?.result}
                     />
                   </div>
                 )}
@@ -204,7 +243,7 @@ export function DuelDetailPage() {
                       <button
                         key={choice}
                         type="button"
-                        disabled={locked || submittingMatchId === match.id}
+                        disabled={kickoffLocked || submittingMatchId === match.id}
                         onClick={() => handlePredict(match, choice)}
                         className={`flex-1 rounded-md border py-1.5 font-mono text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
                           myChoice === choice
@@ -217,7 +256,7 @@ export function DuelDetailPage() {
                     ))}
                   </div>
                 )}
-                {canPredict && locked && !match?.result && (
+                {canPredict && kickoffLocked && !match?.result && (
                   <p className="mt-1 font-mono text-[10px] text-pitch-700/40 dark:text-pitch-100/30">
                     Maç başladı, seçim kilitlendi.
                   </p>
@@ -227,6 +266,58 @@ export function DuelDetailPage() {
           })}
         </div>
       </section>
+
+      {/* Onayla butonu - 5 seçim de yapılınca çıkar, onaydan sonra kaybolur */}
+      {canPredict && (
+        <button
+          type="button"
+          disabled={!allPicksMade || confirming}
+          onClick={handleConfirm}
+          className="flex items-center justify-center gap-2 rounded-lg bg-scoreboard-amber py-3 font-display
+            text-sm font-semibold text-pitch-950 shadow-glow transition hover:brightness-105
+            disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Lock size={16} />
+          {confirming
+            ? 'Onaylanıyor...'
+            : allPicksMade
+              ? 'Seçimlerimi Onayla (Bir Daha Değiştiremem)'
+              : `Önce ${REQUIRED_MATCH_COUNT} maça da seçim yap`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PlayerBadge({
+  name,
+  avatarUrl,
+  score,
+  confirmed,
+  isWinner,
+}: {
+  name: string;
+  avatarUrl: string | null;
+  score: number | null;
+  confirmed: boolean;
+  isWinner: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className={`relative rounded-full ${isWinner ? 'ring-4 ring-scoreboard-amber' : ''}`}>
+        <Avatar avatarUrl={avatarUrl} size="lg" />
+        {confirmed && score === null && (
+          <span className="absolute -bottom-1 -right-1 rounded-full bg-pick-correct p-1 text-white">
+            <Check size={10} />
+          </span>
+        )}
+      </div>
+      <p className="max-w-[90px] truncate text-center font-body text-sm font-medium text-pitch-900 dark:text-pitch-100">
+        {name}
+      </p>
+      {score !== null && (
+        <p className="font-mono text-xs font-bold text-scoreboard-amber">{score} doğru</p>
+      )}
     </div>
   );
 }
@@ -250,32 +341,6 @@ function PickChip({
     >
       <span className="truncate">{label}</span>
       <span className="ml-1 shrink-0 font-mono font-bold">{choice ? CHOICE_LABELS[choice] : '—'}</span>
-    </div>
-  );
-}
-
-function PlayerBadge({
-  name,
-  avatarUrl,
-  score,
-  isWinner,
-}: {
-  name: string;
-  avatarUrl: string | null;
-  score: number | null;
-  isWinner: boolean;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className={`relative rounded-full ${isWinner ? 'ring-4 ring-scoreboard-amber' : ''}`}>
-        <Avatar avatarUrl={avatarUrl} size="lg" />
-      </div>
-      <p className="max-w-[90px] truncate text-center font-body text-sm font-medium text-pitch-900 dark:text-pitch-100">
-        {name}
-      </p>
-      {score !== null && (
-        <p className="font-mono text-xs font-bold text-scoreboard-amber">{score} doğru</p>
-      )}
     </div>
   );
 }

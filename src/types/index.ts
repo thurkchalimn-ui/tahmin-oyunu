@@ -112,6 +112,12 @@ export interface Duel {
   // Sadece bu düellonun sonucunu belirlemek için kullanılır.
   challengerPicks: Record<string, PredictionChoice>; // { matchId: seçim }
   opponentPicks: Record<string, PredictionChoice>;
+  // Onaylandıktan sonra ilgili tarafın picks alanı KİLİTLENİR (Firestore
+  // kuralı bunu zorlar) - bir daha değiştirilemez. Karşı tarafın seçimleri
+  // ancak KENDİSİ onayladıktan sonra görünür hale gelir (karşılıklı,
+  // "kapalı zarf" mantığı - kimse önce görüp ona göre seçim yapamaz).
+  challengerConfirmed: boolean;
+  opponentConfirmed: boolean;
   status: DuelStatus;
   challengerScore: number | null; // Sadece status='completed' iken dolu
   opponentScore: number | null;

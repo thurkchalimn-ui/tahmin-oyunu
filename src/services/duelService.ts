@@ -36,6 +36,8 @@ function mapDuelDoc(id: string, data: Record<string, unknown>): Duel {
     // submitDuelPick - normal submitPrediction'ı ASLA çağırmaz).
     challengerPicks: (data.challengerPicks as Record<string, PredictionChoice>) ?? {},
     opponentPicks: (data.opponentPicks as Record<string, PredictionChoice>) ?? {},
+    challengerConfirmed: (data.challengerConfirmed as boolean) ?? false,
+    opponentConfirmed: (data.opponentConfirmed as boolean) ?? false,
     challengerScore: (data.challengerScore as number) ?? null,
     opponentScore: (data.opponentScore as number) ?? null,
     winnerUid: (data.winnerUid as string) || null,
@@ -77,6 +79,8 @@ export async function createDuel(
     status: 'pending',
     challengerPicks: {},
     opponentPicks: {},
+    challengerConfirmed: false,
+    opponentConfirmed: false,
     challengerScore: null,
     opponentScore: null,
     winnerUid: null,
@@ -139,6 +143,17 @@ export async function submitDuelPick(
   await updateDoc(duelRef, {
     [field]: { ...currentPicks, [matchId]: choice },
   });
+}
+
+/**
+ * Kullanıcının 5 maçlık seçimini KİLİTLER - bir daha değiştirilemez (bkz.
+ * firestore.rules, `xConfirmed != true` şartı bunu zorluyor). Onaydan sonra,
+ * karşı taraf KENDİSİ de onayladığında iki tarafın seçimleri de birbirine
+ * hemen görünür hale gelir (maçın sonuçlanmasını beklemeye gerek yok).
+ */
+export async function confirmDuelPicks(duelId: string, isChallenger: boolean): Promise<void> {
+  const field = isChallenger ? 'challengerConfirmed' : 'opponentConfirmed';
+  await updateDoc(doc(db, 'duels', duelId), { [field]: true });
 }
 
 /**

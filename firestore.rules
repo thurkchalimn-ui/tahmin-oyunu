@@ -103,15 +103,19 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt']) &&
           (request.resource.data.status == 'accepted' || request.resource.data.status == 'declined'))
         ||
-        // Meydan okuyanın kendi seçimlerini girmesi (sadece 'accepted' iken)
+        // Meydan okuyanın kendi seçimlerini girmesi/onaylaması - SADECE
+        // henüz onaylamadıysa (challengerConfirmed != true). Onayladıktan
+        // sonra bu koşul artık sağlanmaz, yani seçimler KİLİTLENİR.
         (isOwner(resource.data.challengerUid) &&
           resource.data.status == 'accepted' &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['challengerPicks']))
+          resource.data.challengerConfirmed != true &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['challengerPicks', 'challengerConfirmed']))
         ||
-        // Rakibin kendi seçimlerini girmesi (sadece 'accepted' iken)
+        // Rakibin kendi seçimlerini girmesi/onaylaması - aynı kilit mantığı
         (isOwner(resource.data.opponentUid) &&
           resource.data.status == 'accepted' &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['opponentPicks']))
+          resource.data.opponentConfirmed != true &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['opponentPicks', 'opponentConfirmed']))
       );
       allow delete: if false;
     }
