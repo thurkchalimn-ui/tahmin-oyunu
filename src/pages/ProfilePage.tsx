@@ -16,6 +16,7 @@ import { Avatar } from '@/components/common/Avatar';
 import { ShareButton } from '@/components/common/ShareButton';
 import { RecentBadgesPreview } from '@/components/profile/RecentBadgesPreview';
 import { InviteFriendCard } from '@/components/profile/InviteFriendCard';
+import { SocialFollowCard } from '@/components/home/SocialFollowCard';
 import { useAvatarOptions } from '@/hooks/useAvatarOptions';
 import { useFollowCounts } from '@/hooks/useFollowCounts';
 import { useUserRank } from '@/hooks/useUserRank';
@@ -226,6 +227,8 @@ export function ProfilePage() {
         <RecentPredictionCards items={history ?? []} viewAllHref="/tahminlerim" />
 
         <RecentBadgesPreview profile={profile} />
+
+        <SocialFollowCard />
 
         <InviteFriendCard uid={firebaseUser.uid} />
 
