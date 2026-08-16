@@ -19,6 +19,24 @@ export interface DailyLimitState {
   watchAdForCredit: () => Promise<void>;
 }
 
+// AdSense'in web için "Ödüllü Reklam" (Rewarded Ad) API'si - "Ad Placement
+// API" olarak biliniyor. adsbygoogle.js (index.html'de zaten yüklü) sayfaya
+// eklendiğinde window.adBreak fonksiyonu otomatik olarak kullanılabilir hale
+// gelir - ayrıca bir script eklemeye gerek yok. TypeScript bu global
+// fonksiyonu tanımıyor, bu yüzden burada bildiriyoruz.
+declare global {
+  interface Window {
+    adBreak?: (config: {
+      type: string;
+      name?: string;
+      beforeReward?: (showAdFn: () => void) => void;
+      adViewed?: () => void;
+      adDismissed?: () => void;
+      adBreakDone?: (info: unknown) => void;
+    }) => void;
+  }
+}
+
 /** Kullanıcının günlük tahmin hakkı durumunu (kullanılan/kalan/bonus) yönetir. */
 export function useDailyPredictionLimit(uid: string | undefined, date: string): DailyLimitState {
   const [used, setUsed] = useState(0);
@@ -70,17 +88,57 @@ export function useDailyPredictionLimit(uid: string | undefined, date: string): 
   const remaining = Math.max(0, allowed - used);
   const canEarnMore = bonusCredits < MAX_BONUS_CREDITS;
 
+  /**
+   * ÖNEMLİ: Hak, SADECE kullanıcı reklamı gerçekten sonuna kadar izlerse
+   * (adViewed callback'i) veriliyor - önceden butona basar basmaz hak
+   * veriliyordu, hiç reklam gösterilmiyordu. Artık gerçek bir AdSense
+   * Ödüllü Reklamı gösteriliyor; kullanıcı reklamı yarıda kapatırsa
+   * (adDismissed) hak verilmiyor. Uygun bir reklam hiç bulunamazsa
+   * (doluluk oranı düşükse, ya da bu reklam türü için hesap henüz uygun
+   * değilse) adBreakDone'a düşer ve kullanıcıya bilgi verilir.
+   */
   async function watchAdForCredit() {
     if (!uid || !canEarnMore) return;
+
+    if (!window.adBreak) {
+      setError('Reklam sistemi şu an yüklenemedi, birazdan tekrar dene.');
+      return;
+    }
+
     setIsEarning(true);
     setError(null);
-    try {
-      await earnBonusCredit(uid, date);
-    } catch {
-      setError('Hak eklenemedi, tekrar dene.');
-    } finally {
-      setIsEarning(false);
-    }
+    let rewarded = false;
+
+    window.adBreak({
+      type: 'reward',
+      name: 'daily-prediction-bonus',
+      beforeReward: (showAdFn) => {
+        // Kullanıcı zaten "Reklam İzle" butonuna basarak isteğini belirtti,
+        // bu yüzden ek bir onay ekranı göstermeden doğrudan reklamı açıyoruz.
+        showAdFn();
+      },
+      adViewed: async () => {
+        rewarded = true;
+        try {
+          await earnBonusCredit(uid, date);
+        } catch {
+          setError('Hak eklenemedi, tekrar dene.');
+        } finally {
+          setIsEarning(false);
+        }
+      },
+      adDismissed: () => {
+        setIsEarning(false);
+        setError('Reklamı tamamlamadan kapattın, hak eklenmedi.');
+      },
+      adBreakDone: () => {
+        // Hiç uygun reklam bulunamadıysa (adViewed/adDismissed hiç
+        // çağrılmadıysa) buraya düşülür - kullanıcıyı bekletmeyelim.
+        if (!rewarded) {
+          setIsEarning(false);
+        }
+      },
+    });
   }
 
   return { used, bonusCredits, allowed, remaining, canEarnMore, loading, error, isEarning, watchAdForCredit };
