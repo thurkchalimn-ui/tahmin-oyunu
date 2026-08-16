@@ -32,37 +32,28 @@ export function PerformanceSummary({
       </h2>
 
       <div className="grid grid-cols-3 gap-x-3 gap-y-4">
-        <Stat icon={<CheckCircle2 size={15} />} value={correctPredictions} label="Doğru Tahmin" accent="text-pick-correct" />
-        <Stat icon={<Percent size={15} />} value={`%${accuracy}`} label="Başarı Oranı" accent="text-pick-correct" />
-        <Stat icon={<Target size={15} />} value={bestStreak} label="En İyi Seri (maç)" accent="text-scoreboard-amber" />
+        <Stat icon={<CheckCircle2 size={15} />} value={correctPredictions} label="Doğru Tahmin" />
+        <Stat icon={<Percent size={15} />} value={`%${accuracy}`} label="Başarı Oranı" />
+        <Stat icon={<Target size={15} />} value={bestStreak} label="En İyi Seri (maç)" />
         <Stat icon={<ListChecks size={15} />} value={totalPredictions} label="Toplam Tahmin" />
-        <Stat icon={<Flame size={15} />} value={activityStreak} label="Günlük Giriş Serisi" accent="text-scoreboard-amber" />
-        <Stat icon={<Star size={15} />} value={xp} label="Kazanılan XP" accent="text-scoreboard-amber" />
+        <Stat icon={<Flame size={15} />} value={activityStreak} label="Günlük Giriş Serisi" />
+        <Stat icon={<Star size={15} />} value={xp} label="Kazanılan XP" />
       </div>
     </section>
   );
 }
 
-function Stat({
-  icon,
-  value,
-  label,
-  accent,
-}: {
-  icon: ReactNode;
-  value: number | string;
-  label: string;
-  accent?: string;
-}) {
+function Stat({ icon, value, label }: { icon: ReactNode; value: number | string; label: string }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="flex items-center gap-1 font-mono text-[10px] uppercase text-pitch-700/60 dark:text-pitch-100/50">
         {icon}
         {label}
       </span>
-      <span className={`font-mono text-xl font-bold text-pitch-900 dark:text-pitch-100 ${accent ?? ''}`}>
-        {value}
-      </span>
+      {/* ÖNEMLİ: scoreboard-amber sabit bir renk (koyu/açık moddan bağımsız) -
+          hem siyah hem beyaz arayüzde okunur olduğu için ayrıca dark: eki
+          gerekmiyor. Kullanıcı isteği: tüm sayılar sarı görünsün. */}
+      <span className="font-mono text-xl font-bold text-scoreboard-amber">{value}</span>
     </div>
   );
 }
