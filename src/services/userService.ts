@@ -160,11 +160,15 @@ export function subscribeUserProfile(
  * Liderlik tablosunu en yüksek XP'ye göre gerçek zamanlı dinler.
  * ÖNEMLİ: Daha önce `bestStreak`e göre sıralanıyordu - artık XP/Seviye
  * sistemi eklendiği için ana sıralama ölçütü XP oldu (bkz. xpUtils.ts).
+ * ÖNEMLİ (limit): Önceden sadece ilk 50 kullanıcı gösteriliyordu - artık
+ * TÜM kullanıcılar gösteriliyor (sayfa uzarsa tarayıcının kendi kaydırma
+ * çubuğuyla aşağı inilir). 5000 üst sınırı sadece anormal/beklenmedik bir
+ * büyümeye karşı bir güvenlik önlemi, pratikte hiçbir zaman dolmayacak.
  */
 export function subscribeLeaderboard(
   onChange: (users: UserProfile[]) => void,
   onError: (message: string) => void,
-  topN = 50,
+  topN = 5000,
 ): () => void {
   const q = query(collection(db, 'users'), orderBy('xp', 'desc'), fbLimit(topN));
   return onSnapshot(
