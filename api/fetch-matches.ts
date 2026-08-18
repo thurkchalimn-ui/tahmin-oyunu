@@ -63,10 +63,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
         'Accept-Language': 'tr-TR,tr;q=0.9',
+        // ÖNEMLİ: mackolik.com, bazı isteklerde "Referer" başlığı olmadan
+        // (özellikle güncel olmayan/başka bir tarih için sorgulandığında)
+        // isteği reddedebiliyor - bu, "diğer tarihlerde yanıt vermedi"
+        // sorununun olası nedeniydi. Gerçek tarayıcıdan gelen bir istek gibi
+        // görünmesi için canlı sonuçlar sayfasını referer olarak ekliyoruz.
+        Referer: 'https://www.mackolik.com/canli-sonuclar',
       },
     });
     if (!response.ok) {
-      res.status(502).json({ error: 'Mackolik yanıt vermedi.' });
+      res.status(502).json({ error: `Mackolik yanıt vermedi (durum kodu: ${response.status}).` });
       return;
     }
     const data = await response.json();
