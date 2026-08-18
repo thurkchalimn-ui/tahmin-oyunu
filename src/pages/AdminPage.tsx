@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMatches } from '@/hooks/useMatches';
 import { createMatch, setMatchResult, undoMatchResult, updateMatch } from '@/services/matchService';
 import { AdminMatchForm } from '@/components/admin/AdminMatchForm';
+import { AdminFetchMatches } from '@/components/admin/AdminFetchMatches';
 import { AdminMatchList } from '@/components/admin/AdminMatchList';
 import { AdminAvatarOptions } from '@/components/admin/AdminAvatarOptions';
 import { AdminStatsPanel } from '@/components/admin/AdminStatsPanel';
@@ -41,16 +42,19 @@ export function AdminPage() {
         <h2 className="mb-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
           Maç Ekle
         </h2>
-        <AdminMatchForm
-          nextDayOrder={nextDayOrder}
-          onSubmit={async (input) => {
-            try {
-              await createMatch(input);
-            } catch {
-              setActionError('Maç eklenemedi.');
-            }
-          }}
-        />
+        <div className="flex flex-col gap-3">
+          <AdminFetchMatches date={date} nextDayOrder={nextDayOrder} onAdded={() => {}} />
+          <AdminMatchForm
+            nextDayOrder={nextDayOrder}
+            onSubmit={async (input) => {
+              try {
+                await createMatch(input);
+              } catch {
+                setActionError('Maç eklenemedi.');
+              }
+            }}
+          />
+        </div>
       </section>
 
       <section>
