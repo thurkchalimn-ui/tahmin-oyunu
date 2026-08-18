@@ -95,8 +95,10 @@ export function AdminFetchMatches({ date, nextDayOrder, onAdded }: AdminFetchMat
       setFetchedMatches([]);
       setSelectedIds(new Set());
       onAdded();
-    } catch {
-      setError('Maçlar eklenirken bir hata oluştu.');
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[AdminFetchMatches] Maç ekleme hatası:', err);
+      setError(err instanceof Error ? `Maçlar eklenirken hata: ${err.message}` : 'Maçlar eklenirken bir hata oluştu.');
     } finally {
       setAdding(false);
     }
