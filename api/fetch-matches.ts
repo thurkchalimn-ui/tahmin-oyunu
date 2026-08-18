@@ -40,9 +40,20 @@ const TARGET_LEAGUES: TargetLeague[] = [
   { country: 'Fransa', name: 'Ligue 1' },
 ];
 
+// UEFA kupaları belirli bir ülkeye bağlı değil (uluslararası) - bu yüzden
+// ülke şartı aranmadan, sadece isme göre eşleştiriliyor.
+const TARGET_LEAGUE_NAMES_ANY_COUNTRY = new Set([
+  'UEFA Şampiyonlar Ligi',
+  'UEFA Avrupa Ligi',
+  'UEFA Konferans Ligi',
+]);
+
 function matchesTargetLeague(comp: MackolikCompetition): boolean {
   const countryName = comp.country?.name ?? '';
   const leagueName = comp.name ?? '';
+
+  if (TARGET_LEAGUE_NAMES_ANY_COUNTRY.has(leagueName)) return true;
+
   return TARGET_LEAGUES.some((t) => {
     if (t.country !== countryName) return false;
     if (t.namePattern) {

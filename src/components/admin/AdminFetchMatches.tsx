@@ -112,7 +112,7 @@ export function AdminFetchMatches({ date, nextDayOrder, onAdded }: AdminFetchMat
             Maçları Otomatik Çek
           </h3>
           <p className="font-mono text-[10px] text-pitch-700/50 dark:text-pitch-100/40">
-            Süper Lig · Premier Lig · LaLiga · Serie A · Ligue 1
+            Süper Lig · Premier Lig · LaLiga · Serie A · Ligue 1 · UEFA Kupaları
           </p>
         </div>
         <Button onClick={handleFetch} isLoading={fetching} variant="secondary" className="!px-3 !py-1.5 text-xs">
