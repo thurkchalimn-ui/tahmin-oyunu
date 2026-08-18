@@ -115,11 +115,25 @@ export async function getTeamLogoByName(teamName: string): Promise<string | null
   }
 }
 
-/** Admin: yeni bir maç ekler (günlük kupona). */
+/**
+ * Admin: yeni bir maç ekler (günlük kupona).
+ * ÖNEMLİ (BUG DÜZELTMESİ): Firestore, bir alanın değeri `undefined` ise
+ * `addDoc`'u TAMAMEN reddediyor (hata fırlatıyor) - `null` kabul ediyor ama
+ * `undefined` değil. `input` içindeki opsiyonel alanlar (homeTeamLogo,
+ * awayTeamLogo, league) bazen `undefined` olarak geliyor - özellikle
+ * "Maçları Otomatik Çek" akışında, bir takımın logosu bulunamadığında. Bu
+ * yüzden addDoc'a göndermeden önce `undefined` değerli TÜM alanlar
+ * (varsa) temizleniyor.
+ */
 export async function createMatch(input: NewMatchInput): Promise<void> {
   const globalOrder = await getNextGlobalOrder();
+
+  const cleanedInput = Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined),
+  );
+
   await addDoc(collection(db, 'matches'), {
-    ...input,
+    ...cleanedInput,
     globalOrder,
     result: null,
     reminderSent: false, // Otomasyon script'i "30 dakika kala" bildirimini gönderince true yapar
@@ -141,7 +155,10 @@ export async function updateMatch(
   matchId: string,
   updates: Partial<Omit<NewMatchInput, 'date' | 'dayOrder'>>,
 ): Promise<void> {
-  await updateDoc(doc(db, 'matches', matchId), updates);
+  const cleanedUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([, value]) => value !== undefined),
+  );
+  await updateDoc(doc(db, 'matches', matchId), cleanedUpdates);
 
   if (updates.homeTeam && updates.homeTeamLogo) await saveTeamLogo(updates.homeTeam, updates.homeTeamLogo);
   if (updates.awayTeam && updates.awayTeamLogo) await saveTeamLogo(updates.awayTeam, updates.awayTeamLogo);
