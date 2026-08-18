@@ -36,6 +36,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (user) {
         const adminSnap = await getDoc(doc(db, 'admins', user.uid));
         setIsAdmin(adminSnap.exists());
+
+        // ÖNEMLİ (BUG DÜZELTMESİ): `user.emailVerified` alanı `true` olsa
+        // bile, o anki OTURUM JETONUNUN (ID token) içine gömülü
+        // `email_verified` claim'i hâlâ ESKİ/YENİLENMEMİŞ olabilir - bu iki
+        // şey birbirinden bağımsız güncellenebiliyor. Firestore güvenlik
+        // kuralları (ör. predictions/{id} oluşturma) token'daki claim'e
+        // bakıyor, `user.emailVerified` alanına değil. Bu yüzden, "e-posta
+        // doğrulandıktan sonra kullanıcı 'Doğruladım, kontrol et' butonuna
+        // hiç basmadan uygulamayı kapatıp yeniden açarsa" senaryosunda,
+        // token yenilenmediği için "Missing or insufficient permissions"
+        // hatası alınıyordu (tahmin gönderirken). Burada, oturum her
+        // değiştiğinde (sayfa yenilense/yeniden açılsa bile) doğrulanmış
+        // kullanıcılar için token'ı ÖNLEYİCİ olarak zorla yeniliyoruz -
+        // ekstra bir ağ isteği pahasına, bu hatayı kökten önlüyor.
+        if (user.emailVerified) {
+          user.getIdToken(true).catch(() => {});
+        }
       } else {
         setIsAdmin(false);
         setProfile(null);
