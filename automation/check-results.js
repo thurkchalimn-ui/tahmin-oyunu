@@ -595,8 +595,25 @@ async function recalculateAllUsersXP() {
       }
     }
 
-    const followerCountSnap = await db.collection('follows').where('followedUid', '==', userDoc.id).count().get();
-    const followerCount = followerCountSnap.data().count;
+    // ÖNEMLİ (KOTA TASARRUFU): Takipçi sayısı artık `follows` koleksiyonuna
+    // sorgu atılarak DEĞİL, doğrudan kullanıcı dokümanındaki (zaten elimizde
+    // olan) alandan okunuyor - her takip/takipten çıkma anında
+    // followService.ts tarafından atomik olarak güncel tutuluyor. Bu,
+    // `recalculateAllUsersXP` HER kullanıcı için çalıştığından, buradaki
+    // tasarruf en büyük etkiye sahip olan yer.
+    //
+    // KENDİ KENDİNİ ONARAN YEDEK: Eğer bu alan hiç yoksa (ör. bu özellik
+    // eklenmeden önce oluşturulmuş, henüz hiç güncellenmemiş eski bir
+    // kullanıcı), TEK SEFERLİK olarak eski yöntemle (sorgu) hesaplanır ve
+    // sonuç kalıcı olarak yazılır - böylece ayrı bir backfill script'i
+    // çalıştırmaya gerek kalmaz, sistem kendini otomatik tamamlar.
+    let followerCount = data.followerCount;
+    if (followerCount === undefined) {
+      const followerCountSnap = await db.collection('follows').where('followedUid', '==', userDoc.id).count().get();
+      followerCount = followerCountSnap.data().count;
+      await userDoc.ref.update({ followerCount });
+      console.log(`[check-results] ${userDoc.id}: followerCount ilk kez hesaplandı ve kaydedildi (${followerCount}).`);
+    }
 
     for (const milestone of FOLLOWER_COUNT_MILESTONES) {
       if (!badges.some((b) => b.type === 'followerCount' && b.value === milestone) && followerCount >= milestone) {
