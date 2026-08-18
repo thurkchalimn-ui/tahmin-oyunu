@@ -58,10 +58,10 @@ function matchesTargetLeague(comp: MackolikCompetition): boolean {
 // Vercel'in varsayılan (10 saniye) süre sınırını aşabiliyor, bu da "502"
 // hatasına yol açıyordu. Bu süreyi 30 saniyeye çıkarıyoruz (Vercel Hobby
 // planında izin verilen en yüksek değer).
-export const config = {
-  maxDuration: 30,
-};
-
+// ÖNEMLİ: Süre sınırı artık burada DEĞİL, proje kök dizinindeki vercel.json
+// dosyasında ayarlanıyor - "export const config" yöntemi sadece Next.js
+// projelerinde çalışıyor, bizim düz Vite + @vercel/node yapımızda hiçbir
+// etkisi olmuyordu (502 hatasının asıl nedeni buydu).
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const date = (req.query.date as string) || new Date().toISOString().slice(0, 10);
 
