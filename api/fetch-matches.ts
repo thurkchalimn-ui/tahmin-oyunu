@@ -41,18 +41,18 @@ const TARGET_LEAGUES: TargetLeague[] = [
 ];
 
 // UEFA kupaları belirli bir ülkeye bağlı değil (uluslararası) - bu yüzden
-// ülke şartı aranmadan, sadece isme göre eşleştiriliyor.
-const TARGET_LEAGUE_NAMES_ANY_COUNTRY = new Set([
-  'UEFA Şampiyonlar Ligi',
-  'UEFA Avrupa Ligi',
-  'UEFA Konferans Ligi',
-]);
+// ülke şartı aranmadan, sadece isme göre eşleştiriliyor. ÖNEMLİ: Tam eşleşme
+// yerine "içinde geçiyor mu" kontrolü yapılıyor - çünkü Ağustos gibi
+// aylarda oynanan ELEME TURLARI, mackolik'te "UEFA Şampiyonlar Ligi
+// Elemeleri" gibi FARKLI bir isimle kayıtlı olabiliyor; asıl grup
+// aşamasıyla aynı köke sahip her ismi (elemeler dahil) yakalamak için.
+const TARGET_LEAGUE_NAME_PATTERNS = [/şampiyonlar ligi/i, /avrupa ligi/i, /konferans ligi/i];
 
 function matchesTargetLeague(comp: MackolikCompetition): boolean {
   const countryName = comp.country?.name ?? '';
   const leagueName = comp.name ?? '';
 
-  if (TARGET_LEAGUE_NAMES_ANY_COUNTRY.has(leagueName)) return true;
+  if (TARGET_LEAGUE_NAME_PATTERNS.some((p) => p.test(leagueName))) return true;
 
   return TARGET_LEAGUES.some((t) => {
     if (t.country !== countryName) return false;
