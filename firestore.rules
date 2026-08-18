@@ -50,7 +50,17 @@ service cloud.firestore {
         (isOwner(uid) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['invitedByUid']) &&
           resource.data.invitedByUid == null &&
-          request.resource.data.invitedByUid is string);
+          request.resource.data.invitedByUid is string) ||
+        // ÖNEMLİ (KOTA TASARRUFU): Takipçi sayısını sorgu yerine kalıcı bir
+        // sayaç olarak tutabilmek için, HERHANGİ bir giriş yapmış kullanıcının
+        // BAŞKASININ profilindeki followerCount alanını SADECE tam olarak
+        // +1 ya da -1 değiştirmesine izin veriliyor (takip/takipten çıkma
+        // anında) - başka hiçbir alanı değiştiremez, rastgele bir değere de
+        // ayarlayamaz, sadece bir öncekinden ±1 fark edebilir.
+        (isSignedIn() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followerCount']) &&
+          (request.resource.data.followerCount == resource.data.followerCount + 1 ||
+            request.resource.data.followerCount == resource.data.followerCount - 1));
       allow delete: if isOwner(uid);
     }
 

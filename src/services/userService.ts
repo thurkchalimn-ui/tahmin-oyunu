@@ -25,17 +25,6 @@ import { createNotification } from '@/services/notificationCenterService';
 import { BADGE_LABELS } from '@/components/common/BadgeIcons';
 
 /**
- * Takipçi sayısını okur (sadece sayım - kota dostu). followService.ts'deki
- * aynı isimli fonksiyonun küçük bir kopyasıdır - döngüsel import'tan
- * kaçınmak için burada ayrıca tanımlanmıştır (matchService.ts'deki
- * getMatchOrderingInfoByIds ile aynı desen).
- */
-async function getFollowerCountInline(uid: string): Promise<number> {
-  const snap = await getCountFromServer(query(collection(db, 'follows'), where('followedUid', '==', uid)));
-  return snap.data().count;
-}
-
-/**
  * Bu kullanıcının davet linkiyle ("?ref=uid") kayıt olmuş kullanıcı sayısını
  * okur (sadece sayım - kota dostu). bkz. RegisterPage.tsx - yeni kullanıcı
  * kayıt olurken `invitedByUid` alanına bu kullanıcının uid'sini yazar.
@@ -289,6 +278,7 @@ export async function touchDailyActivity(
     totalPredictions: number;
     xp: number;
     bonusXp?: number; // Sosyal medya takibi gibi kalıcı bonuslar - calculateXP()'ye DAHİL edilmez, sonuca eklenir
+    followerCount?: number; // Artık sorgu yerine profilden okunuyor (kota tasarrufu) - bkz. followService.ts
   },
 ): Promise<void> {
   const todayKey = toDateKey(new Date());
@@ -311,7 +301,13 @@ export async function touchDailyActivity(
     }
   }
 
-  const followerCount = await getFollowerCountInline(uid);
+  // ÖNEMLİ (KOTA TASARRUFU): Takipçi sayısı artık `follows` koleksiyonuna
+  // sorgu atılarak DEĞİL, doğrudan profildeki (zaten elimizde olan) alandan
+  // okunuyor - her takip/takipten çıkma anında followService.ts tarafından
+  // atomik olarak güncel tutuluyor. Bu, EN SIK çalışan fonksiyonlardan
+  // birinde (her oturum açılışında bir kez) bir sorguyu tamamen ortadan
+  // kaldırıyor.
+  const followerCount = current.followerCount ?? 0;
   const inviteCount = await getInviteCountInline(uid);
 
   // Takipçi rozetleri - takipçi sayısı zaten yukarıda okunduğu için (XP
@@ -448,7 +444,10 @@ export async function recalculateUserStreak(uid: string): Promise<void> {
 
   // XP - her zaman GÜNCEL verilerden sıfırdan hesaplanır (bkz. xpUtils.ts).
   const oldXp = (userSnap.data()?.xp as number) ?? 0;
-  const followerCount = await getFollowerCountInline(uid);
+  // ÖNEMLİ (KOTA TASARRUFU): userSnap zaten çekilmiş durumda - takipçi
+  // sayısını ayrı bir sorguyla değil, doğrudan bu dokümandan okuyoruz
+  // (bkz. followService.ts, artık atomik olarak güncel tutuluyor).
+  const followerCount = (userSnap.data()?.followerCount as number) ?? 0;
   const inviteCount = await getInviteCountInline(uid);
 
   // Takipçi rozetleri

@@ -76,6 +76,13 @@ export interface UserProfile {
   activityStreak?: number; // Art arda kaç gündür uygulamayı açtığı (bir gün atlarsa sıfırlanır)
   lastActiveDateKey?: string | null; // activityStreak'in son sayıldığı gün ('YYYY-MM-DD')
   invitedByUid?: string | null; // Bu kullanıcıyı davet eden kişinin uid'si (davet linkiyle kayıt olduysa)
+  // ÖNEMLİ (KOTA TASARRUFU): Önceden takipçi sayısı, her XP yeniden
+  // hesaplamasında (`follows` koleksiyonuna) bir sorgu atılarak
+  // hesaplanıyordu - bu, sık çalışan bir işlem için gereksiz okuma
+  // demekti. Artık bu sayı burada KALICI olarak tutuluyor ve sadece
+  // gerçek bir takip/takipten çıkma olduğunda Firestore'un `increment()`
+  // işlemiyle (+1/-1) atomik olarak güncelleniyor - bkz. followService.ts.
+  followerCount?: number;
   socialFollowClaimed?: { instagram?: boolean; twitter?: boolean }; // Dürüstlük esaslı - "Takip Ettim" butonuna basıldı mı
   bonusXp?: number; // Sosyal medya takibi gibi KALICI, tekrar hesaplanmayan bonus XP (increment() ile artırılır)
   xp: number; // Deneyim puanı - doğru/yanlış tahmin, rozet ve giriş serisinden hesaplanır (bkz. utils/xpUtils.ts)

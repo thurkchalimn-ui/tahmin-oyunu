@@ -99,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             totalPredictions: p.totalPredictions,
             xp: p.xp,
             bonusXp: p.bonusXp,
+            followerCount: p.followerCount,
           }).catch(() => {});
         }
       },

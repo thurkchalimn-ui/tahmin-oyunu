@@ -5,6 +5,8 @@ import {
   deleteDoc,
   getDoc,
   getDocs,
+  updateDoc,
+  increment,
   query,
   where,
   getCountFromServer,
@@ -22,14 +24,12 @@ function followDocId(followerUid: string, followedUid: string): string {
  * Bir kullanıcıyı takip eder (tek yönlü, Twitter tarzı - karşı taraf onayı gerekmez).
  * Takip edilen kullanıcıya "yeni takipçi" bildirimi düşer (bkz.
  * notificationCenterService.ts).
- * NOT: Takip edilen kullanıcının XP'si (her takipçi +5 XP kazandırır, bkz.
- * xpUtils.ts) BURADAN GÜNCELLENMEZ - çünkü Firestore güvenlik kuralı bir
- * kullanıcının sadece KENDİ profilini güncelleyebilmesine izin verir, takip
- * eden kişi takip edilenin profiline yazamaz. Bunun yerine, Admin SDK
- * yetkisine sahip otomasyon script'i (automation/check-results.js) periyodik
- * olarak TÜM kullanıcıların XP'sini (takipçi sayıları dahil) yeniden
- * hesaplar - bu yüzden yeni bir takipçinin XP'ye yansıması anlık değil,
- * otomasyonun bir sonraki çalışmasını bekler (birkaç dakika).
+ * ÖNEMLİ (KOTA TASARRUFU): Takip edilen kullanıcının profilindeki
+ * `followerCount` alanı burada ATOMİK olarak +1 artırılıyor (bkz.
+ * firestore.rules'daki özel izin) - böylece bu sayı artık her XP
+ * hesaplamasında sorgu atılarak yeniden hesaplanmıyor, doğrudan profilden
+ * okunuyor. XP'nin kendisi hâlâ anlık güncellenmiyor (o hâlâ otomasyonun
+ * bir sonraki çalışmasını bekliyor), ama sayının kendisi artık anlık.
  */
 export async function followUser(followerUid: string, followedUid: string, followerDisplayName: string): Promise<void> {
   if (followerUid === followedUid) throw new Error('Kendini takip edemezsin.');
@@ -38,6 +38,7 @@ export async function followUser(followerUid: string, followedUid: string, follo
     followedUid,
     createdAt: Timestamp.now(),
   });
+  await updateDoc(doc(db, 'users', followedUid), { followerCount: increment(1) }).catch(() => {});
   await createNotification(
     followedUid,
     'follow',
@@ -47,9 +48,10 @@ export async function followUser(followerUid: string, followedUid: string, follo
   ).catch(() => {});
 }
 
-/** Takibi bırakır. */
+/** Takibi bırakır. followerCount atomik olarak -1 azaltılır. */
 export async function unfollowUser(followerUid: string, followedUid: string): Promise<void> {
   await deleteDoc(doc(db, 'follows', followDocId(followerUid, followedUid)));
+  await updateDoc(doc(db, 'users', followedUid), { followerCount: increment(-1) }).catch(() => {});
 }
 
 /** Bir kullanıcının başka bir kullanıcıyı takip edip etmediğini kontrol eder. */
