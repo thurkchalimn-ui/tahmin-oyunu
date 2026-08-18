@@ -5,6 +5,7 @@ import {
   setDoc,
   getDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -303,6 +304,34 @@ export async function undoMatchResult(matchId: string): Promise<void> {
       await updateDoc(doc(db, 'predictions', predDoc.id), { isCorrect: null, resolvedAt: null });
     }),
   );
+
+  for (const uid of affectedUserIds) {
+    await recalculateUserStreak(uid);
+  }
+}
+
+/**
+ * Admin: bir maçı KALICI OLARAK siler - genelde yanlışlıkla eklenmiş/
+ * kopya bir maçı temizlemek için kullanılır. Bu maça ait TÜM tahminler de
+ * silinir (aksi halde "hayalet" tahminler kalır, başka yerlerde - ör.
+ * profil geçmişi - hataya yol açar) ve etkilenen kullanıcıların serileri/XP'si
+ * bu değişikliği yansıtacak şekilde yeniden hesaplanır (undoMatchResult ile
+ * aynı mantık).
+ *
+ * ÖNEMLİ: Bu işlem GERİ ALINAMAZ - arayüzde bir onay adımı olması önerilir.
+ */
+export async function deleteMatch(matchId: string): Promise<void> {
+  const predSnap = await getDocs(query(collection(db, 'predictions'), where('matchId', '==', matchId)));
+
+  const affectedUserIds = new Set<string>();
+  await Promise.all(
+    predSnap.docs.map(async (predDoc) => {
+      affectedUserIds.add(predDoc.data().userId as string);
+      await deleteDoc(predDoc.ref);
+    }),
+  );
+
+  await deleteDoc(doc(db, 'matches', matchId));
 
   for (const uid of affectedUserIds) {
     await recalculateUserStreak(uid);

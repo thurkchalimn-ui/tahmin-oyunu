@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMatches } from '@/hooks/useMatches';
-import { createMatch, setMatchResult, undoMatchResult, updateMatch } from '@/services/matchService';
+import { createMatch, setMatchResult, undoMatchResult, updateMatch, deleteMatch } from '@/services/matchService';
 import { AdminMatchForm } from '@/components/admin/AdminMatchForm';
 import { AdminFetchMatches } from '@/components/admin/AdminFetchMatches';
 import { AdminMatchList } from '@/components/admin/AdminMatchList';
@@ -87,6 +87,13 @@ export function AdminPage() {
                 await updateMatch(matchId, updates);
               } catch {
                 setActionError('Maç güncellenemedi.');
+              }
+            }}
+            onDeleteMatch={async (matchId) => {
+              try {
+                await deleteMatch(matchId);
+              } catch {
+                setActionError('Maç silinemedi.');
               }
             }}
           />

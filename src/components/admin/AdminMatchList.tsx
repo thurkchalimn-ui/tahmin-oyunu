@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import type { Match, PredictionChoice } from '@/types';
 import { formatMatchTime } from '@/utils/dateUtils';
 import { assignMatchNumbers } from '@/utils/matchNumbering';
@@ -21,6 +22,7 @@ interface AdminMatchListProps {
       kickoffAt: string;
     },
   ) => Promise<void>;
+  onDeleteMatch: (matchId: string) => Promise<void>;
 }
 
 const CHOICE_LABELS: Record<PredictionChoice, string> = { HOME: '1', DRAW: 'X', AWAY: '2' };
@@ -34,12 +36,20 @@ function resultLabelFromScore(home: number, away: number): string {
 
 /**
  * Admin için günün maçlarını listeler; SKOR girerek sonuç girme (sistem
- * otomatik olarak 1/X/2'ye çevirir), maç düzenleme (takım/logo/saat) ve
- * yanlışlıkla girilmiş bir sonucu geri alma imkanı sağlar.
+ * otomatik olarak 1/X/2'ye çevirir), maç düzenleme (takım/logo/saat), bir
+ * sonucu geri alma ve maçı KALICI OLARAK SİLME (ör. yanlışlıkla/kopya
+ * eklenmiş bir maç) imkanı sağlar.
  */
-export function AdminMatchList({ matches, onSetResult, onUndoResult, onUpdateMatch }: AdminMatchListProps) {
+export function AdminMatchList({
+  matches,
+  onSetResult,
+  onUndoResult,
+  onUpdateMatch,
+  onDeleteMatch,
+}: AdminMatchListProps) {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [undoingId, setUndoingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Her maç için ayrı ayrı, henüz kaydedilmemiş skor girişleri (matchId -> "ev,deplasman")
@@ -84,6 +94,20 @@ export function AdminMatchList({ matches, onSetResult, onUndoResult, onUpdateMat
       await onUndoResult(matchId);
     } finally {
       setUndoingId(null);
+    }
+  }
+
+  async function handleDelete(matchId: string, label: string) {
+    const confirmed = window.confirm(
+      `${label} maçını KALICI OLARAK silmek istediğine emin misin? Bu maça ait tüm tahminler de silinecek ve etkilenen kullanıcıların serileri buna göre güncellenecek. Bu işlem GERİ ALINAMAZ.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingId(matchId);
+    try {
+      await onDeleteMatch(matchId);
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -149,6 +173,15 @@ export function AdminMatchList({ matches, onSetResult, onUndoResult, onUpdateMat
                 >
                   Düzenle
                 </Button>
+                <button
+                  type="button"
+                  disabled={deletingId === match.id}
+                  onClick={() => handleDelete(match.id, `${match.homeTeam} - ${match.awayTeam}`)}
+                  aria-label="Maçı sil"
+                  className="rounded-md p-1.5 text-pick-wrong/70 hover:bg-pick-wrong/10 hover:text-pick-wrong disabled:opacity-40"
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
             ) : (
               // --- Sonuç henüz girilmemiş: skor giriş kutuları ---
@@ -211,6 +244,15 @@ export function AdminMatchList({ matches, onSetResult, onUndoResult, onUpdateMat
                 >
                   Düzenle
                 </Button>
+                <button
+                  type="button"
+                  disabled={deletingId === match.id}
+                  onClick={() => handleDelete(match.id, `${match.homeTeam} - ${match.awayTeam}`)}
+                  aria-label="Maçı sil"
+                  className="rounded-md p-1.5 text-pick-wrong/70 hover:bg-pick-wrong/10 hover:text-pick-wrong disabled:opacity-40"
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
             )}
           </div>
