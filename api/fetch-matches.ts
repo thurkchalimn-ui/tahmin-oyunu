@@ -53,6 +53,15 @@ function matchesTargetLeague(comp: MackolikCompetition): boolean {
   });
 }
 
+// ÖNEMLİ: mackolik.com'un döndürdüğü veri çok büyük (dünyadaki tüm ligler/
+// maçlar, sadece bizim 5 ligimiz değil) - bunu çekip işlemek bazı günlerde
+// Vercel'in varsayılan (10 saniye) süre sınırını aşabiliyor, bu da "502"
+// hatasına yol açıyordu. Bu süreyi 30 saniyeye çıkarıyoruz (Vercel Hobby
+// planında izin verilen en yüksek değer).
+export const config = {
+  maxDuration: 30,
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const date = (req.query.date as string) || new Date().toISOString().slice(0, 10);
 
