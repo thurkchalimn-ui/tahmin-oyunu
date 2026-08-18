@@ -99,6 +99,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const competitions: Record<string, MackolikCompetition> = data?.data?.competitions ?? {};
     const matches: Record<string, MackolikMatch> = data?.data?.matches ?? {};
 
+    // ÖNEMLİ (GEÇİCİ TEŞHİS MODU): ?debug=leagues eklenirse, filtreleme
+    // yapmadan mackolik'in o gün için gönderdiği TÜM lig isimlerini
+    // (varsayım yapmadan) döner - "Şampiyonlar Ligi" gibi kupaların GERÇEK
+    // isim yazımını bulmak için. Normal kullanımda bu parametre kullanılmaz.
+    if (req.query.debug === 'leagues') {
+      const allLeagues = Object.values(competitions).map((c) => ({
+        name: c.name,
+        country: c.country?.name ?? '(ülke yok)',
+      }));
+      res.status(200).json({ allLeagues });
+      return;
+    }
+
     const targetCompetitionIds = new Set(
       Object.entries(competitions)
         .filter(([, comp]) => matchesTargetLeague(comp))
