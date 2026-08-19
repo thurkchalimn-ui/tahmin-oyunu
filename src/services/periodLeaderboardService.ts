@@ -72,3 +72,36 @@ export async function getPeriodLeaderboard(
     updatedAt: '',
   }));
 }
+
+/**
+ * "Genel" (tüm-zamanlar, XP'ye göre) liderlik tablosunu getirir. ÖNEMLİ
+ * (KOTA TASARRUFU): Bu sekme önceden istemci tarafında `users`
+ * koleksiyonunu CANLI dinleyerek çalışıyordu - kullanıcı sayısı arttıkça
+ * maliyeti doğrusal olarak büyüyen bir tasarımdı. Artık haftalık/aylık ile
+ * aynı desende: otomasyon bunu birkaç saatte bir hesaplayıp
+ * `leaderboardCache/all` dokümanına yazıyor, burada TEK bir okuma ile
+ * çekiliyor. Bedel: liste artık ANLIK değil, birkaç saate kadar gecikmeli
+ * güncellenebilir (kabul edilebilir bir takas).
+ */
+export async function getAllTimeLeaderboard(): Promise<UserProfile[]> {
+  const snap = await getDoc(doc(db, 'leaderboardCache', 'all'));
+  if (!snap.exists()) return [];
+
+  const entries = (snap.data().entries as (CachedEntry & { bestStreak: number; xp: number })[]) ?? [];
+  return entries.map((e) => ({
+    uid: e.uid,
+    email: '',
+    displayName: e.displayName,
+    currentStreak: 0,
+    bestStreak: e.bestStreak,
+    totalPredictions: e.totalPredictions,
+    correctPredictions: e.correctPredictions,
+    badges: e.badges ?? [],
+    isAdmin: false,
+    avatarUrl: e.avatarUrl,
+    xp: e.xp,
+    level: 1,
+    createdAt: '',
+    updatedAt: '',
+  }));
+}
