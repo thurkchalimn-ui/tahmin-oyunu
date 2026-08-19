@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { UserProfile, AsyncState } from '@/types';
 import { subscribeLeaderboard } from '@/services/userService';
 
-/** Liderlik tablosunu (en yüksek seriye göre sıralı) gerçek zamanlı getirir. */
+/** Liderlik tablosunu (en yüksek XP'ye göre sıralı) gerçek zamanlı getirir. */
 export function useLeaderboard(): AsyncState<UserProfile[]> {
   const [state, setState] = useState<AsyncState<UserProfile[]>>({
     data: null,
