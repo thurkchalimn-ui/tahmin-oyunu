@@ -759,6 +759,37 @@ async function cachePeriodLeaderboard(period) {
   console.log(`[check-results] ${docId} liderlik önbelleği güncellendi (${entries.length} kullanıcı).`);
 }
 
+/**
+ * "Genel" (tüm-zamanlar, XP'ye göre) liderlik tablosunu hesaplayıp
+ * `leaderboardCache/all` dokümanına yazar. ÖNEMLİ (KOTA TASARRUFU): Bu
+ * sekme önceden istemci tarafında CANLI bir dinleyiciyle (tüm `users`
+ * koleksiyonunu dinleyen) çalışıyordu - bu, kullanıcı sayısı arttıkça
+ * maliyeti doğrusal olarak büyüyen bir tasarımdı (herkesin XP'si her
+ * değiştiğinde, sayfayı açık tutan HERKES için yeniden okuma tetikleniyordu).
+ * Artık haftalık/aylık ile aynı desende: otomasyon bunu birkaç saatte bir
+ * TEK SEFER hesaplar, site sadece bu hazır dokümanı okur - maliyet artık
+ * kullanıcı sayısından BAĞIMSIZ (sabit).
+ */
+async function cacheAllTimeLeaderboard() {
+  const usersSnap = await db.collection('users').orderBy('xp', 'desc').get();
+  const entries = usersSnap.docs.map((d) => {
+    const data = d.data();
+    return {
+      uid: d.id,
+      displayName: data.displayName ?? 'İsimsiz Oyuncu',
+      avatarUrl: data.avatarUrl ?? null,
+      badges: data.badges ?? [],
+      totalPredictions: data.totalPredictions ?? 0,
+      correctPredictions: data.correctPredictions ?? 0,
+      bestStreak: data.bestStreak ?? 0,
+      xp: data.xp ?? 0,
+    };
+  });
+
+  await db.collection('leaderboardCache').doc('all').set({ entries, computedAt: Date.now() });
+  console.log(`[check-results] all (genel) liderlik önbelleği güncellendi (${entries.length} kullanıcı).`);
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -877,6 +908,7 @@ async function main() {
       try {
         await cachePeriodLeaderboard('week');
         await cachePeriodLeaderboard('month');
+        await cacheAllTimeLeaderboard();
       } catch (err) {
         console.error('[check-results] Liderlik önbelleği güncellenemedi:', err);
       }
