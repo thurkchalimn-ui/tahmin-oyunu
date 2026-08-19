@@ -27,9 +27,11 @@ import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { isNonEmpty } from '@/utils/validators';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 /** Kullanıcının kendi istatistiklerini ve rozetlerini gördüğü profil sayfası. */
 export function ProfilePage() {
+  usePageTitle('Profilim');
   const navigate = useNavigate();
   const { firebaseUser, profile, emailVerified } = useAuth();
   const { data: history } = usePredictionHistory(firebaseUser?.uid);

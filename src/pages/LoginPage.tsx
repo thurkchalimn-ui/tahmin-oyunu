@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { loginUser, resetPassword } from '@/services/authService';
 import { Button } from '@/components/common/Button';
 import { translateAuthError, isValidEmail } from '@/utils/validators';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 /** E-posta/şifre ile giriş sayfası. */
 export function LoginPage() {
+  usePageTitle('Giriş Yap');
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

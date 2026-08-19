@@ -9,10 +9,12 @@ import { Avatar } from '@/components/common/Avatar';
 import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { isNonEmpty } from '@/utils/validators';
 
 /** Kullanıcının üyesi olduğu özel ligleri listeler ve yeni bir lig kurma formu sunar. */
 export function LeaguesPage() {
+  usePageTitle('Liglerim');
   const { firebaseUser } = useAuth();
   const { data: leagues, loading, error } = useUserLeagues(firebaseUser?.uid);
 

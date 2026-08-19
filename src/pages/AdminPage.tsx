@@ -8,10 +8,12 @@ import { AdminAvatarOptions } from '@/components/admin/AdminAvatarOptions';
 import { AdminStatsPanel } from '@/components/admin/AdminStatsPanel';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { todayKey } from '@/utils/dateUtils';
 
 /** Admin paneli: seçilen güne maç ekleme ve sonuç girme işlemleri burada yapılır. */
 export function AdminPage() {
+  usePageTitle('Admin Paneli');
   const [date, setDate] = useState(todayKey());
   const { data: matches, loading, error } = useMatches(date);
   const [actionError, setActionError] = useState<string | null>(null);

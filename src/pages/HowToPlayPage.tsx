@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Flame, Star, Trophy, Award, Users, MessageCircle } from 'lucide-react';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 /**
  * "Nasıl Oynanır" sayfası - hem yeni kullanıcılara oyunu anlatmak hem de
@@ -10,12 +10,7 @@ import { Flame, Star, Trophy, Award, Users, MessageCircle } from 'lucide-react';
  * dengeliyor).
  */
 export function HowToPlayPage() {
-  useEffect(() => {
-    document.title = 'Nasıl Oynanır? — Tahmin Serisi';
-    return () => {
-      document.title = 'Tahmin Serisi';
-    };
-  }, []);
+  usePageTitle('Nasıl Oynanır?');
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 font-body text-sm text-pitch-900 dark:text-pitch-100">

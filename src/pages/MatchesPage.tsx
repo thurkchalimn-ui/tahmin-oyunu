@@ -10,6 +10,7 @@ import { DateNavigator } from '@/components/matches/DateNavigator';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { AdBanner } from '@/components/common/AdBanner';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { todayKey, formatDateHeading } from '@/utils/dateUtils';
 import type { Match, PredictionChoice } from '@/types';
 
@@ -20,6 +21,7 @@ import type { Match, PredictionChoice } from '@/types';
  * "Tahmin Yap" butonuyla yönlendiriyor.
  */
 export function MatchesPage() {
+  usePageTitle('Günün Maçları');
   const { firebaseUser, emailVerified } = useAuth();
   const today = todayKey();
   const [selectedDate, setSelectedDate] = useState(today);

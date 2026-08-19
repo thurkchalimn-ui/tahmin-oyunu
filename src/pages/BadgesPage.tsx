@@ -5,6 +5,7 @@ import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { BadgeCatalogGrid } from '@/components/profile/BadgeCatalogGrid';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 /**
  * Profildeki "Tümü" linkinin gittiği, tam rozet kataloğunu (kilitli dahil)
@@ -18,6 +19,7 @@ export function BadgesPage() {
   const { data: playerProfile, loading, error } = usePlayerProfile(uid);
 
   const profile = uid ? playerProfile : ownProfile;
+  usePageTitle(uid && profile ? `${profile.displayName} - Rozetler` : 'Rozetlerim');
   const backHref = uid ? `/oyuncu/${uid}` : '/profil';
 
   if (uid && loading) return <LoadingSpinner fullScreen label="Yükleniyor..." />;

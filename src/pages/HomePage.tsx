@@ -13,6 +13,7 @@ import { RecentResultsPreview } from '@/components/home/RecentResultsPreview';
 import { RecentBadgesPreview } from '@/components/profile/RecentBadgesPreview';
 import { GuestWelcomeBanner } from '@/components/home/GuestWelcomeBanner';
 import { AdBanner } from '@/components/common/AdBanner';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { todayKey } from '@/utils/dateUtils';
 
 // ÖNEMLİ: Bu gradyan bilinçli olarak Tailwind config'deki özel bir class
@@ -33,6 +34,7 @@ const STADIUM_GLOW_STYLE = {
  * butonu ayrı bir sayfaya (/maclar, bkz. MatchesPage.tsx) yönlendirir.
  */
 export function HomePage() {
+  usePageTitle('Günlük Futbol Tahmin Oyunu');
   const { firebaseUser, profile } = useAuth();
   const today = todayKey();
   const { data: matches } = useMatches(today);

@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Mail } from 'lucide-react';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 const CONTACT_EMAIL = 'iletisim@tahminserisi.com';
 
 /** "Bize Ulaşın" sayfası - kullanıcıların doğrudan mail göndermesi için basit bir yönlendirme sayfası. */
 export function ContactPage() {
+  usePageTitle('Bize Ulaşın');
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 font-body text-sm text-pitch-900 dark:text-pitch-100">
       <Link to="/" className="mb-4 inline-block font-mono text-xs text-scoreboard-amber">

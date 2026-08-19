@@ -5,6 +5,7 @@ import { auth, db } from '@/config/firebase';
 import { registerUser } from '@/services/authService';
 import { Button } from '@/components/common/Button';
 import { translateAuthError, isValidEmail, isValidPassword, isNonEmpty } from '@/utils/validators';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 /**
  * Yeni kullanıcı kayıt sayfası. Adreste bir davet parametresi varsa
@@ -14,6 +15,7 @@ import { translateAuthError, isValidEmail, isValidPassword, isNonEmpty } from '@
  * otomasyon script'i tarafından periyodik olarak +25 XP kazanır.
  */
 export function RegisterPage() {
+  usePageTitle('Kayıt Ol');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const referrerUid = searchParams.get('ref');

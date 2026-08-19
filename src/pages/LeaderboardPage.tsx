@@ -15,6 +15,7 @@ import { LeaderboardPodium } from '@/components/leaderboard/LeaderboardPodium';
 import { PeriodTabs } from '@/components/leaderboard/PeriodTabs';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import type { StatsPeriod } from '@/utils/periodUtils';
 
 /**
@@ -28,6 +29,7 @@ import type { StatsPeriod } from '@/utils/periodUtils';
  * kalıcı olarak saklıyor (bkz. periodLeaderboardService.ts, check-results.js).
  */
 export function LeaderboardPage() {
+  usePageTitle('Liderlik Tablosu');
   const { firebaseUser, profile } = useAuth();
   const [tab, setTab] = useState<StatsPeriod>('all');
   const [monthKey, setMonthKey] = useState(getCurrentMonthKey());

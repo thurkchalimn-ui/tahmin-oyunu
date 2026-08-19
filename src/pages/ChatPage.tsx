@@ -7,10 +7,12 @@ import { ChatMessageList } from '@/components/chat/ChatMessageList';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import type { ChatMessage } from '@/types';
 
 /** Kullanıcıların birbirine kullanıcı adlarıyla göründüğü, herkese açık sohbet kanalı. */
 export function ChatPage() {
+  usePageTitle('Sohbet');
   const { firebaseUser, profile, emailVerified, isAdmin } = useAuth();
   const { data: messages, loading, error } = useChatMessages();
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);

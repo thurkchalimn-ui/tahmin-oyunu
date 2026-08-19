@@ -9,6 +9,7 @@ import { createDuel } from '@/services/duelService';
 import { Avatar } from '@/components/common/Avatar';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { todayKey } from '@/utils/dateUtils';
 
 const REQUIRED_MATCH_COUNT = 5;
@@ -19,6 +20,7 @@ const REQUIRED_MATCH_COUNT = 5;
  * "pending" durumda oluşturulur, karşı taraf kabul/red edene kadar bekler.
  */
 export function CreateDuelPage() {
+  usePageTitle('Yeni Düello');
   const { firebaseUser, profile } = useAuth();
   const navigate = useNavigate();
   const today = todayKey();

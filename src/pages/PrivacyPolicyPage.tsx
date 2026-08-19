@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 /**
  * Gizlilik Politikası ve Kullanım Şartları. Genel bir MVP metnidir; uygulama
@@ -6,6 +7,7 @@ import { Link } from 'react-router-dom';
  * danışmanına gözden geçirtilmesi önerilir.
  */
 export function PrivacyPolicyPage() {
+  usePageTitle('Gizlilik Politikası');
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 font-body text-sm text-pitch-900 dark:text-pitch-100">
       <Link to="/" className="mb-4 inline-block font-mono text-xs text-scoreboard-amber">

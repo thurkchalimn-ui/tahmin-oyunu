@@ -8,12 +8,14 @@ import { PredictionHistoryList } from '@/components/leaderboard/PredictionHistor
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { getPeriodRange, type StatsPeriod } from '@/utils/periodUtils';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 /**
  * Profildeki "Son Tahminlerin" kart şeridinin yanındaki "Tümü" linkinin
  * gittiği, kullanıcının TÜM tahmin geçmişini (dönem filtreli) gösteren sayfa.
  */
 export function AllPredictionsPage() {
+  usePageTitle('Tüm Tahminlerim');
   const { firebaseUser } = useAuth();
   const { data: history, loading, error } = usePredictionHistory(firebaseUser?.uid);
   const [tab, setTab] = useState<StatsPeriod>('all');

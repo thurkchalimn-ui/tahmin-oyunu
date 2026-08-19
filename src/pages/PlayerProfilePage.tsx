@@ -15,6 +15,7 @@ import { RecentPredictionCards } from '@/components/profile/RecentPredictionCard
 import { RecentBadgesPreview } from '@/components/profile/RecentBadgesPreview';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 const STADIUM_GLOW_STYLE = {
   backgroundImage:
@@ -36,6 +37,7 @@ export function PlayerProfilePage() {
   const { firebaseUser } = useAuth();
   const { data: profile, loading: profileLoading, error: profileError } = usePlayerProfile(uid);
   const { data: history } = usePredictionHistory(uid);
+  usePageTitle(profile ? profile.displayName : 'Oyuncu Profili');
 
   const { followerCount, followingCount } = useFollowCounts(uid);
   const rank = useUserRank(profile?.correctPredictions);

@@ -6,6 +6,7 @@ import { subscribeDuel, getMatchesByIds, respondToDuel, submitDuelPick, confirmD
 import { Avatar } from '@/components/common/Avatar';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import type { Duel, Match, PredictionChoice } from '@/types';
 
 const REQUIRED_MATCH_COUNT = 5;
@@ -23,6 +24,7 @@ const CHOICE_LABELS: Record<PredictionChoice, string> = { HOME: '1', DRAW: 'X', 
  * zarf" mantığı, kimse önce görüp ona göre seçim yapamaz.
  */
 export function DuelDetailPage() {
+  usePageTitle('Düello Detayı');
   const { duelId } = useParams<{ duelId: string }>();
   const { firebaseUser, profile } = useAuth();
   const [duel, setDuel] = useState<Duel | null | undefined>(undefined);

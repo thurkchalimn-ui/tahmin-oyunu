@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 /** Tanımsız rotalar için 404 sayfası. */
 export function NotFoundPage() {
+  usePageTitle('Sayfa Bulunamadı');
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-24 text-center">
       <p className="font-mono text-5xl font-bold text-scoreboard-amber">404</p>

@@ -9,6 +9,7 @@ import { Avatar } from '@/components/common/Avatar';
 import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import type { League, UserProfile } from '@/types';
 
 /** Tek bir özel ligin liderlik tablosunu ve (kurucuysa) üye yönetimini gösterir. */
@@ -23,6 +24,8 @@ export function LeaguePage() {
   const [error, setError] = useState<string | null>(null);
   const [showAddMember, setShowAddMember] = useState(false);
   const [followingUids, setFollowingUids] = useState<string[]>([]);
+
+  usePageTitle(league ? league.name : 'Lig');
 
   async function loadLeague() {
     if (!leagueId) return;

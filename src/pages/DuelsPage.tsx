@@ -6,6 +6,7 @@ import { subscribeMyDuels, respondToDuel } from '@/services/duelService';
 import { Avatar } from '@/components/common/Avatar';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import type { Duel } from '@/types';
 
 /**
@@ -13,6 +14,7 @@ import type { Duel } from '@/types';
  * tamamlanmış düellolar (sonuçlarıyla) - üç ayrı bölüm halinde.
  */
 export function DuelsPage() {
+  usePageTitle('Düellolarım');
   const { firebaseUser, profile } = useAuth();
   const [duels, setDuels] = useState<Duel[]>([]);
   const [loading, setLoading] = useState(true);
