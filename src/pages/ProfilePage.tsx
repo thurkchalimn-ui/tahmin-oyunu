@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Camera, BadgeCheck, Swords, ChevronRight } from 'lucide-react';
+import { Camera, BadgeCheck } from 'lucide-react';
 import { LevelBadge } from '@/components/common/LevelBadge';
 import { useAuth } from '@/hooks/useAuth';
 import { usePredictionHistory } from '@/hooks/usePredictionHistory';
@@ -233,19 +233,6 @@ export function ProfilePage() {
         <SocialFollowCard />
 
         <InviteFriendCard uid={firebaseUser.uid} />
-
-        <Link
-          to="/duello"
-          className="flex items-center justify-between rounded-xl border border-pitch-700/15 bg-gradient-to-b
-            from-white to-pitch-100 p-4 shadow-stadium transition hover:brightness-105
-            dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900"
-        >
-          <span className="flex items-center gap-2 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
-            <Swords className="text-scoreboard-amber" size={18} />
-            Düellolarım
-          </span>
-          <ChevronRight size={18} className="text-pitch-700/40 dark:text-pitch-100/30" />
-        </Link>
 
         <section className="rounded-xl border border-pitch-700/15 bg-gradient-to-b from-white to-pitch-100 p-4 shadow-stadium dark:border-pitch-700 dark:from-pitch-800 dark:to-pitch-900">
           <h2 className="mb-1 font-display text-sm font-semibold text-pitch-900 dark:text-pitch-100">
