@@ -1,51 +1,38 @@
 import { useEffect, useState } from 'react';
 import { collection, query, where, documentId, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import { getPeriodLeaderboard } from '@/services/periodLeaderboardService';
 import { getAllTimeTopThree } from '@/services/homeSummaryService';
 import type { UserProfile } from '@/types';
 
 interface WeeklyTopThreeResult {
   data: UserProfile[];
   loading: boolean;
-  /** Haftalık veri yeterliyse 'week', yetersizse (ör. hafta yeni başladıysa) yedek olarak 'all' gösterilir. */
+  /** ÖNEMLİ: Artık her zaman 'all' - ana sayfadaki podyum önizlemesi
+   * kullanıcı isteği üzerine haftalık yerine GENEL (tüm-zamanlar) liderleri
+   * gösteriyor. Alan, WeeklyPodium.tsx'in etiket göstermesi için korunuyor. */
   source: 'week' | 'all';
 }
 
 /**
- * Ana sayfadaki liderlik podyum önizlemesi için ilk 3 kullanıcıyı getirir.
- * Haftalık liderlik verisi henüz azsa (ör. hafta yeni başladığında maç
- * sayısı düşükse) otomatik olarak tüm-zamanlar liderlerine geçer.
+ * Ana sayfadaki liderlik podyum önizlemesi için ilk 3 kullanıcıyı (GENEL/
+ * tüm-zamanlar sıralamasına göre) getirir.
  *
- * NOT: Ne haftalık önbellek ne de basit tüm-zamanlar sorgusu gerçek
- * `bestStreak` değerini içeriyordu (biri hiç tutmuyordu, diğeri hesaplamıyordu)
- * - bu yüzden bulunan 3 kullanıcının gerçek bestStreak değeri, `users`
- * koleksiyonundan küçük bir ek sorguyla (sadece 3 ID için) tamamlanıyor.
+ * NOT: Basit tüm-zamanlar sorgusu gerçek `bestStreak` değerini
+ * içermeyebiliyordu - bu yüzden bulunan 3 kullanıcının gerçek bestStreak
+ * değeri, `users` koleksiyonundan küçük bir ek sorguyla (sadece 3 ID için)
+ * tamamlanıyor.
  */
 export function useWeeklyTopThree(): WeeklyTopThreeResult {
   const [data, setData] = useState<UserProfile[]>([]);
-  const [source, setSource] = useState<'week' | 'all'>('week');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const weekly = await getPeriodLeaderboard('week');
-        let topThree: UserProfile[];
-        let resolvedSource: 'week' | 'all';
+        let topThree = (await getAllTimeTopThree()) as UserProfile[];
 
-        if (weekly.length >= 3) {
-          topThree = weekly.slice(0, 3);
-          resolvedSource = 'week';
-        } else {
-          const allTime = await getAllTimeTopThree();
-          topThree = allTime as UserProfile[];
-          resolvedSource = 'all';
-        }
-
-        // Gerçek bestStreak ve xp değerlerini tamamla (haftalık önbellek
-        // ikisini de içermiyor - otomasyon bunları cache'e yazmıyor)
+        // Gerçek bestStreak ve xp değerlerini tamamla
         if (topThree.length > 0) {
           const snap = await getDocs(
             query(collection(db, 'users'), where(documentId(), 'in', topThree.map((u) => u.uid))),
@@ -63,10 +50,7 @@ export function useWeeklyTopThree(): WeeklyTopThreeResult {
           }));
         }
 
-        if (!cancelled) {
-          setData(topThree);
-          setSource(resolvedSource);
-        }
+        if (!cancelled) setData(topThree);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -76,5 +60,5 @@ export function useWeeklyTopThree(): WeeklyTopThreeResult {
     };
   }, []);
 
-  return { data, loading, source };
+  return { data, loading, source: 'all' };
 }
