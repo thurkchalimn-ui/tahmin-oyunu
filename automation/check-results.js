@@ -831,17 +831,28 @@ async function resolveDuels() {
     const allResolved = matchSnaps.every((s) => s.exists && s.data().result != null);
     if (!allResolved) continue;
 
-    async function countCorrect(uid) {
+    // ÖNEMLİ (BUG DÜZELTMESİ): Düello seçimleri normal `predictions`
+    // koleksiyonuna DEĞİL, düellonun kendi dokümanındaki
+    // challengerPicks/opponentPicks alanlarına yazılıyor (bkz.
+    // submitDuelPick - kasıtlı olarak günlük tahminlerden AYRI tutuluyor).
+    // Önceden bu fonksiyon yanlışlıkla `predictions` koleksiyonunu
+    // kontrol ediyordu - bu alanlar orada hiç olmadığı için skor genelde
+    // yanlış (çoğunlukla 0-0, bazen alakasız bir sayı) çıkıyordu.
+    const resultsByMatchId = {};
+    matchSnaps.forEach((s) => {
+      resultsByMatchId[s.id] = s.data().result;
+    });
+
+    function countCorrect(picks) {
       let correct = 0;
       for (const matchId of matchIds) {
-        const predSnap = await db.collection('predictions').doc(`${uid}_${matchId}`).get();
-        if (predSnap.exists && predSnap.data().isCorrect === true) correct += 1;
+        if (picks && picks[matchId] === resultsByMatchId[matchId]) correct += 1;
       }
       return correct;
     }
 
-    const challengerScore = await countCorrect(duel.challengerUid);
-    const opponentScore = await countCorrect(duel.opponentUid);
+    const challengerScore = countCorrect(duel.challengerPicks);
+    const opponentScore = countCorrect(duel.opponentPicks);
     const winnerUid =
       challengerScore > opponentScore ? duel.challengerUid : opponentScore > challengerScore ? duel.opponentUid : null;
 
