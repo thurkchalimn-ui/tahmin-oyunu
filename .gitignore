@@ -13,3 +13,5 @@ dist-ssr
 *firebase-adminsdk*.json
 serviceAccountKey.json
 automation/key.json
+.vercel
+.env*
