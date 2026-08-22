@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-
-Sitemap: https://tahminserisi.com/sitemap.xml
+Sitemap: https://www.tahminserisi.com/sitemap.xml
