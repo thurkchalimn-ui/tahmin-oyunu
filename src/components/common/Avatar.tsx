@@ -22,6 +22,9 @@ const SIZE_CLASSES: Record<NonNullable<AvatarProps['size']>, string> = {
  * dairesel çerçeveyi doldurmak için görseli KIRPIYORDU (logonun kenarları
  * taşıyor/kesiliyordu). `object-contain` + hafif bir iç boşluk (padding),
  * logonun tamamının kırpılmadan, ortalanmış şekilde sığmasını sağlar.
+ *
+ * ÖNEMLİ: Beyaz arka plan/halka (bg-white ring-1) BİLEREK kaldırıldı -
+ * görsel artık kendi (genelde şeffaf) arka planıyla görünüyor.
  */
 export function Avatar({ avatarUrl, size = 'md' }: AvatarProps) {
   const [failed, setFailed] = useState(false);
@@ -29,15 +32,12 @@ export function Avatar({ avatarUrl, size = 'md' }: AvatarProps) {
 
   if (avatarUrl && !failed) {
     return (
-      <span
-        className={`${dimension} flex shrink-0 items-center justify-center rounded-full bg-white p-0.5
-          ring-1 ring-pitch-700/10 dark:ring-pitch-700`}
-      >
+      <span className={`${dimension} flex shrink-0 items-center justify-center`}>
         <img
           src={avatarUrl}
           alt="Profil görseli"
           onError={() => setFailed(true)}
-          className="h-full w-full rounded-full object-contain"
+          className="h-full w-full object-contain"
         />
       </span>
     );
