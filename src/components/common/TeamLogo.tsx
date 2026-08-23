@@ -9,6 +9,10 @@ interface TeamLogoProps {
 /**
  * Takım logosunu gösterir. Logo linki yoksa veya yüklenemezse (bozuk link vb.),
  * takımın baş harfini gösteren bir daire yer tutucuya otomatik olarak düşer.
+ * ÖNEMLİ: Logonun kendisi artık beyaz daire/halka içine ALINMIYOR - çoğu
+ * logo zaten kendi arka planına sahip (şeffaf PNG/SVG), üzerine beyaz daire
+ * eklemek gereksiz bir görsel kirlilik yaratıyordu. Sadece harf yer
+ * tutucusu (logo hiç yoksa) daire biçiminde kalıyor.
  */
 export function TeamLogo({ name, logoUrl, size = 'md' }: TeamLogoProps) {
   const [failed, setFailed] = useState(false);
@@ -20,7 +24,7 @@ export function TeamLogo({ name, logoUrl, size = 'md' }: TeamLogoProps) {
         src={logoUrl}
         alt={name}
         onError={() => setFailed(true)}
-        className={`${dimension} shrink-0 rounded-full bg-white object-contain ring-1 ring-pitch-700/10 dark:ring-pitch-700`}
+        className={`${dimension} shrink-0 object-contain`}
       />
     );
   }
