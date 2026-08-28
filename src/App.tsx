@@ -5,6 +5,7 @@ import { Navbar } from '@/components/common/Navbar';
 import { BottomNav } from '@/components/common/BottomNav';
 import { EmailVerificationBanner } from '@/components/common/EmailVerificationBanner';
 import { InstallPrompt } from '@/components/common/InstallPrompt';
+import { AdSenseScriptLoader } from '@/components/common/AdSenseScriptLoader';
 import { Analytics } from '@vercel/analytics/react';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
 import { HomePage } from '@/pages/HomePage';
@@ -35,6 +36,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <div className="min-h-screen bg-pitch-100 dark:bg-pitch-900">
+            <AdSenseScriptLoader />
             <Navbar />
             <EmailVerificationBanner />
             <main className="pb-16">
